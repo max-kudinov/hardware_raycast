@@ -1,0 +1,5 @@
+*.vcd
+*.fst
+*.out
+obj_dir/
+ray/
