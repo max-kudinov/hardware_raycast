@@ -3,3 +3,6 @@
 *.out
 obj_dir/
 ray/
+sim_build/
+.nvim/
+__pycache__/
