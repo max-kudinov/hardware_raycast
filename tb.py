@@ -82,7 +82,7 @@ async def newton_inv(dut, recip):
     return fixp_to_float(dut, int(dut.num_o.value))
 
 
-async def calc_ray(dut, x):
+async def ray_height_calc(dut, x):
     global ray_dir_x_max
     global ray_dir_y_max
     ray_x = (x*0.0015) - 1
@@ -148,7 +148,7 @@ async def game(dut):
     """Game loop"""
 
     for x in range(FRAME_WIDTH):
-        line_height, line_color = await calc_ray(dut, x)
+        line_height, line_color = await ray_height_calc(dut, x)
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
         if start_pos < 0:
