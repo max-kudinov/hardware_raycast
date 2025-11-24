@@ -4,8 +4,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-FRAME_WIDTH = 1280
-FRAME_HEIGHT = 720
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
 
 MAP_WIDTH = 20
 MAP_HEIGHT = 20
@@ -85,7 +85,9 @@ async def newton_inv(dut, recip):
 async def ray_height_calc(dut, x):
     global ray_dir_x_max
     global ray_dir_y_max
-    ray_x = (x*0.0015) - 1
+    ray_step = float_to_fixp(dut, 2 / FRAME_WIDTH)
+    ray = x * ray_step - 1
+    ray_x = fixp_to_float(dut, ray)
     ray_dir_x = dir_x + plane_x * ray_x
     ray_dir_y = dir_y + plane_y * ray_x
 
