@@ -26,6 +26,6 @@ module ray_height_calc #(
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam RAY_STEP = int'(real'(2.0 / FRAME_WIDTH * (2**W_FRAC)));
+localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
 
 endmodule
