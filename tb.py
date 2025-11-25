@@ -52,9 +52,6 @@ plane_y = 0.66
 time = 0
 old_time = 0
 
-ray_dir_x_max = 0
-ray_dir_y_max = 0
-
 
 def float_to_fixp(dut, num_float):
     frac_bits = int(dut.W_FRAC.value)
@@ -83,19 +80,11 @@ async def newton_inv(dut, recip):
 
 
 async def ray_height_calc(dut, x):
-    global ray_dir_x_max
-    global ray_dir_y_max
     ray_step = float_to_fixp(dut, 2 / FRAME_WIDTH)
     ray = x * ray_step - 1
     ray_x = fixp_to_float(dut, ray)
     ray_dir_x = dir_x + plane_x * ray_x
     ray_dir_y = dir_y + plane_y * ray_x
-
-    if abs(ray_dir_x) > ray_dir_x_max:
-        ray_dir_x_max = abs(ray_dir_x)
-
-    if abs(ray_dir_y) > ray_dir_y_max:
-        ray_dir_y_max = abs(ray_dir_y)
 
     delta_dist_x = 1e30 if float_to_fixp(dut, ray_dir_x) == 0 else await newton_inv(dut, abs(ray_dir_x))
     delta_dist_y = 1e30 if float_to_fixp(dut, ray_dir_y) == 0 else await newton_inv(dut, abs(ray_dir_y))
@@ -181,8 +170,6 @@ def controls():
     fps = 1 / frame_time
     font.render_to(surface, (20, 20), str(fps), (255, 255, 255))
 
-    font.render_to(surface, (20, 50), f"ray_dir_x_max: {ray_dir_x_max}", (255, 255, 255))
-    font.render_to(surface, (20, 80), f"ray_dir_y_max: {ray_dir_y_max}", (255, 255, 255))
     font.render_to(surface, (20, 110), f"pos_x: {pos_x}", (255, 255, 255))
     font.render_to(surface, (20, 140), f"pos_y: {pos_y}", (255, 255, 255))
     font.render_to(surface, (20, 170), f"frame_time: {frame_time}", (255, 255, 255))
