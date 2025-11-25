@@ -1,6 +1,6 @@
 `default_nettype none
 
-module ray_height_calc #(
+module line_height_calc #(
     parameter W_INT       = 8,
     parameter W_FRAC      = 8,
     parameter W_X_POS     = 8,
