@@ -1,8 +1,11 @@
+`include "fixedpoint.svh"
+
 `default_nettype none
 
-module line_height_calc #(
-    parameter W_INT       = 8,
-    parameter W_FRAC      = 8,
+module line_height_calc
+    import fixedpoint::W_INT;
+    import fixedpoint::W_FRAC;
+#(
     parameter W_X_POS     = 8,
     parameter W_HEIGHT    = 8,
     parameter FRAME_WIDTH = 640
@@ -22,6 +25,8 @@ module line_height_calc #(
     output var logic        [W_HEIGHT-1:0]    height_o
 );
 
+import fixedpoint::fixp_mult;
+
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
@@ -32,9 +37,18 @@ localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
+logic signed [W_INT-1:-W_FRAC] ray_x;
 logic inv_done;
 logic dda_done;
 logic wall_dist_zero;
+
+logic        [W_X_POS-1:0]     x_pos;
+logic signed [W_INT-1:-W_FRAC] dir_x;
+logic signed [W_INT-1:-W_FRAC] dir_y;
+logic signed [W_INT-1:-W_FRAC] ray_dir_x;
+logic signed [W_INT-1:-W_FRAC] ray_dir_y;
+logic signed [W_INT-1:-W_FRAC] plane_x;
+logic signed [W_INT-1:-W_FRAC] plane_y;
 
 typedef enum {
     ST_IDLE,
@@ -83,5 +97,40 @@ always_ff @(posedge clk)
         state <= ST_IDLE;
     else
         state <= next_state;
+
+// ----------------------------------------------------------------------------
+// Register input signals
+// ----------------------------------------------------------------------------
+
+always_ff @(posedge clk) begin
+    if (state == ST_IDLE && start_i) begin
+        x_pos   <= x_pos_i;
+
+        dir_x   <= dir_x_i;
+        dir_y   <= dir_y_i;
+
+        plane_x <= plane_x_i;
+        plane_y <= plane_y_i;
+    end
+end
+
+// ----------------------------------------------------------------------------
+// Calculate ray_x
+// ----------------------------------------------------------------------------
+
+always_ff @(posedge clk)
+    if (state == ST_CALC_RAY_X)
+        ray_x <= (W_INT + W_FRAC)'(x_pos * RAY_STEP) - 1'b1;
+
+// ----------------------------------------------------------------------------
+// Calculate ray dir x/y components
+// ----------------------------------------------------------------------------
+
+always_ff @(posedge clk) begin
+    if (state == ST_CALC_RAY_DIR) begin
+        ray_dir_x <= dir_x + fixp_mult(plane_x, ray_x);
+        ray_dir_y <= dir_y + fixp_mult(plane_y, ray_x);
+    end
+end
 
 endmodule
