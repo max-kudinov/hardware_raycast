@@ -53,14 +53,14 @@ time = 0
 old_time = 0
 
 
-def float_to_fixp(dut, num_float):
-    frac_bits = int(dut.W_FRAC.value)
+def float_to_fixp(num_float):
+    frac_bits = int(cocotb.packages.fixedpoint.W_FRAC.value)
 
     return int(num_float * (2 ** frac_bits))
 
 
-def fixp_to_float(dut, num_fixp):
-    frac_bits = int(dut.W_FRAC.value)
+def fixp_to_float(num_fixp):
+    frac_bits = int(cocotb.packages.fixedpoint.W_FRAC.value)
 
     return float(num_fixp) / (2 ** frac_bits)
 
@@ -68,7 +68,7 @@ def fixp_to_float(dut, num_fixp):
 async def newton_inv(dut, recip):
     await RisingEdge(dut.clk)
     dut.start_i.value = 1
-    dut.num_i.value = float_to_fixp(dut, recip)
+    dut.num_i.value = float_to_fixp(recip)
 
     await RisingEdge(dut.clk)
     dut.start_i.value = 0
@@ -76,18 +76,18 @@ async def newton_inv(dut, recip):
     while not dut.done_o.value:
         await RisingEdge(dut.clk)
 
-    return fixp_to_float(dut, int(dut.num_o.value))
+    return fixp_to_float(int(dut.num_o.value))
 
 
 async def ray_height_calc(dut, x):
-    ray_step = float_to_fixp(dut, 2 / FRAME_WIDTH)
+    ray_step = float_to_fixp(2 / FRAME_WIDTH)
     ray = x * ray_step - 1
-    ray_x = fixp_to_float(dut, ray)
+    ray_x = fixp_to_float(ray)
     ray_dir_x = dir_x + plane_x * ray_x
     ray_dir_y = dir_y + plane_y * ray_x
 
-    delta_dist_x = 1e30 if float_to_fixp(dut, ray_dir_x) == 0 else await newton_inv(dut, abs(ray_dir_x))
-    delta_dist_y = 1e30 if float_to_fixp(dut, ray_dir_y) == 0 else await newton_inv(dut, abs(ray_dir_y))
+    delta_dist_x = 1e30 if float_to_fixp(ray_dir_x) == 0 else await newton_inv(dut, abs(ray_dir_x))
+    delta_dist_y = 1e30 if float_to_fixp(ray_dir_y) == 0 else await newton_inv(dut, abs(ray_dir_y))
 
     perp_wall_dist = 0
     map_x = int(pos_x)
@@ -129,7 +129,7 @@ async def ray_height_calc(dut, x):
         perp_wall_dist = side_dist_y - delta_dist_y
         line_color = (128, 128, 128)
 
-    if float_to_fixp(dut, perp_wall_dist) == 0:
+    if float_to_fixp(perp_wall_dist) == 0:
         return (FRAME_HEIGHT, line_color)
     else:
         return (int(FRAME_HEIGHT * await newton_inv(dut, perp_wall_dist)), line_color)
