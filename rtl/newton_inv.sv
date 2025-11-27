@@ -1,10 +1,12 @@
+`include "fixedpoint.svh"
+
 `default_nettype none
 
-module newton_inv #(
-    parameter W_INT  = 8,
-    parameter W_FRAC = 8,
-    parameter N_ITER = 5
-) (
+module newton_inv
+    import fixedpoint::W_INT;
+    import fixedpoint::W_FRAC;
+    import fixedpoint::N_ITER;
+(
     input  var logic                   clk,
     input  var logic                   rst,
 
@@ -14,6 +16,8 @@ module newton_inv #(
     output var logic                   done_o,
     output var logic [W_INT-1:-W_FRAC] num_o
 );
+
+import fixedpoint::fixp_mult;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -38,11 +42,6 @@ logic [W_INT-1:-W_FRAC]     approx_mid_ff;
 logic [W_SHIFT-1:0]         shift_amount;
 logic [W_CNT-1:0]           iter_cnt;
 logic                       cnt_done;
-
-// Most significant bits of mult are unused
-// verilator lint_off UNUSEDSIGNAL
-logic [W_INT*2-1:-W_FRAC*2] mult_res;
-// verilator lint_on UNUSEDSIGNAL
 
 typedef enum {
     ST_IDLE,
@@ -125,17 +124,14 @@ assign cnt_done = iter_cnt == W_CNT'(N_ITER_CYCLES - 1);
 always_comb begin
     approx_next     = approx_ff;
     approx_mid_next = approx_mid_ff;
-    mult_res        = '0;
 
     if (state == ST_SHIFT_INPUT) begin
         approx_next = FIXP_ONE;
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            mult_res        = num_ff * approx_ff;
-            approx_mid_next = FIXP_TWO - mult_res[W_INT-1:-W_FRAC];
+            approx_mid_next = FIXP_TWO - fixp_mult(num_ff,  approx_ff);
         end else begin
-            mult_res    = approx_ff * approx_mid_ff;
-            approx_next = mult_res[W_INT-1:-W_FRAC];
+            approx_next = fixp_mult(approx_ff, approx_mid_ff);
         end
     end
 
