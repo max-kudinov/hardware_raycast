@@ -7,18 +7,17 @@ def run_tb():
     sim = "verilator"
 
     parameters = {
-        "W_INT": 5,
-        "W_FRAC": 9,
-        "N_ITER": 5
     }
 
     proj_path = Path(__file__).resolve().parent
     sources = [proj_path / "rtl/newton_inv.sv"]
+    includes = [proj_path / "rtl/include"]
 
     runner = get_runner(sim)
 
     runner.build(
         sources=sources,
+        includes=includes,
         hdl_toplevel="newton_inv",
         parameters=parameters
     )
