@@ -120,7 +120,7 @@ always_ff @(posedge clk)
     else if (state == ST_ITERATE)
         iter_cnt <= iter_cnt + 1'b1;
 
-assign cnt_done = iter_cnt == (N_ITER_CYCLES - 1);
+assign cnt_done = iter_cnt == W_CNT'(N_ITER_CYCLES - 1);
 
 always_comb begin
     approx_next     = approx_ff;
