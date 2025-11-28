@@ -26,6 +26,7 @@ module line_height_calc
 );
 
 import fixedpoint::fixp_mult;
+import fixedpoint::fixp_abs;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -38,9 +39,18 @@ localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
 // ----------------------------------------------------------------------------
 
 logic signed [W_INT-1:-W_FRAC] ray_x;
+logic [W_INT-1:-W_FRAC] inv_num_in;
+logic [W_INT-1:-W_FRAC] inv_num_out;
+logic inv_start;
 logic inv_done;
+logic inv_busy;
 logic dda_done;
 logic wall_dist_zero;
+
+logic [W_INT-1:-W_FRAC] delta_dist_x_next;
+logic [W_INT-1:-W_FRAC] delta_dist_x_ff;
+logic [W_INT-1:-W_FRAC] delta_dist_y_next;
+logic [W_INT-1:-W_FRAC] delta_dist_y_ff;
 
 logic        [W_X_POS-1:0]     x_pos;
 logic signed [W_INT-1:-W_FRAC] dir_x;
@@ -131,6 +141,53 @@ always_ff @(posedge clk) begin
         ray_dir_x <= dir_x + fixp_mult(plane_x, ray_x);
         ray_dir_y <= dir_y + fixp_mult(plane_y, ray_x);
     end
+end
+
+// ----------------------------------------------------------------------------
+// Calculate relative ray distance of one cell step
+// ----------------------------------------------------------------------------
+
+newton_inv newton_inv (
+    .clk     (clk        ),
+    .rst     (rst        ),
+    .start_i (inv_start  ),
+    .num_i   (inv_num_in ),
+    .done_o  (inv_done   ),
+    .busy_o  (inv_busy   ),
+    .num_o   (inv_num_out)
+);
+
+always_comb begin
+    inv_start         = '0;
+    inv_num_in        = '0;
+    delta_dist_x_next = delta_dist_x_ff;
+    delta_dist_y_next = delta_dist_y_ff;
+
+    if (state == ST_CALC_DELTA_DIST_X) begin
+        inv_num_in = fixp_abs(ray_dir_x);
+
+        if (!inv_busy && !inv_done)
+            inv_start = '1;
+
+        if (inv_done)
+            delta_dist_x_next = (ray_dir_x == '0) ? '1 : inv_num_out;
+    end
+
+    if (state == ST_CALC_DELTA_DIST_Y) begin
+        inv_num_in = fixp_abs(ray_dir_y);
+
+        if (!inv_busy && !inv_done)
+            inv_start = '1;
+
+        if (inv_done)
+            delta_dist_y_next = (ray_dir_y == '0) ? '1 : inv_num_out;
+    end
+
+end
+
+always_ff @(posedge clk) begin
+    delta_dist_x_ff <= delta_dist_x_next;
+    delta_dist_y_ff <= delta_dist_y_next;
 end
 
 endmodule

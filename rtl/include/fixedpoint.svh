@@ -15,10 +15,17 @@ package fixedpoint;
         // verilator lint_off UNUSEDSIGNAL
         logic [W_INT*2-1:-W_FRAC*2] mult_res;
         // verilator lint_on UNUSEDSIGNAL
-        begin
-            mult_res = num_a * num_b;
-            return mult_res[W_INT-1:-W_FRAC];
-        end
+        mult_res = num_a * num_b;
+        return mult_res[W_INT-1:-W_FRAC];
+    endfunction
+
+    function automatic logic [W_INT-1:-W_FRAC] fixp_abs (
+        input var logic signed [W_INT-1:-W_FRAC] num
+    );
+        if (num < 0)
+            return -num;
+        else
+            return num;
     endfunction
 
 endpackage

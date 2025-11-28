@@ -14,6 +14,7 @@ module newton_inv
     input  var logic [W_INT-1:-W_FRAC] num_i,
 
     output var logic                   done_o,
+    output var logic                   busy_o,
     output var logic [W_INT-1:-W_FRAC] num_o
 );
 
@@ -148,8 +149,10 @@ end
 
 assign num_o = num_ff;
 
-always_ff @(posedge clk)
+always_ff @(posedge clk) begin
     done_o <= next_state == ST_RES_OUT;
+    busy_o <= !(next_state == ST_IDLE || next_state == ST_RES_OUT) ;
+end
 
 endmodule
 
