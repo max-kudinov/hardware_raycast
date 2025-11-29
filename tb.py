@@ -79,7 +79,7 @@ async def newton_inv(dut, recip):
     return fixp_to_float(int(dut.num_o.value))
 
 
-async def ray_height_calc(dut, x):
+async def line_height_calc(dut, x):
     ray_step = float_to_fixp(2 / FRAME_WIDTH)
     ray = x * ray_step - 1
     ray_x = fixp_to_float(ray)
@@ -139,7 +139,7 @@ async def game(dut):
     """Game loop"""
 
     for x in range(FRAME_WIDTH):
-        line_height, line_color = await ray_height_calc(dut, x)
+        line_height, line_color = await line_height_calc(dut, x)
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
         if start_pos < 0:
