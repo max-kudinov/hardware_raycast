@@ -260,8 +260,10 @@ end
 // ----------------------------------------------------------------------------
 
 always_ff @(posedge clk) begin
-    side_dist_x <= fixp_mult(side_perp_dist_x_ff, delta_dist_x_ff);
-    side_dist_y <= fixp_mult(side_perp_dist_y_ff, delta_dist_y_ff);
+    if (state == ST_CALC_SIDE_DIST) begin
+        side_dist_x <= fixp_mult(side_perp_dist_x_ff, delta_dist_x_ff);
+        side_dist_y <= fixp_mult(side_perp_dist_y_ff, delta_dist_y_ff);
+    end
 end
 
 endmodule
