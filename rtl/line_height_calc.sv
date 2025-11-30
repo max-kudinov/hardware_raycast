@@ -58,6 +58,9 @@ logic [W_INT-1:-W_FRAC] side_perp_dist_x_ff;
 logic [W_INT-1:-W_FRAC] side_perp_dist_y_next;
 logic [W_INT-1:-W_FRAC] side_perp_dist_y_ff;
 
+logic [W_INT-1:-W_FRAC] side_dist_x;
+logic [W_INT-1:-W_FRAC] side_dist_y;
+
 logic step_x_next;
 logic step_x_ff;
 logic step_y_next;
@@ -250,6 +253,15 @@ always_ff @(posedge clk) begin
     side_perp_dist_y_ff <= side_perp_dist_y_next;
     step_x_ff           <= step_x_next;
     step_y_ff           <= step_y_next;
+end
+
+// ----------------------------------------------------------------------------
+// Scale perpendicular distance to ray distance
+// ----------------------------------------------------------------------------
+
+always_ff @(posedge clk) begin
+    side_dist_x <= fixp_mult(side_perp_dist_x_ff, delta_dist_x_ff);
+    side_dist_y <= fixp_mult(side_perp_dist_y_ff, delta_dist_y_ff);
 end
 
 endmodule
