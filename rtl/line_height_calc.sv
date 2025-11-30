@@ -14,8 +14,10 @@ module line_height_calc
     input  var logic                          rst,
 
     input  var logic                          start_i,
-    input  var logic        [W_X_POS-1:0]     x_pos_i,
+    input  var logic        [W_X_POS-1:0]     px_x_i,
 
+    input  var logic        [W_INT-1:-W_FRAC] pos_x_i,
+    input  var logic        [W_INT-1:-W_FRAC] pos_y_i,
     input  var logic signed [W_INT-1:-W_FRAC] dir_x_i,
     input  var logic signed [W_INT-1:-W_FRAC] dir_y_i,
     input  var logic signed [W_INT-1:-W_FRAC] plane_x_i,
@@ -51,8 +53,23 @@ logic [W_INT-1:-W_FRAC] delta_dist_x_next;
 logic [W_INT-1:-W_FRAC] delta_dist_x_ff;
 logic [W_INT-1:-W_FRAC] delta_dist_y_next;
 logic [W_INT-1:-W_FRAC] delta_dist_y_ff;
+logic [W_INT-1:-W_FRAC] side_perp_dist_x_next;
+logic [W_INT-1:-W_FRAC] side_perp_dist_x_ff;
+logic [W_INT-1:-W_FRAC] side_perp_dist_y_next;
+logic [W_INT-1:-W_FRAC] side_perp_dist_y_ff;
 
-logic        [W_X_POS-1:0]     x_pos;
+logic step_x_next;
+logic step_x_ff;
+logic step_y_next;
+logic step_y_ff;
+
+logic [W_INT-1:-W_FRAC] pos_x;
+logic [W_INT-1:-W_FRAC] pos_y;
+
+logic [W_INT-1:0] map_x;
+logic [W_INT-1:0] map_y;
+
+logic        [W_X_POS-1:0]     px_x;
 logic signed [W_INT-1:-W_FRAC] dir_x;
 logic signed [W_INT-1:-W_FRAC] dir_y;
 logic signed [W_INT-1:-W_FRAC] ray_dir_x;
@@ -114,7 +131,13 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (state == ST_IDLE && start_i) begin
-        x_pos   <= x_pos_i;
+        px_x    <= px_x_i;
+
+        pos_x   <= pos_x_i;
+        pos_y   <= pos_y_i;
+
+        map_x   <= pos_x_i[W_INT-1:0];
+        map_y   <= pos_y_i[W_INT-1:0];
 
         dir_x   <= dir_x_i;
         dir_y   <= dir_y_i;
@@ -130,7 +153,7 @@ end
 
 always_ff @(posedge clk)
     if (state == ST_CALC_RAY_X)
-        ray_x <= (W_INT + W_FRAC)'(x_pos * RAY_STEP) - 1'b1;
+        ray_x <= (W_INT + W_FRAC)'(px_x * RAY_STEP) - 1'b1;
 
 // ----------------------------------------------------------------------------
 // Calculate ray dir x/y components
@@ -188,6 +211,45 @@ end
 always_ff @(posedge clk) begin
     delta_dist_x_ff <= delta_dist_x_next;
     delta_dist_y_ff <= delta_dist_y_next;
+end
+
+// ----------------------------------------------------------------------------
+// Calculation of distance between camera point and cell border in the direction
+// of the ray
+// ----------------------------------------------------------------------------
+
+always_comb begin
+    side_perp_dist_x_next = side_perp_dist_x_ff;
+    side_perp_dist_y_next = side_perp_dist_y_ff;
+    step_x_next           = step_x_ff;
+    step_y_next           = step_y_ff;
+
+    if (state == ST_CALC_PERP_DIST) begin
+
+        if (ray_dir_x > 0) begin
+            step_x_next           = '1;
+            side_perp_dist_x_next = (W_INT + W_FRAC)'(map_x) + 1'b1 - pos_x;
+        end else begin
+            step_x_next           = '0;
+            side_perp_dist_x_next = pos_x - (W_INT + W_FRAC)'(map_x);
+        end
+
+        if (ray_dir_y > 0) begin
+            step_y_next           = '1;
+            side_perp_dist_y_next = (W_INT + W_FRAC)'(map_y) + 1'b1 - pos_y;
+        end else begin
+            step_y_next           = '0;
+            side_perp_dist_y_next = pos_y - (W_INT + W_FRAC)'(map_y);
+        end
+
+    end
+end
+
+always_ff @(posedge clk) begin
+    side_perp_dist_x_ff <= side_perp_dist_x_next;
+    side_perp_dist_y_ff <= side_perp_dist_y_next;
+    step_x_ff           <= step_x_next;
+    step_y_ff           <= step_y_next;
 end
 
 endmodule
