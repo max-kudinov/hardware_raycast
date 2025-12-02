@@ -23,6 +23,10 @@ module line_height_calc
     input  var logic signed [W_INT-1:-W_FRAC] plane_x_i,
     input  var logic signed [W_INT-1:-W_FRAC] plane_y_i,
 
+    output var logic        [W_INT-1:0]       lookup_map_x_o,
+    output var logic        [W_INT-1:0]       lookup_map_y_o,
+    input  var logic                          wall_hit_i,
+
     output var logic                          done_o,
     output var logic        [W_HEIGHT-1:0]    height_o
 );
@@ -46,7 +50,8 @@ logic [W_INT-1:-W_FRAC] inv_num_out;
 logic inv_start;
 logic inv_done;
 logic inv_busy;
-logic dda_done;
+logic dda_start;
+logic ray_hit_side;
 logic wall_dist_zero;
 
 logic [W_INT-1:-W_FRAC] delta_dist_x_next;
@@ -58,8 +63,13 @@ logic [W_INT-1:-W_FRAC] side_perp_dist_x_ff;
 logic [W_INT-1:-W_FRAC] side_perp_dist_y_next;
 logic [W_INT-1:-W_FRAC] side_perp_dist_y_ff;
 
-logic [W_INT-1:-W_FRAC] side_dist_x;
-logic [W_INT-1:-W_FRAC] side_dist_y;
+logic [W_INT-1:-W_FRAC] init_side_dist_x;
+logic [W_INT-1:-W_FRAC] init_side_dist_y;
+logic [W_INT-1:-W_FRAC] dda_side_dist_x;
+logic [W_INT-1:-W_FRAC] dda_side_dist_y;
+
+logic [W_INT-1:-W_FRAC] perp_wall_dist_next;
+logic [W_INT-1:-W_FRAC] perp_wall_dist_ff;
 
 logic step_x_next;
 logic step_x_ff;
@@ -69,8 +79,8 @@ logic step_y_ff;
 logic [W_INT-1:-W_FRAC] pos_x;
 logic [W_INT-1:-W_FRAC] pos_y;
 
-logic [W_INT-1:0] map_x;
-logic [W_INT-1:0] map_y;
+logic [W_INT-1:0] init_map_x;
+logic [W_INT-1:0] init_map_y;
 
 logic        [W_X_POS-1:0]     px_x;
 logic signed [W_INT-1:-W_FRAC] dir_x;
@@ -112,8 +122,8 @@ always_comb begin
         ST_CALC_DELTA_DIST_Y: if (inv_done)       next_state = ST_CALC_PERP_DIST;
         ST_CALC_PERP_DIST:                        next_state = ST_CALC_SIDE_DIST;
         ST_CALC_SIDE_DIST:                        next_state = ST_RUN_DDA;
-        ST_RUN_DDA:           if (dda_done)       next_state = ST_CALC_WALL_DIST;
-        ST_CALC_WALL_DIST:    if (wall_dist_zero) next_state = ST_RES_OUT;
+        ST_RUN_DDA:           if (wall_hit_i)     next_state = ST_CALC_WALL_DIST;
+        ST_CALC_WALL_DIST:    if (wall_dist_zero) next_state = ST_CALC_LINE_HEIGHT;
                               else                next_state = ST_INV_WALL_DIST;
         ST_INV_WALL_DIST:     if (inv_done)       next_state = ST_CALC_LINE_HEIGHT;
         ST_CALC_LINE_HEIGHT:                      next_state = ST_RES_OUT;
@@ -134,19 +144,19 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (state == ST_IDLE && start_i) begin
-        px_x    <= px_x_i;
+        px_x       <= px_x_i;
 
-        pos_x   <= pos_x_i;
-        pos_y   <= pos_y_i;
+        pos_x      <= pos_x_i;
+        pos_y      <= pos_y_i;
 
-        map_x   <= pos_x_i[W_INT-1:0];
-        map_y   <= pos_y_i[W_INT-1:0];
+        init_map_x <= pos_x_i[W_INT-1:0];
+        init_map_y <= pos_y_i[W_INT-1:0];
 
-        dir_x   <= dir_x_i;
-        dir_y   <= dir_y_i;
+        dir_x      <= dir_x_i;
+        dir_y      <= dir_y_i;
 
-        plane_x <= plane_x_i;
-        plane_y <= plane_y_i;
+        plane_x    <= plane_x_i;
+        plane_y    <= plane_y_i;
     end
 end
 
@@ -231,18 +241,18 @@ always_comb begin
 
         if (ray_dir_x > 0) begin
             step_x_next           = '1;
-            side_perp_dist_x_next = (W_INT + W_FRAC)'(map_x) + 1'b1 - pos_x;
+            side_perp_dist_x_next = (W_INT + W_FRAC)'(init_map_x) + 1'b1 - pos_x;
         end else begin
             step_x_next           = '0;
-            side_perp_dist_x_next = pos_x - (W_INT + W_FRAC)'(map_x);
+            side_perp_dist_x_next = pos_x - (W_INT + W_FRAC)'(init_map_x);
         end
 
         if (ray_dir_y > 0) begin
             step_y_next           = '1;
-            side_perp_dist_y_next = (W_INT + W_FRAC)'(map_y) + 1'b1 - pos_y;
+            side_perp_dist_y_next = (W_INT + W_FRAC)'(init_map_y) + 1'b1 - pos_y;
         end else begin
             step_y_next           = '0;
-            side_perp_dist_y_next = pos_y - (W_INT + W_FRAC)'(map_y);
+            side_perp_dist_y_next = pos_y - (W_INT + W_FRAC)'(init_map_y);
         end
 
     end
@@ -261,9 +271,58 @@ end
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_SIDE_DIST) begin
-        side_dist_x <= fixp_mult(side_perp_dist_x_ff, delta_dist_x_ff);
-        side_dist_y <= fixp_mult(side_perp_dist_y_ff, delta_dist_y_ff);
+        init_side_dist_x <= fixp_mult(side_perp_dist_x_ff, delta_dist_x_ff);
+        init_side_dist_y <= fixp_mult(side_perp_dist_y_ff, delta_dist_y_ff);
     end
 end
+
+// ----------------------------------------------------------------------------
+// Calculate ray distance
+// ----------------------------------------------------------------------------
+
+dda dda (
+    .clk                (clk             ),
+    .rst                (rst             ),
+
+    .start_i            (dda_start       ),
+
+    .init_map_x_i       (init_map_x      ),
+    .init_map_y_i       (init_map_y      ),
+    .map_x_o            (lookup_map_x_o  ),
+    .map_y_o            (lookup_map_y_o  ),
+    .step_x_i           (step_x_ff       ),
+    .step_y_i           (step_y_ff       ),
+    .wall_hit_i         (wall_hit_i      ),
+
+    .init_side_dist_x_i (init_side_dist_x),
+    .init_side_dist_y_i (init_side_dist_y),
+    .side_dist_x_o      (dda_side_dist_x ),
+    .side_dist_y_o      (dda_side_dist_y ),
+    .delta_dist_x_i     (delta_dist_x_ff ),
+    .delta_dist_y_i     (delta_dist_y_ff ),
+    .hit_side_o         (ray_hit_side    )
+);
+
+always_ff @(posedge clk)
+    if (rst)
+        dda_start <= '0;
+    else
+        dda_start <= state == ST_CALC_SIDE_DIST;
+
+always_comb begin
+    perp_wall_dist_next = perp_wall_dist_ff;
+
+    if (state == ST_CALC_WALL_DIST) begin
+        if (ray_hit_side)
+            perp_wall_dist_next = dda_side_dist_y - delta_dist_y_ff;
+        else
+            perp_wall_dist_next = dda_side_dist_x - delta_dist_x_ff;
+    end
+end
+
+always_ff @(posedge clk)
+    perp_wall_dist_ff <= perp_wall_dist_next;
+
+assign wall_dist_zero = perp_wall_dist_next == '0;
 
 endmodule
