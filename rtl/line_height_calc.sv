@@ -33,6 +33,7 @@ module line_height_calc
 
 import fixedpoint::fixp_mult;
 import fixedpoint::fixp_abs;
+import fixedpoint::fixp_int_mult;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -53,6 +54,8 @@ logic inv_busy;
 logic dda_start;
 logic ray_hit_side;
 logic wall_dist_zero;
+
+logic [W_INT-1:-W_FRAC] inv_perp_wall_dist;
 
 logic [W_INT-1:-W_FRAC] delta_dist_x_next;
 logic [W_INT-1:-W_FRAC] delta_dist_x_ff;
@@ -219,6 +222,13 @@ always_comb begin
             delta_dist_y_next = (ray_dir_y == '0) ? '1 : inv_num_out;
     end
 
+    if (state == ST_INV_WALL_DIST) begin
+        inv_num_in = perp_wall_dist_ff;
+
+        if (!inv_busy && !inv_done)
+            inv_start = '1;
+    end
+
 end
 
 always_ff @(posedge clk) begin
@@ -324,5 +334,20 @@ always_ff @(posedge clk)
     perp_wall_dist_ff <= perp_wall_dist_next;
 
 assign wall_dist_zero = perp_wall_dist_next == '0;
+
+// ----------------------------------------------------------------------------
+// Calculate wall height
+// ----------------------------------------------------------------------------
+
+always_ff @(posedge clk)
+    if (state == ST_INV_WALL_DIST && inv_done)
+        inv_perp_wall_dist <= inv_num_out;
+
+always_ff @(posedge clk)
+    if (state == ST_CALC_LINE_HEIGHT)
+        if (perp_wall_dist_ff != '0)
+            height_o <= W_HEIGHT'(fixp_int_mult(FRAME_WIDTH, inv_perp_wall_dist));
+        else
+            height_o <= '1;
 
 endmodule
