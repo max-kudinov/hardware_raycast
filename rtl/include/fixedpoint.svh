@@ -8,8 +8,8 @@ package fixedpoint;
     localparam N_ITER = 5;
 
     function automatic logic [W_INT-1:-W_FRAC] fixp_mult (
-        input var logic [W_INT-1:-W_FRAC] num_a,
-        input var logic [W_INT-1:-W_FRAC] num_b
+        input logic [W_INT-1:-W_FRAC] num_a,
+        input logic [W_INT-1:-W_FRAC] num_b
     );
         // Bits are truncated after multiplication
         // verilator lint_off UNUSEDSIGNAL
@@ -18,6 +18,19 @@ package fixedpoint;
         mult_res = num_a * num_b;
         return mult_res[W_INT-1:-W_FRAC];
     endfunction
+
+    function automatic integer fixp_int_mult (
+        input integer                 num_a,
+        input logic [W_INT-1:-W_FRAC] num_b
+    );
+        // Bits are truncated after multiplication
+        // verilator lint_off UNUSEDSIGNAL
+        logic [31:-W_FRAC*2] mult_res;
+        // verilator lint_on UNUSEDSIGNAL
+        mult_res = {num_a, {W_FRAC {1'b0} } } * num_b;
+        return mult_res[31:0];
+    endfunction
+
 
     function automatic logic [W_INT-1:-W_FRAC] fixp_abs (
         input var logic signed [W_INT-1:-W_FRAC] num
