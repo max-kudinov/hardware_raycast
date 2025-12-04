@@ -358,3 +358,5 @@ always_ff @(posedge clk)
         done_o <= '0;
 
 endmodule
+
+`default_nettype wire
