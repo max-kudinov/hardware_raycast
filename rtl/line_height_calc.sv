@@ -28,7 +28,8 @@ module line_height_calc
     input  var logic                          wall_hit_i,
 
     output var logic                          done_o,
-    output var logic        [W_HEIGHT-1:0]    height_o
+    output var logic        [W_HEIGHT-1:0]    height_o,
+    output var logic                          ray_hit_side_o
 );
 
 import fixedpoint::fixp_mult;
@@ -52,7 +53,6 @@ logic inv_start;
 logic inv_done;
 logic inv_busy;
 logic dda_start;
-logic ray_hit_side;
 logic wall_dist_zero;
 
 logic [W_INT-1:-W_FRAC] inv_perp_wall_dist;
@@ -307,7 +307,7 @@ dda dda (
     .side_dist_y_o      (dda_side_dist_y ),
     .delta_dist_x_i     (delta_dist_x_ff ),
     .delta_dist_y_i     (delta_dist_y_ff ),
-    .hit_side_o         (ray_hit_side    )
+    .hit_side_o         (ray_hit_side_o  )
 );
 
 always_ff @(posedge clk)
@@ -320,7 +320,7 @@ always_comb begin
     perp_wall_dist_next = perp_wall_dist_ff;
 
     if (state == ST_CALC_WALL_DIST) begin
-        if (ray_hit_side)
+        if (ray_hit_side_o)
             perp_wall_dist_next = dda_side_dist_y - delta_dist_y_ff;
         else
             perp_wall_dist_next = dda_side_dist_x - delta_dist_x_ff;
