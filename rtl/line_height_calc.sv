@@ -49,13 +49,14 @@ localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
 logic signed [W_INT-1:-W_FRAC] ray_x;
 logic [W_INT-1:-W_FRAC] inv_num_in;
 logic [W_INT-1:-W_FRAC] inv_num_out;
-logic inv_start;
+logic inv_start_next;
+logic inv_start_ff;
 logic inv_done;
 logic inv_busy;
 logic dda_start;
-logic wall_dist_zero;
 
-logic [W_INT-1:-W_FRAC] inv_perp_wall_dist;
+logic [W_INT-1:-W_FRAC] inv_perp_wall_dist_next;
+logic [W_INT-1:-W_FRAC] inv_perp_wall_dist_ff;
 
 logic [W_INT-1:-W_FRAC] delta_dist_x_next;
 logic [W_INT-1:-W_FRAC] delta_dist_x_ff;
@@ -117,18 +118,17 @@ always_comb begin
     next_state = state;
 
     case (state)
-        ST_IDLE:              if (start_i)        next_state = ST_CALC_RAY_X;
-        ST_CALC_RAY_X:                            next_state = ST_CALC_RAY_DIR;
-        ST_CALC_RAY_DIR:                          next_state = ST_CALC_DELTA_DIST_X;
-        ST_CALC_DELTA_DIST_X: if (inv_done)       next_state = ST_CALC_DELTA_DIST_Y;
-        ST_CALC_DELTA_DIST_Y: if (inv_done)       next_state = ST_CALC_PERP_DIST;
-        ST_CALC_PERP_DIST:                        next_state = ST_CALC_SIDE_DIST;
-        ST_CALC_SIDE_DIST:                        next_state = ST_RUN_DDA;
-        ST_RUN_DDA:           if (wall_hit_i)     next_state = ST_CALC_WALL_DIST;
-        ST_CALC_WALL_DIST:    if (wall_dist_zero) next_state = ST_CALC_LINE_HEIGHT;
-                              else                next_state = ST_INV_WALL_DIST;
-        ST_INV_WALL_DIST:     if (inv_done)       next_state = ST_CALC_LINE_HEIGHT;
-        ST_CALC_LINE_HEIGHT:                      next_state = ST_IDLE;
+        ST_IDLE:              if (start_i)    next_state = ST_CALC_RAY_X;
+        ST_CALC_RAY_X:                        next_state = ST_CALC_RAY_DIR;
+        ST_CALC_RAY_DIR:                      next_state = ST_CALC_DELTA_DIST_X;
+        ST_CALC_DELTA_DIST_X: if (inv_done)   next_state = ST_CALC_DELTA_DIST_Y;
+        ST_CALC_DELTA_DIST_Y: if (inv_done)   next_state = ST_CALC_PERP_DIST;
+        ST_CALC_PERP_DIST:                    next_state = ST_CALC_SIDE_DIST;
+        ST_CALC_SIDE_DIST:                    next_state = ST_RUN_DDA;
+        ST_RUN_DDA:           if (wall_hit_i) next_state = ST_CALC_WALL_DIST;
+        ST_CALC_WALL_DIST:                    next_state = ST_INV_WALL_DIST;
+        ST_INV_WALL_DIST:     if (inv_done)   next_state = ST_CALC_LINE_HEIGHT;
+        ST_CALC_LINE_HEIGHT:                  next_state = ST_IDLE;
     endcase
 end
 
@@ -184,26 +184,38 @@ end
 // ----------------------------------------------------------------------------
 
 newton_inv newton_inv (
-    .clk     (clk        ),
-    .rst     (rst        ),
-    .start_i (inv_start  ),
-    .num_i   (inv_num_in ),
-    .done_o  (inv_done   ),
-    .busy_o  (inv_busy   ),
-    .num_o   (inv_num_out)
+    .clk     (clk         ),
+    .rst     (rst         ),
+    .start_i (inv_start_ff),
+    .num_i   (inv_num_in  ),
+    .done_o  (inv_done    ),
+    .busy_o  (inv_busy    ),
+    .num_o   (inv_num_out )
 );
 
 always_comb begin
-    inv_start         = '0;
-    inv_num_in        = '0;
-    delta_dist_x_next = delta_dist_x_ff;
-    delta_dist_y_next = delta_dist_y_ff;
+    unique0 case (state)
+        ST_CALC_RAY_DIR:                    inv_start_next = '1;
+        ST_CALC_DELTA_DIST_X: if (inv_done) inv_start_next = '1;
+        ST_CALC_WALL_DIST:                  inv_start_next = '1;
+        default:                            inv_start_next = '0;
+    endcase
+end
+
+always_ff @(posedge clk)
+    if (rst)
+        inv_start_ff <= '0;
+    else
+        inv_start_ff <= inv_start_next;
+
+always_comb begin
+    inv_num_in              = '0;
+    delta_dist_x_next       = delta_dist_x_ff;
+    delta_dist_y_next       = delta_dist_y_ff;
+    inv_perp_wall_dist_next = inv_perp_wall_dist_ff;
 
     if (state == ST_CALC_DELTA_DIST_X) begin
         inv_num_in = fixp_abs(ray_dir_x);
-
-        if (!inv_busy && !inv_done)
-            inv_start = '1;
 
         if (inv_done)
             delta_dist_x_next = (ray_dir_x == '0) ? '1 : inv_num_out;
@@ -212,9 +224,6 @@ always_comb begin
     if (state == ST_CALC_DELTA_DIST_Y) begin
         inv_num_in = fixp_abs(ray_dir_y);
 
-        if (!inv_busy && !inv_done)
-            inv_start = '1;
-
         if (inv_done)
             delta_dist_y_next = (ray_dir_y == '0) ? '1 : inv_num_out;
     end
@@ -222,8 +231,8 @@ always_comb begin
     if (state == ST_INV_WALL_DIST) begin
         inv_num_in = perp_wall_dist_ff;
 
-        if (!inv_busy && !inv_done)
-            inv_start = '1;
+        if (inv_done)
+            inv_perp_wall_dist_next = (perp_wall_dist_ff == '0) ? '1 : inv_num_out;
     end
 
 end
@@ -330,22 +339,17 @@ end
 always_ff @(posedge clk)
     perp_wall_dist_ff <= perp_wall_dist_next;
 
-assign wall_dist_zero = perp_wall_dist_next == '0;
-
 // ----------------------------------------------------------------------------
 // Calculate wall height
 // ----------------------------------------------------------------------------
 
 always_ff @(posedge clk)
     if (state == ST_INV_WALL_DIST && inv_done)
-        inv_perp_wall_dist <= inv_num_out;
+        inv_perp_wall_dist_ff <= inv_perp_wall_dist_next;
 
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
-        if (perp_wall_dist_ff != '0)
-            height_o <= W_HEIGHT'(fixp_int_mult(FRAME_WIDTH, inv_perp_wall_dist));
-        else
-            height_o <= '1;
+        height_o <= W_HEIGHT'(fixp_int_mult(FRAME_WIDTH, inv_perp_wall_dist_ff));
 
 always_ff @(posedge clk)
     if (rst)
