@@ -104,8 +104,7 @@ typedef enum {
     ST_RUN_DDA,
     ST_CALC_WALL_DIST,
     ST_INV_WALL_DIST,
-    ST_CALC_LINE_HEIGHT,
-    ST_RES_OUT
+    ST_CALC_LINE_HEIGHT
 } state_t;
 
 state_t state, next_state;
@@ -129,9 +128,7 @@ always_comb begin
         ST_CALC_WALL_DIST:    if (wall_dist_zero) next_state = ST_CALC_LINE_HEIGHT;
                               else                next_state = ST_INV_WALL_DIST;
         ST_INV_WALL_DIST:     if (inv_done)       next_state = ST_CALC_LINE_HEIGHT;
-        ST_CALC_LINE_HEIGHT:                      next_state = ST_RES_OUT;
-        ST_RES_OUT:           if (start_i)        next_state = ST_CALC_RAY_X;
-                              else                next_state = ST_IDLE;
+        ST_CALC_LINE_HEIGHT:                      next_state = ST_IDLE;
     endcase
 end
 
@@ -349,5 +346,13 @@ always_ff @(posedge clk)
             height_o <= W_HEIGHT'(fixp_int_mult(FRAME_WIDTH, inv_perp_wall_dist));
         else
             height_o <= '1;
+
+always_ff @(posedge clk)
+    if (rst)
+        done_o <= '0;
+    else if (state == ST_CALC_LINE_HEIGHT)
+        done_o <= '1;
+    else
+        done_o <= '0;
 
 endmodule
