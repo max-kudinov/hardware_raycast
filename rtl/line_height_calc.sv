@@ -52,7 +52,6 @@ logic [W_INT-1:-W_FRAC] inv_num_out;
 logic inv_start_next;
 logic inv_start_ff;
 logic inv_done;
-logic inv_busy;
 logic dda_start;
 
 logic [W_INT-1:-W_FRAC] inv_perp_wall_dist_next;
@@ -189,7 +188,6 @@ newton_inv newton_inv (
     .start_i (inv_start_ff),
     .num_i   (inv_num_in  ),
     .done_o  (inv_done    ),
-    .busy_o  (inv_busy    ),
     .num_o   (inv_num_out )
 );
 
