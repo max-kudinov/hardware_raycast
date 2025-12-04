@@ -48,6 +48,24 @@ import fixedpoint::fixp_int_mult;
 localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
 
 // ----------------------------------------------------------------------------
+// Local types declaration
+// ----------------------------------------------------------------------------
+
+typedef enum {
+    ST_IDLE,
+    ST_CALC_RAY_X,
+    ST_CALC_RAY_DIR,
+    ST_CALC_DELTA_DIST_X,
+    ST_CALC_DELTA_DIST_Y,
+    ST_CALC_PERP_DIST,
+    ST_CALC_SIDE_DIST,
+    ST_RUN_DDA,
+    ST_CALC_WALL_DIST,
+    ST_INV_WALL_DIST,
+    ST_CALC_LINE_HEIGHT
+} state_t;
+
+// ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
@@ -105,21 +123,9 @@ logic [W_INT-1:-W_FRAC]        pos_y;
 logic [W_INT-1:0]              init_map_x;
 logic [W_INT-1:0]              init_map_y;
 
-typedef enum {
-    ST_IDLE,
-    ST_CALC_RAY_X,
-    ST_CALC_RAY_DIR,
-    ST_CALC_DELTA_DIST_X,
-    ST_CALC_DELTA_DIST_Y,
-    ST_CALC_PERP_DIST,
-    ST_CALC_SIDE_DIST,
-    ST_RUN_DDA,
-    ST_CALC_WALL_DIST,
-    ST_INV_WALL_DIST,
-    ST_CALC_LINE_HEIGHT
-} state_t;
-
-state_t state, next_state;
+// FSM
+state_t                        state;
+state_t                        next_state;
 
 // ----------------------------------------------------------------------------
 // FSM
