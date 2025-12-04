@@ -14,15 +14,20 @@ module line_height_calc
     input  var logic                          rst,
 
     input  var logic                          start_i,
+    // Horizontal position of input pixel on the screen
     input  var logic        [W_X_POS-1:0]     px_x_i,
 
+    // Camera coordinates
     input  var logic        [W_INT-1:-W_FRAC] pos_x_i,
     input  var logic        [W_INT-1:-W_FRAC] pos_y_i,
+    // Camera direction
     input  var logic signed [W_INT-1:-W_FRAC] dir_x_i,
     input  var logic signed [W_INT-1:-W_FRAC] dir_y_i,
+    // Camera plane
     input  var logic signed [W_INT-1:-W_FRAC] plane_x_i,
     input  var logic signed [W_INT-1:-W_FRAC] plane_y_i,
 
+    // Map coordinates to check for a wall
     output var logic        [W_INT-1:0]       lookup_map_x_o,
     output var logic        [W_INT-1:0]       lookup_map_y_o,
     input  var logic                          wall_hit_i,
@@ -46,52 +51,59 @@ localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic signed [W_INT-1:-W_FRAC] ray_x;
-logic [W_INT-1:-W_FRAC] inv_num_in;
-logic [W_INT-1:-W_FRAC] inv_num_out;
-logic inv_start_next;
-logic inv_start_ff;
-logic inv_done;
-logic dda_start;
-
-logic [W_INT-1:-W_FRAC] inv_perp_wall_dist_next;
-logic [W_INT-1:-W_FRAC] inv_perp_wall_dist_ff;
-
-logic [W_INT-1:-W_FRAC] delta_dist_x_next;
-logic [W_INT-1:-W_FRAC] delta_dist_x_ff;
-logic [W_INT-1:-W_FRAC] delta_dist_y_next;
-logic [W_INT-1:-W_FRAC] delta_dist_y_ff;
-logic [W_INT-1:-W_FRAC] side_perp_dist_x_next;
-logic [W_INT-1:-W_FRAC] side_perp_dist_x_ff;
-logic [W_INT-1:-W_FRAC] side_perp_dist_y_next;
-logic [W_INT-1:-W_FRAC] side_perp_dist_y_ff;
-
-logic [W_INT-1:-W_FRAC] init_side_dist_x;
-logic [W_INT-1:-W_FRAC] init_side_dist_y;
-logic [W_INT-1:-W_FRAC] dda_side_dist_x;
-logic [W_INT-1:-W_FRAC] dda_side_dist_y;
-
-logic [W_INT-1:-W_FRAC] perp_wall_dist_next;
-logic [W_INT-1:-W_FRAC] perp_wall_dist_ff;
-
-logic step_x_next;
-logic step_x_ff;
-logic step_y_next;
-logic step_y_ff;
-
-logic [W_INT-1:-W_FRAC] pos_x;
-logic [W_INT-1:-W_FRAC] pos_y;
-
-logic [W_INT-1:0] init_map_x;
-logic [W_INT-1:0] init_map_y;
-
+// Ray direction for current screen pixel
 logic        [W_X_POS-1:0]     px_x;
+logic signed [W_INT-1:-W_FRAC] ray_x;
 logic signed [W_INT-1:-W_FRAC] dir_x;
 logic signed [W_INT-1:-W_FRAC] dir_y;
-logic signed [W_INT-1:-W_FRAC] ray_dir_x;
-logic signed [W_INT-1:-W_FRAC] ray_dir_y;
 logic signed [W_INT-1:-W_FRAC] plane_x;
 logic signed [W_INT-1:-W_FRAC] plane_y;
+logic signed [W_INT-1:-W_FRAC] ray_dir_x;
+logic signed [W_INT-1:-W_FRAC] ray_dir_y;
+
+// Inversion module
+logic [W_INT-1:-W_FRAC]        inv_num_in;
+logic [W_INT-1:-W_FRAC]        inv_num_out;
+logic                          inv_start_next;
+logic                          inv_start_ff;
+logic                          inv_done;
+
+// Ray distance in one map cell
+logic [W_INT-1:-W_FRAC]        delta_dist_x_next;
+logic [W_INT-1:-W_FRAC]        delta_dist_x_ff;
+logic [W_INT-1:-W_FRAC]        delta_dist_y_next;
+logic [W_INT-1:-W_FRAC]        delta_dist_y_ff;
+
+// Distance from the point to the cell border
+logic [W_INT-1:-W_FRAC]        side_perp_dist_x_next;
+logic [W_INT-1:-W_FRAC]        side_perp_dist_x_ff;
+logic [W_INT-1:-W_FRAC]        side_perp_dist_y_next;
+logic [W_INT-1:-W_FRAC]        side_perp_dist_y_ff;
+
+// DDA
+logic [W_INT-1:-W_FRAC]        init_side_dist_x;
+logic [W_INT-1:-W_FRAC]        init_side_dist_y;
+logic [W_INT-1:-W_FRAC]        dda_side_dist_x;
+logic [W_INT-1:-W_FRAC]        dda_side_dist_y;
+logic                          dda_start;
+
+// Ray step direction for DDA
+logic                          step_x_next;
+logic                          step_x_ff;
+logic                          step_y_next;
+logic                          step_y_ff;
+
+// Distance from the wall to the camera plane
+logic [W_INT-1:-W_FRAC]        perp_wall_dist_next;
+logic [W_INT-1:-W_FRAC]        perp_wall_dist_ff;
+logic [W_INT-1:-W_FRAC]        inv_perp_wall_dist_next;
+logic [W_INT-1:-W_FRAC]        inv_perp_wall_dist_ff;
+
+// Camera position
+logic [W_INT-1:-W_FRAC]        pos_x;
+logic [W_INT-1:-W_FRAC]        pos_y;
+logic [W_INT-1:0]              init_map_x;
+logic [W_INT-1:0]              init_map_y;
 
 typedef enum {
     ST_IDLE,
