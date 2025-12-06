@@ -40,6 +40,7 @@ module line_height_calc
 import fixedpoint::fixp_mult;
 import fixedpoint::fixp_abs;
 import fixedpoint::fixp_int_mult;
+import fixedpoint::fixp_int;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -183,7 +184,7 @@ end
 
 always_ff @(posedge clk)
     if (state == ST_CALC_RAY_X)
-        ray_x <= (W_INT + W_FRAC)'(px_x * RAY_STEP) - 1'b1;
+        ray_x <= (W_INT + W_FRAC)'(px_x * RAY_STEP) - fixp_int(W_INT'(1));
 
 // ----------------------------------------------------------------------------
 // Calculate ray dir x/y components
