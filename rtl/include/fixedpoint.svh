@@ -33,12 +33,18 @@ package fixedpoint;
 
 
     function automatic logic [W_INT-1:-W_FRAC] fixp_abs (
-        input var logic signed [W_INT-1:-W_FRAC] num
+        input logic signed [W_INT-1:-W_FRAC] num
     );
         if (num < 0)
             return -num;
         else
             return num;
+    endfunction
+
+    function automatic logic [W_INT-1:-W_FRAC] fixp_int (
+        input [W_INT-1:0] num
+    );
+        return { num, { W_FRAC {1'b0} } };
     endfunction
 
 endpackage
