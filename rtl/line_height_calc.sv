@@ -212,11 +212,12 @@ newton_inv newton_inv (
 );
 
 always_comb begin
+    inv_start_next = '0;
+
     unique0 case (state)
         ST_CALC_RAY_DIR:                    inv_start_next = '1;
         ST_CALC_DELTA_DIST_X: if (inv_done) inv_start_next = '1;
         ST_CALC_WALL_DIST:                  inv_start_next = '1;
-        default:                            inv_start_next = '0;
     endcase
 end
 
