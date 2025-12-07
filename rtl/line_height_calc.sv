@@ -276,18 +276,18 @@ always_comb begin
 
         if (ray_dir_x > 0) begin
             step_x_next           = '1;
-            side_perp_dist_x_next = (W_INT + W_FRAC)'(init_map_x) + 1'b1 - pos_x;
+            side_perp_dist_x_next = fixp_int(init_map_x) + 1'b1 - pos_x;
         end else begin
             step_x_next           = '0;
-            side_perp_dist_x_next = pos_x - (W_INT + W_FRAC)'(init_map_x);
+            side_perp_dist_x_next = pos_x - fixp_int(init_map_x);
         end
 
         if (ray_dir_y > 0) begin
             step_y_next           = '1;
-            side_perp_dist_y_next = (W_INT + W_FRAC)'(init_map_y) + 1'b1 - pos_y;
+            side_perp_dist_y_next = fixp_int(init_map_y) + 1'b1 - pos_y;
         end else begin
             step_y_next           = '0;
-            side_perp_dist_y_next = pos_y - (W_INT + W_FRAC)'(init_map_y);
+            side_perp_dist_y_next = pos_y - fixp_int(init_map_y);
         end
 
     end
