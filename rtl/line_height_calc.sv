@@ -38,8 +38,9 @@ module line_height_calc
 );
 
 import fixedpoint::fixp_mult;
-import fixedpoint::fixp_abs;
+import fixedpoint::fixp_signed_mult;
 import fixedpoint::fixp_int_mult;
+import fixedpoint::fixp_abs;
 import fixedpoint::fixp_int;
 
 // ----------------------------------------------------------------------------
@@ -192,8 +193,8 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_RAY_DIR) begin
-        ray_dir_x <= dir_x + fixp_mult(plane_x, ray_x);
-        ray_dir_y <= dir_y + fixp_mult(plane_y, ray_x);
+        ray_dir_x <= dir_x + fixp_signed_mult(plane_x, ray_x);
+        ray_dir_y <= dir_y + fixp_signed_mult(plane_y, ray_x);
     end
 end
 

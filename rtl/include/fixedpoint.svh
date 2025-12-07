@@ -19,6 +19,18 @@ package fixedpoint;
         return mult_res[W_INT-1:-W_FRAC];
     endfunction
 
+    function automatic logic [W_INT-1:-W_FRAC] fixp_signed_mult (
+        input logic signed [W_INT-1:-W_FRAC] num_a,
+        input logic signed [W_INT-1:-W_FRAC] num_b
+    );
+        // Bits are truncated after multiplication
+        // verilator lint_off UNUSEDSIGNAL
+        logic [W_INT*2-1:-W_FRAC*2] mult_res;
+        // verilator lint_on UNUSEDSIGNAL
+        mult_res = num_a * num_b;
+        return mult_res[W_INT-1:-W_FRAC];
+    endfunction
+
     function automatic integer fixp_int_mult (
         input integer                 num_a,
         input logic [W_INT-1:-W_FRAC] num_b
