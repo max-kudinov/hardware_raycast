@@ -106,6 +106,7 @@ logic [W_INT-1:-W_FRAC]        init_side_dist_y;
 logic [W_INT-1:-W_FRAC]        dda_side_dist_x;
 logic [W_INT-1:-W_FRAC]        dda_side_dist_y;
 logic                          dda_start;
+logic                          dda_done;
 
 // Ray step direction for DDA
 logic                          step_x_next;
@@ -137,17 +138,17 @@ always_comb begin
     next_state = state;
 
     case (state)
-        ST_IDLE:              if (start_i)    next_state = ST_CALC_RAY_X;
-        ST_CALC_RAY_X:                        next_state = ST_CALC_RAY_DIR;
-        ST_CALC_RAY_DIR:                      next_state = ST_CALC_DELTA_DIST_X;
-        ST_CALC_DELTA_DIST_X: if (inv_done)   next_state = ST_CALC_DELTA_DIST_Y;
-        ST_CALC_DELTA_DIST_Y: if (inv_done)   next_state = ST_CALC_PERP_DIST;
-        ST_CALC_PERP_DIST:                    next_state = ST_CALC_SIDE_DIST;
-        ST_CALC_SIDE_DIST:                    next_state = ST_RUN_DDA;
-        ST_RUN_DDA:           if (wall_hit_i) next_state = ST_CALC_WALL_DIST;
-        ST_CALC_WALL_DIST:                    next_state = ST_INV_WALL_DIST;
-        ST_INV_WALL_DIST:     if (inv_done)   next_state = ST_CALC_LINE_HEIGHT;
-        ST_CALC_LINE_HEIGHT:                  next_state = ST_IDLE;
+        ST_IDLE:              if (start_i)  next_state = ST_CALC_RAY_X;
+        ST_CALC_RAY_X:                      next_state = ST_CALC_RAY_DIR;
+        ST_CALC_RAY_DIR:                    next_state = ST_CALC_DELTA_DIST_X;
+        ST_CALC_DELTA_DIST_X: if (inv_done) next_state = ST_CALC_DELTA_DIST_Y;
+        ST_CALC_DELTA_DIST_Y: if (inv_done) next_state = ST_CALC_PERP_DIST;
+        ST_CALC_PERP_DIST:                  next_state = ST_CALC_SIDE_DIST;
+        ST_CALC_SIDE_DIST:                  next_state = ST_RUN_DDA;
+        ST_RUN_DDA:           if (dda_done) next_state = ST_CALC_WALL_DIST;
+        ST_CALC_WALL_DIST:                  next_state = ST_INV_WALL_DIST;
+        ST_INV_WALL_DIST:     if (inv_done) next_state = ST_CALC_LINE_HEIGHT;
+        ST_CALC_LINE_HEIGHT:                next_state = ST_IDLE;
     endcase
 end
 
@@ -335,7 +336,8 @@ dda dda (
     .side_dist_y_o      (dda_side_dist_y ),
     .delta_dist_x_i     (delta_dist_x_ff ),
     .delta_dist_y_i     (delta_dist_y_ff ),
-    .hit_side_o         (ray_hit_side_o  )
+    .hit_side_o         (ray_hit_side_o  ),
+    .done_o             (dda_done        )
 );
 
 always_ff @(posedge clk)

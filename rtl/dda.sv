@@ -25,7 +25,8 @@ module dda
     output var logic [W_INT-1:-W_FRAC] side_dist_y_o,
     input  var logic [W_INT-1:-W_FRAC] delta_dist_x_i,
     input  var logic [W_INT-1:-W_FRAC] delta_dist_y_i,
-    output var logic                   hit_side_o
+    output var logic                   hit_side_o,
+    output var logic                   done_o
 );
 
 // ----------------------------------------------------------------------------
@@ -71,7 +72,7 @@ always_ff @(posedge clk) begin
         map_y_o       <= init_map_y_i;
     end
 
-    if (state == ST_CALC_DDA) begin
+    if (state == ST_CALC_DDA && !wall_hit_i) begin
         if (side_dist_x_o < side_dist_y_o) begin
             side_dist_x_o <= side_dist_x_o + delta_dist_x_i;
             map_x_o       <= step_x_i ? (map_x_o + 1'b1) : (map_x_o - 1'b1);
@@ -83,6 +84,12 @@ always_ff @(posedge clk) begin
         end
     end
 end
+
+always_ff @(posedge clk)
+    if (rst)
+        done_o <= '0;
+    else
+        done_o <= state == ST_CALC_DDA && wall_hit_i;
 
 endmodule
 
