@@ -180,7 +180,7 @@ def line_height_calc_model(x):
     ray_dir_y = (dir_y + plane_y * ray_x).resize(T)
 
     if ray_dir_x == 0:
-        delta_dist_x = fixp_init(val=2**(W_INT-2))
+        delta_dist_x = fixp_init(val=MAP_WIDTH)
     else:
         if ray_dir_x > 0:
             delta_dist_x = inv_model(ray_dir_x)
@@ -188,7 +188,7 @@ def line_height_calc_model(x):
             delta_dist_x = inv_model(-ray_dir_x)
 
     if ray_dir_y == 0:
-        delta_dist_y = fixp_init(val=2**(W_INT-2))
+        delta_dist_y = fixp_init(val=MAP_HEIGHT)
     else:
         if ray_dir_y > 0:
             delta_dist_y = inv_model(ray_dir_y)
@@ -216,11 +216,11 @@ def line_height_calc_model(x):
 
     while True:
         if (side_dist_x < side_dist_y):
-            side_dist_x = (side_dist_x + delta_dist_x).resize(T)
+            side_dist_x = fixp_init(val=side_dist_x + delta_dist_x)
             map_x += step_x
             hit_side = 0
         else:
-            side_dist_y = (side_dist_y + delta_dist_y).resize(T)
+            side_dist_y = fixp_init(val=side_dist_y + delta_dist_y)
             map_y += step_y
             hit_side = 1
 
