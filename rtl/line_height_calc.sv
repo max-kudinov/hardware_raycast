@@ -6,9 +6,10 @@ module line_height_calc
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
-    parameter W_X_POS     = 8,
-    parameter W_HEIGHT    = 8,
-    parameter FRAME_WIDTH = 640
+    parameter W_X_POS      = 8,
+    parameter W_HEIGHT     = 8,
+    parameter FRAME_WIDTH  = 640,
+    parameter FRAME_HEIGHT = 480
 ) (
     input  var logic                          clk,
     input  var logic                          rst,
@@ -370,7 +371,10 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
-        height_o <= W_HEIGHT'(fixp_int_mult(FRAME_WIDTH, inv_perp_wall_dist_ff));
+        if (inv_perp_wall_dist_ff[W_INT-1:0] == '0)
+            height_o <= W_HEIGHT'(fixp_int_mult(FRAME_HEIGHT, inv_perp_wall_dist_ff));
+        else
+            height_o <= W_HEIGHT'(FRAME_HEIGHT);
 
 always_ff @(posedge clk)
     if (rst)
