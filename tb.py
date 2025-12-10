@@ -15,11 +15,6 @@ MAP_HEIGHT = 20
 # W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
 # W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
 
-W_INT = 6
-W_FRAC = 15
-
-T = (W_INT, W_FRAC)
-
 FP_MODE = True
 
 W_HEIGHT = int(cocotb.top.W_HEIGHT.value)
@@ -163,7 +158,7 @@ def line_height_calc_model(x):
     ray_dir_y = fixp(val=dir_y + plane_y * ray_x, signed=True)
 
     if ray_dir_x == 0:
-        delta_dist_x = fixp(val=FRAME_WIDTH)
+        delta_dist_x = fixp(val=255)
     else:
         if ray_dir_x > 0:
             delta_dist_x = inv_model(ray_dir_x)
@@ -171,7 +166,7 @@ def line_height_calc_model(x):
             delta_dist_x = inv_model(-ray_dir_x)
 
     if ray_dir_y == 0:
-        delta_dist_y = fixp(val=FRAME_HEIGHT)
+        delta_dist_y = fixp(val=255)
     else:
         if ray_dir_y > 0:
             delta_dist_y = inv_model(ray_dir_y)
@@ -211,10 +206,10 @@ def line_height_calc_model(x):
             break
 
     if hit_side == 0:
-        perp_wall_dist = (side_dist_x - delta_dist_x).resize(T)
+        perp_wall_dist = fixp(val=side_dist_x - delta_dist_x)
         line_color = (255, 255, 255)
     else:
-        perp_wall_dist = (side_dist_y - delta_dist_y).resize(T)
+        perp_wall_dist = fixp(val=side_dist_y - delta_dist_y)
         line_color = (128, 128, 128)
 
     if perp_wall_dist == 0:
@@ -222,8 +217,8 @@ def line_height_calc_model(x):
     else:
         inv_perp_wall_dist = inv_model(perp_wall_dist)
         if int(inv_perp_wall_dist) == 0:
-            scaled_height = (fixp_frame_height * inv_perp_wall_dist).resize(
-                (W_HEIGHT+1, W_FRAC)
+            scaled_height = fixp(
+                val=fixp_frame_height * inv_perp_wall_dist, int_bits=W_HEIGHT+1
             )
             return (int(scaled_height), line_color)
         else:
