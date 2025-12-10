@@ -96,21 +96,21 @@ async def newton_inv(dut, recip):
 
 def inv_model(num):
     cnt = 0
-    approx = fixp_init(val=1)
+    approx = fixp(val=1)
 
     while num > 1:
-        num = (num / 2).resize(T)
+        num = fixp(val=(num / 2))
         cnt += 1
 
     for _ in range(8):
-        approx = (approx * (2 - num * approx)).resize(T)
+        approx = fixp(val=approx * (2 - num * approx))
 
-    approx = (approx / (2**cnt)).resize(T)
+    approx = fixp(val=approx / (2**cnt))
     return approx
 
 
-def fixp_init(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
-    fixp = FpBinary(
+def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
+    fp_value = FpBinary(
         int_bits=int_bits,
         frac_bits=frac_bits,
         signed=signed,
@@ -119,24 +119,16 @@ def fixp_init(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
 
     return FpBinarySwitchable(
         fp_mode=FP_MODE,
-        fp_value=fixp,
+        fp_value=fp_value,
         float_value=val
     )
 
 
 def fixp_max_val():
-    return fixp_init(val=(2**W_INT - 1 + ((2**W_FRAC - 1) / (2**W_FRAC))))
+    return fixp(val=(2**W_INT - 1 + ((2**W_FRAC - 1) / (2**W_FRAC))))
 
 
-fixp_frame_height = fixp_init(val=FRAME_HEIGHT, int_bits=W_HEIGHT)
-ray_dir_x = fixp_init(signed=True)
-ray_dir_y = fixp_init(signed=True)
-delta_dist_x = fixp_init()
-delta_dist_y = fixp_init()
-perp_wall_dist = fixp_init()
-inv_perp_wall_dist = fixp_init()
-side_dist_x = fixp_init()
-side_dist_y = fixp_init()
+fixp_frame_height = fixp(val=FRAME_HEIGHT, int_bits=W_HEIGHT)
 
 
 async def line_height_calc(dut, x):
@@ -165,22 +157,13 @@ async def line_height_calc(dut, x):
 
 
 def line_height_calc_model(x):
-    global ray_dir_x
-    global ray_dir_y
-    global perp_wall_dist
-    global inv_perp_wall_dist
-    global side_dist_x
-    global side_dist_y
-    global delta_dist_x
-    global delta_dist_y
+    ray_x = fixp(val=(x * ray_step / 2**W_FRAC - 1), signed=True)
 
-    ray_x = fixp_init(val=(x * ray_step / 2**W_FRAC - 1), signed=True)
-
-    ray_dir_x = (dir_x + plane_x * ray_x).resize(T)
-    ray_dir_y = (dir_y + plane_y * ray_x).resize(T)
+    ray_dir_x = fixp(val=dir_x + plane_x * ray_x, signed=True)
+    ray_dir_y = fixp(val=dir_y + plane_y * ray_x, signed=True)
 
     if ray_dir_x == 0:
-        delta_dist_x = fixp_init(val=MAP_WIDTH)
+        delta_dist_x = fixp(val=FRAME_WIDTH)
     else:
         if ray_dir_x > 0:
             delta_dist_x = inv_model(ray_dir_x)
@@ -188,7 +171,7 @@ def line_height_calc_model(x):
             delta_dist_x = inv_model(-ray_dir_x)
 
     if ray_dir_y == 0:
-        delta_dist_y = fixp_init(val=MAP_HEIGHT)
+        delta_dist_y = fixp(val=FRAME_HEIGHT)
     else:
         if ray_dir_y > 0:
             delta_dist_y = inv_model(ray_dir_y)
@@ -200,27 +183,27 @@ def line_height_calc_model(x):
 
     if ray_dir_x > 0:
         step_x = 1
-        side_dist_x = ((map_x + 1 - pos_x) * delta_dist_x).resize(T)
+        side_dist_x = fixp(val=(map_x + 1 - pos_x) * delta_dist_x)
     else:
         step_x = -1
-        side_dist_x = ((pos_x - map_x) * delta_dist_x).resize(T)
+        side_dist_x = fixp(val=(pos_x - map_x) * delta_dist_x)
 
     if ray_dir_y > 0:
         step_y = 1
-        side_dist_y = ((map_y + 1 - pos_y) * delta_dist_y).resize(T)
+        side_dist_y = fixp(val=(map_y + 1 - pos_y) * delta_dist_y)
     else:
         step_y = -1
-        side_dist_y = ((pos_y - map_y) * delta_dist_y).resize(T)
+        side_dist_y = fixp(val=(pos_y - map_y) * delta_dist_y)
 
     hit_side = 0
 
     while True:
         if (side_dist_x < side_dist_y):
-            side_dist_x = fixp_init(val=side_dist_x + delta_dist_x)
+            side_dist_x = fixp(val=side_dist_x + delta_dist_x)
             map_x += step_x
             hit_side = 0
         else:
-            side_dist_y = fixp_init(val=side_dist_y + delta_dist_y)
+            side_dist_y = fixp(val=side_dist_y + delta_dist_y)
             map_y += step_y
             hit_side = 1
 
