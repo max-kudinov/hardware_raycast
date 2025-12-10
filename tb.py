@@ -102,7 +102,7 @@ def inv_model(num):
         num = (num / 2).resize(T)
         cnt += 1
 
-    for _ in range(5):
+    for _ in range(8):
         approx = (approx * (2 - num * approx)).resize(T)
 
     approx = (approx / (2**cnt)).resize(T)
