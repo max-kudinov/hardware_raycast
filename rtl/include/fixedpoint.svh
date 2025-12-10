@@ -3,9 +3,9 @@
 
 package fixedpoint;
 
-    localparam W_INT  = 6;
-    localparam W_FRAC = 15;
-    localparam N_ITER = 5;
+    localparam W_INT  = 9;
+    localparam W_FRAC = 10;
+    localparam N_ITER = 8;
 
     function automatic logic [W_INT-1:-W_FRAC] fixp_mult (
         input logic [W_INT-1:-W_FRAC] num_a,

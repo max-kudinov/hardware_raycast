@@ -12,8 +12,8 @@ FRAME_HEIGHT = 480
 MAP_WIDTH = 20
 MAP_HEIGHT = 20
 
-# W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
-# W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
+W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
+W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
 
 FP_MODE = True
 
