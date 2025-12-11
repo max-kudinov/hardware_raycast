@@ -119,10 +119,6 @@ def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
     )
 
 
-def fixp_max_val():
-    return fixp(val=(2**W_INT - 1 + ((2**W_FRAC - 1) / (2**W_FRAC))))
-
-
 fixp_frame_height = fixp(val=FRAME_HEIGHT, int_bits=W_HEIGHT)
 
 
