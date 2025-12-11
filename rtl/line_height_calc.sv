@@ -379,10 +379,8 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (rst)
         done_o <= '0;
-    else if (state == ST_CALC_LINE_HEIGHT)
-        done_o <= '1;
     else
-        done_o <= '0;
+        done_o <= state == ST_CALC_LINE_HEIGHT;
 
 endmodule
 
