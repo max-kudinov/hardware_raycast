@@ -11,7 +11,7 @@ bit rst;
 logic [W_INT-1:-W_FRAC] num;
 logic [W_NUM-1:0] res;
 logic start, done;
-initial num = {W_INT'(13), W_FRAC'('b00100000)};
+initial num = '0;
 
 always #1 clk = !clk;
 
@@ -43,11 +43,7 @@ initial begin
     $finish;
 end
 
-newton_inv #(
-    .W_INT  (W_INT ),
-    .W_FRAC (W_FRAC),
-    .N_ITER (N_ITER)
-) DUT (
+newton_inv DUT (
     .clk     (clk),
     .rst     (rst),
 
