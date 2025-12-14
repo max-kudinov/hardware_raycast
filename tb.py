@@ -51,24 +51,24 @@ game_map = [
 
 
 def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
-    fp_value = FpBinary(
-        int_bits=int_bits,
-        frac_bits=frac_bits,
-        signed=signed,
-        value=val
-    )
 
-    return FpBinarySwitchable(
-        fp_mode=FP_MODE,
-        fp_value=fixp_round(fp_value),
-        float_value=val
-    )
+    if type(val) is FpBinarySwitchable:
+        return val.resize(
+            format=(int_bits, frac_bits), round_mode=RoundingEnum.direct_neg_inf
+        )
+    else:
+        fp_value = FpBinary(
+            int_bits=int_bits,
+            frac_bits=frac_bits,
+            signed=signed,
+            value=val
+        )
 
-
-def fixp_round(num):
-    return num.resize(
-        format=(W_INT, W_FRAC), round_mode=RoundingEnum.direct_neg_inf
-    )
+        return FpBinarySwitchable(
+            fp_mode=FP_MODE,
+            fp_value=fp_value,
+            float_value=val
+        )
 
 
 # Player position
@@ -114,15 +114,19 @@ async def newton_inv(dut, recip):
 def inv_model(num):
     cnt = 0
     approx = fixp(val=1)
+    product = fixp(val=0)
+    sub = fixp(val=0)
 
     while num > 1:
-        num = fixp(val=fixp_round(num / 2))
+        num = fixp(val=num / 2)
         cnt += 1
 
     for _ in range(8):
-        approx = fixp(val=fixp_round(approx * fixp_round(2 - num * approx)))
+        product = fixp(val=num * approx)
+        sub = fixp(val=2 - product)
+        approx = fixp(val=approx * sub)
 
-    approx = fixp(val=fixp_round(approx / (2**cnt)))
+    approx = fixp(val=approx / (2**cnt))
     return approx
 
 
@@ -190,7 +194,7 @@ def line_height_calc_model(x):
     ray_dir_y = fixp(val=dir_y + plane_y * ray_x, signed=True)
 
     if ray_dir_x == 0:
-        delta_dist_x = fixp(val=255)
+        delta_dist_x = fixp(val=2**(W_INT-1)-1)
     else:
         if ray_dir_x > 0:
             delta_dist_x = inv_model(ray_dir_x)
@@ -198,7 +202,7 @@ def line_height_calc_model(x):
             delta_dist_x = inv_model(-ray_dir_x)
 
     if ray_dir_y == 0:
-        delta_dist_y = fixp(val=255)
+        delta_dist_y = fixp(val=2**(W_INT-1)-1)
     else:
         if ray_dir_y > 0:
             delta_dist_y = inv_model(ray_dir_y)
@@ -271,22 +275,12 @@ async def game(dut):
             print(f"Expected {line_height_model}, got: {line_height}")
             p_wall_dist = fixp_to_float(int(dut.line_height_calc.perp_wall_dist_ff.value))
             inv_p_wall_dist = fixp_to_float(int(dut.line_height_calc.inv_perp_wall_dist_ff.value))
-            print(f"Model ray_x: {ray_x}")
-            print(f"Model dir_x: {dir_x}")
-            print(f"model pos_x: {pos_x}")
-            print(f"model pos_y: {pos_y}")
-            print(f"Model map_x: {map_x}")
-            print(f"Model map_y: {map_y}")
-            print(f"model dda_side_dist_x: {dda_side_dist_x}")
-            print(f"model dda_side_dist_y: {dda_side_dist_y}")
             print(f"Model ray_dir_x: {ray_dir_x}")
-            print(f"Model ray_dir_y: {ray_dir_y}")
-            print(f"Model side_dist_x: {side_dist_x}")
-            print(f"Model side_dist_y: {side_dist_y}")
+            print(f"Model ray_dir_y: {ray_dir_y}\n")
             print(f"Model delta_dist_x: {delta_dist_x}")
-            print(f"Model delta_dist_y: {delta_dist_y}")
+            print(f"Model delta_dist_y: {delta_dist_y}\n")
             print(f"DUT perp_wall_dist: {p_wall_dist}")
-            print(f"Model perp_wall_dist: {perp_wall_dist}")
+            print(f"Model perp_wall_dist: {perp_wall_dist}\n")
             print(f"DUT inv_perp_wall_dist: {inv_p_wall_dist}")
             print(f"Model inv_perp_wall_dist: {inv_perp_wall_dist}")
             exit(0)
@@ -316,8 +310,8 @@ def controls():
     old_time = time
     time = pg.time.get_ticks()
     frame_time = (time - old_time) / 1000.0
-    move_speed = frame_time * 4.0
-    rot_speed = frame_time * 2.0
+    move_speed = 0.3 * 4.0
+    rot_speed = 0.3 * 2.0
     fps = 1 / frame_time
     font.render_to(surface, (20, 20), f"FPS: {str(fps)}", (0, 255, 0))
     font.render_to(surface, (20, 50), f"pos_x: {pos_x}", (0, 255, 0))
