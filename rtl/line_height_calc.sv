@@ -48,7 +48,8 @@ import fixedpoint::fixp_int;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam RAY_STEP = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
+localparam RAY_STEP  = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
+localparam DELTA_MAX = fixp_int(W_INT'(2**(W_INT-1) - 1));
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -239,14 +240,14 @@ always_comb begin
         inv_num_in = fixp_abs(ray_dir_x);
 
         if (inv_done)
-            delta_dist_x_next = (ray_dir_x == '0) ? '1 : inv_num_out;
+            delta_dist_x_next = (ray_dir_x == '0) ? DELTA_MAX : inv_num_out;
     end
 
     if (state == ST_CALC_DELTA_DIST_Y) begin
         inv_num_in = fixp_abs(ray_dir_y);
 
         if (inv_done)
-            delta_dist_y_next = (ray_dir_y == '0) ? '1 : inv_num_out;
+            delta_dist_y_next = (ray_dir_y == '0) ? DELTA_MAX : inv_num_out;
     end
 
     if (state == ST_INV_WALL_DIST) begin
