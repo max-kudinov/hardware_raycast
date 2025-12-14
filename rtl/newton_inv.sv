@@ -105,7 +105,7 @@ always_ff @(posedge clk)
         shift_amount <= '0;
 
         for (int i = 0; i < W_INT; i++) begin
-            if (num_ff[i]) shift_amount <= W_SHIFT'(i);
+            if (num_ff[i]) shift_amount <= W_SHIFT'(i + 1);
         end
     end
 
