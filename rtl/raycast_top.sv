@@ -40,9 +40,10 @@ logic [W_INT-1:0] map_x;
 logic [W_INT-1:0] map_y;
 // verilator lint_on UNUSEDSIGNAL
 
-// verilator lint_off ascrange
+// Big-endian to match Python list order
+// verilator lint_off ASCRANGE
 logic [0:MAP_SIDE-1] map [MAP_SIDE];
-// verilator lint_on ascrange
+// verilator lint_on ASCRANGE
 logic wall_hit;
 
 initial begin
@@ -72,7 +73,7 @@ end
 
 
 // verilator lint_off WIDTHTRUNC
-assign wall_hit = map[map_x][map_y];
+assign wall_hit = map[map_y][map_x];
 // verilator lint_on WIDTHTRUNC
 
 
