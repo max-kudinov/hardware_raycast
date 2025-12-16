@@ -165,8 +165,7 @@ async def line_height_calc(dut, x):
     await RisingEdge(dut.clk)
     dut.start_i.value = 0
 
-    while not dut.done_o.value:
-        await RisingEdge(dut.clk)
+    await RisingEdge(dut.done_o)
 
     if dut.ray_hit_side_o.value:
         line_color = (128, 128, 128)
