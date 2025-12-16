@@ -352,15 +352,15 @@ def controls():
     # Forward
     if keys[pg.K_w]:
         if game_map[int(pos_y)][int(pos_x + dir_x * move_speed)] != 1:
-            pos_x = fixp(val=pos_x + dir_x * move_speed)
+            pos_x = fixp_unsigned(val=pos_x + dir_x * move_speed)
         if game_map[int(pos_y + dir_y * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp(val=pos_y + dir_y * move_speed)
+            pos_y = fixp_unsigned(val=pos_y + dir_y * move_speed)
     # Backwards
     if keys[pg.K_s]:
         if game_map[int(pos_y)][int(pos_x - dir_x * move_speed)] != 1:
-            pos_x = fixp(val=pos_x - dir_x * move_speed)
+            pos_x = fixp_unsigned(val=pos_x - dir_x * move_speed)
         if game_map[int(pos_y - dir_y * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp(val=pos_y - dir_y * move_speed)
+            pos_y = fixp_unsigned(val=pos_y - dir_y * move_speed)
     # Rotate right
     if keys[pg.K_d]:
         old_dir_x = fixp(val=dir_x, signed=True)
