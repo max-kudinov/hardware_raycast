@@ -71,6 +71,21 @@ def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
         )
 
 
+def fixp_unsigned(int_bits=W_INT, frac_bits=W_FRAC, val=0):
+    fp_value = FpBinary(
+        int_bits=int_bits,
+        frac_bits=frac_bits,
+        signed=False,
+        value=val
+    )
+
+    return FpBinarySwitchable(
+        fp_mode=FP_MODE,
+        fp_value=fp_value,
+        float_value=val
+    )
+
+
 # Player position
 pos_x = fixp(val=10)
 pos_y = fixp(val=10)
@@ -111,22 +126,24 @@ async def newton_inv(dut, recip):
     return fixp_to_float(int(dut.num_o.value))
 
 
-def inv_model(num):
+def inv_model(num_in):
+    num = fixp_unsigned(val=num_in)
     cnt = 0
     approx = fixp(val=1)
     product = fixp(val=0)
     sub = fixp(val=0)
+    fixp_2 = fixp(val=2)
 
     while num > 1:
-        num = fixp(val=num / 2)
+        num = fixp(val=num >> 1)
         cnt += 1
 
     for _ in range(8):
         product = fixp(val=num * approx)
-        sub = fixp(val=2 - product)
+        sub = fixp(val=fixp_2 - product)
         approx = fixp(val=approx * sub)
 
-    approx = fixp(val=approx / (2**cnt))
+    approx = fixp(val=approx >> cnt)
     return approx
 
 
@@ -209,24 +226,29 @@ def line_height_calc_model(x):
         else:
             delta_dist_y = inv_model(-ray_dir_y)
 
-    map_x = int(pos_x)
-    map_y = int(pos_y)
+    # Integer numbers, workaround to make side_dist_* unsigned
+    map_x = fixp(val=int(pos_x))
+    map_y = fixp(val=int(pos_y))
+    one = fixp(val=1)
 
     if ray_dir_x > 0:
         step_x = 1
-        side_dist_x = fixp(val=(map_x + 1 - pos_x) * delta_dist_x)
+        side_dist_x = fixp(val=(map_x + one - pos_x) * delta_dist_x)
     else:
         step_x = -1
         side_dist_x = fixp(val=(pos_x - map_x) * delta_dist_x)
 
     if ray_dir_y > 0:
         step_y = 1
-        side_dist_y = fixp(val=(map_y + 1 - pos_y) * delta_dist_y)
+        side_dist_y = fixp(val=(map_y + one - pos_y) * delta_dist_y)
     else:
         step_y = -1
         side_dist_y = fixp(val=(pos_y - map_y) * delta_dist_y)
 
     hit_side = 0
+
+    map_x = int(pos_x)
+    map_y = int(pos_y)
 
     while True:
         if (side_dist_x < side_dist_y):
