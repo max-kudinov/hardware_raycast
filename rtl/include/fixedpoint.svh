@@ -3,7 +3,7 @@
 
 package fixedpoint;
 
-    localparam W_INT  = 9;
+    localparam W_INT  = 8;
     localparam W_FRAC = 10;
     localparam N_ITER = 8;
 
