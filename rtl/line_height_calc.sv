@@ -70,6 +70,15 @@ typedef enum {
 } state_t;
 
 // ----------------------------------------------------------------------------
+// Elaboration checks
+// ----------------------------------------------------------------------------
+
+if (RAY_STEP == 0) begin : gen_elab_check
+    $error("Incompatible input parameters: RAY_STEP is 0.");
+    $error("Either increase W_FRAC or decrease FRAME_WIDTH");
+end
+
+// ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
