@@ -14,6 +14,7 @@ MAP_HEIGHT = 20
 
 W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
 W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
+N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
 
 FP_MODE = True
 
@@ -138,7 +139,7 @@ def inv_model(num_in):
         num = fixp(val=num >> 1)
         cnt += 1
 
-    for _ in range(8):
+    for _ in range(N_ITER):
         product = fixp(val=num * approx)
         sub = fixp(val=fixp_2 - product)
         approx = fixp(val=approx * sub)
