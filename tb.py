@@ -332,8 +332,8 @@ def controls():
     old_time = time
     time = pg.time.get_ticks()
     frame_time = (time - old_time) / 1000.0
-    move_speed = 0.3 * 4.0
-    rot_speed = 0.3 * 2.0
+    move_speed = 0.2 * 4.0
+    rot_speed = 0.2 * 2.0
     fps = 1 / frame_time
     font.render_to(surface, (20, 20), f"FPS: {str(fps)}", (0, 255, 0))
     font.render_to(surface, (20, 50), f"pos_x: {pos_x}", (0, 255, 0))
