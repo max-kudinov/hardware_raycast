@@ -102,7 +102,13 @@ plane_y = fixp(val=-0.62, signed=True)
 time = 0
 old_time = 0
 
-ray_step = int(2.0 / FRAME_WIDTH * (2**(W_FRAC)))
+step = 2.0 / FRAME_WIDTH * 2**(W_FRAC)
+
+# Mimic rounding of int cast in SystemVerilog
+if step < 0.5:
+    ray_step = 0
+else:
+    ray_step = round(step)
 
 
 def float_to_fixp(num_float):
