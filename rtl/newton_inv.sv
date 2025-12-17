@@ -23,8 +23,6 @@ module newton_inv
 localparam W_SHIFT       = $clog2(W_INT + 1);
 localparam N_ITER_CYCLES = fixedpoint::N_ITER * 2;
 localparam W_CNT         = $clog2(N_ITER_CYCLES);
-localparam FIXP_ONE      = { W_INT'(1), W_FRAC'(0) };
-localparam FIXP_TWO      = { W_INT'(2), W_FRAC'(0) };
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
@@ -123,10 +121,10 @@ always_comb begin
     approx_mid_next = approx_mid_ff;
 
     if (state == ST_SHIFT_INPUT) begin
-        approx_next = FIXP_ONE;
+        approx_next = fixedpoint::int_to_fixp(1);
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = FIXP_TWO - fixedpoint::mult(num_ff,  approx_ff);
+            approx_mid_next = fixedpoint::int_to_fixp(2) - fixedpoint::mult(num_ff,  approx_ff);
         end else begin
             approx_next = fixedpoint::mult(approx_ff, approx_mid_ff);
         end
