@@ -29,16 +29,13 @@ module dda
     output var logic                   done_o
 );
 
-// ----------------------------------------------------------------------------
-// Local signals declaration
-// ----------------------------------------------------------------------------
-
 typedef enum {
     ST_IDLE,
     ST_CALC_DDA
 } state_t;
 
-state_t state, next_state;
+state_t state;
+state_t next_state;
 
 // ----------------------------------------------------------------------------
 // FSM
