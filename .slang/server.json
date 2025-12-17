@@ -1,0 +1,5 @@
+{
+    "flags": "-Irtl/include",
+    "indexGlobs": [".rtl/.../*.sv", "./rtl/.../*.svh"],
+    "excludeDirs": ["sim_build", "ray", "__pycache__"]
+}
