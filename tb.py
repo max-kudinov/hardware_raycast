@@ -257,6 +257,9 @@ def line_height_calc_model(x):
     map_y = int(pos_y)
 
     while True:
+        if game_map[map_y][map_x] == 1:
+            break
+
         if (side_dist_x < side_dist_y):
             side_dist_x = fixp(val=side_dist_x + delta_dist_x)
             map_x += step_x
@@ -265,9 +268,6 @@ def line_height_calc_model(x):
             side_dist_y = fixp(val=side_dist_y + delta_dist_y)
             map_y += step_y
             hit_side = 1
-
-        if game_map[map_y][map_x] == 1:
-            break
 
     if hit_side == 0:
         perp_wall_dist = fixp(val=side_dist_x - delta_dist_x)
