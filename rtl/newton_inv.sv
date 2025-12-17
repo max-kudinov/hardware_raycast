@@ -5,7 +5,6 @@
 module newton_inv
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
-    import fixedpoint::N_ITER;
 (
     input  var logic                   clk,
     input  var logic                   rst,
@@ -17,14 +16,12 @@ module newton_inv
     output var logic [W_INT-1:-W_FRAC] num_o
 );
 
-import fixedpoint::fixp_mult;
-
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
 localparam W_SHIFT       = $clog2(W_INT + 1);
-localparam N_ITER_CYCLES = N_ITER * 2;
+localparam N_ITER_CYCLES = fixedpoint::N_ITER * 2;
 localparam W_CNT         = $clog2(N_ITER_CYCLES);
 localparam FIXP_ONE      = { W_INT'(1), W_FRAC'(0) };
 localparam FIXP_TWO      = { W_INT'(2), W_FRAC'(0) };
@@ -129,9 +126,9 @@ always_comb begin
         approx_next = FIXP_ONE;
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = FIXP_TWO - fixp_mult(num_ff,  approx_ff);
+            approx_mid_next = FIXP_TWO - fixedpoint::fixp_mult(num_ff,  approx_ff);
         end else begin
-            approx_next = fixp_mult(approx_ff, approx_mid_ff);
+            approx_next = fixedpoint::fixp_mult(approx_ff, approx_mid_ff);
         end
     end
 
