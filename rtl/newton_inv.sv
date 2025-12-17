@@ -126,9 +126,9 @@ always_comb begin
         approx_next = FIXP_ONE;
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = FIXP_TWO - fixedpoint::fixp_mult(num_ff,  approx_ff);
+            approx_mid_next = FIXP_TWO - fixedpoint::mult(num_ff,  approx_ff);
         end else begin
-            approx_next = fixedpoint::fixp_mult(approx_ff, approx_mid_ff);
+            approx_next = fixedpoint::mult(approx_ff, approx_mid_ff);
         end
     end
 

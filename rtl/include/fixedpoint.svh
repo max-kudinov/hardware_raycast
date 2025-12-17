@@ -7,7 +7,7 @@ package fixedpoint;
     localparam W_FRAC = 10;
     localparam N_ITER = 8;
 
-    function automatic logic [W_INT-1:-W_FRAC] fixp_mult (
+    function automatic logic [W_INT-1:-W_FRAC] mult (
         input logic [W_INT-1:-W_FRAC] num_a,
         input logic [W_INT-1:-W_FRAC] num_b
     );
@@ -19,7 +19,7 @@ package fixedpoint;
         return mult_res[W_INT-1:-W_FRAC];
     endfunction
 
-    function automatic logic [W_INT-1:-W_FRAC] fixp_signed_mult (
+    function automatic logic [W_INT-1:-W_FRAC] signed_mult (
         input logic signed [W_INT-1:-W_FRAC] num_a,
         input logic signed [W_INT-1:-W_FRAC] num_b
     );
@@ -31,7 +31,7 @@ package fixedpoint;
         return mult_res[W_INT-1:-W_FRAC];
     endfunction
 
-    function automatic integer fixp_int_mult (
+    function automatic integer int_mult (
         input integer                 num_a,
         input logic [W_INT-1:-W_FRAC] num_b
     );
@@ -44,7 +44,7 @@ package fixedpoint;
     endfunction
 
 
-    function automatic logic [W_INT-1:-W_FRAC] fixp_abs (
+    function automatic logic [W_INT-1:-W_FRAC] abs (
         input logic signed [W_INT-1:-W_FRAC] num
     );
         if (num < 0)
@@ -53,7 +53,7 @@ package fixedpoint;
             return num;
     endfunction
 
-    function automatic logic [W_INT-1:-W_FRAC] fixp_int (
+    function automatic logic [W_INT-1:-W_FRAC] int_to_fixp (
         input [W_INT-1:0] num
     );
         return { num, { W_FRAC {1'b0} } };
