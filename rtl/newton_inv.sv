@@ -144,7 +144,10 @@ end
 assign num_o = num_ff;
 
 always_ff @(posedge clk)
-    done_o <= next_state == ST_RES_OUT;
+    if (rst)
+        done_o <= '0;
+    else
+        done_o <= next_state == ST_RES_OUT;
 
 endmodule
 
