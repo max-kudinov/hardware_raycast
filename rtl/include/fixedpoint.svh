@@ -39,7 +39,7 @@ package fixedpoint;
         // verilator lint_off UNUSEDSIGNAL
         logic [31:-W_FRAC*2] mult_res;
         // verilator lint_on UNUSEDSIGNAL
-        mult_res = (W_INT+W_FRAC)'({num_a, {W_FRAC {1'b0} } }) * num_b;
+        mult_res = {num_a, {W_FRAC {1'b0} } } * (32+W_FRAC)'(num_b);
         return integer'(mult_res[31:0]);
     endfunction
 
