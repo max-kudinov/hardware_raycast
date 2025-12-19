@@ -19,7 +19,7 @@ package fixedpoint;
         return mult_res[W_INT-1:-W_FRAC];
     endfunction
 
-    function automatic logic [W_INT-1:-W_FRAC] signed_mult (
+    function automatic logic signed [W_INT-1:-W_FRAC] signed_mult (
         input logic signed [W_INT-1:-W_FRAC] num_a,
         input logic signed [W_INT-1:-W_FRAC] num_b
     );
@@ -28,7 +28,7 @@ package fixedpoint;
         logic signed [W_INT*2-1:-W_FRAC*2] mult_res;
         // verilator lint_on UNUSEDSIGNAL
         mult_res = num_a * num_b;
-        return mult_res[W_INT-1:-W_FRAC];
+        return signed'(mult_res[W_INT-1:-W_FRAC]);
     endfunction
 
     function automatic integer int_mult (
