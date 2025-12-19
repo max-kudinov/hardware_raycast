@@ -44,7 +44,7 @@ state_t next_state;
 always_comb begin
     next_state = state;
 
-    case (state)
+    unique case (state)
         ST_IDLE:     if (start_i)    next_state = ST_CALC_DDA;
         ST_CALC_DDA: if (wall_hit_i) next_state = ST_IDLE;
     endcase

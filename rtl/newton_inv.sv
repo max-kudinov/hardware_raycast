@@ -56,7 +56,7 @@ state_t state, next_state;
 always_comb begin
     next_state = state;
 
-    case (state)
+    unique case (state)
         ST_IDLE:         if (start_i)  next_state = ST_CALC_SHIFT;
         ST_CALC_SHIFT:                 next_state = ST_SHIFT_INPUT;
         ST_SHIFT_INPUT:                next_state = ST_ITERATE;

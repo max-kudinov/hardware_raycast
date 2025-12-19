@@ -142,7 +142,7 @@ state_t                        next_state;
 always_comb begin
     next_state = state;
 
-    case (state)
+    unique case (state)
         ST_IDLE:              if (start_i)  next_state = ST_CALC_RAY_X;
         ST_CALC_RAY_X:                      next_state = ST_CALC_RAY_DIR;
         ST_CALC_RAY_DIR:                    next_state = ST_CALC_DELTA_DIST_X;
