@@ -100,7 +100,7 @@ always_ff @(posedge clk)
         shift_amount <= '0;
 
         for (int i = 0; i < W_INT; i++) begin
-            if (num_ff[i]) shift_amount <= W_SHIFT'(i + 1);
+            if (num_ff[i]) shift_amount <= unsigned'(W_SHIFT'(i + 1));
         end
     end
 
@@ -114,7 +114,7 @@ always_ff @(posedge clk)
     else if (state == ST_ITERATE)
         iter_cnt <= iter_cnt + 1'b1;
 
-assign cnt_done = iter_cnt == W_CNT'(N_ITER_CYCLES - 1);
+assign cnt_done = iter_cnt == unsigned'(W_CNT'(N_ITER_CYCLES - 1));
 
 always_comb begin
     approx_next     = approx_ff;
