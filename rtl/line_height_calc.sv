@@ -42,7 +42,7 @@ module line_height_calc
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam RAY_STEP  = int'(2.0 / FRAME_WIDTH * (2**W_FRAC));
+localparam RAY_STEP  = int'(2.0 / real'(FRAME_WIDTH) * (2**W_FRAC));
 localparam DELTA_MAX = fixedpoint::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
 
 // ----------------------------------------------------------------------------
