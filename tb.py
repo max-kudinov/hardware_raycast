@@ -165,32 +165,7 @@ async def line_height_calc(dut, x):
     return (int(dut.height_o.value), line_color)
 
 
-perp_wall_dist = 0
-inv_perp_wall_dist = 0
-ray_x = 0
-ray_dir_x = 0
-ray_dir_y = 0
-delta_dist_x = 0
-delta_dist_y = 0
-side_dist_x = 0
-side_dist_y = 0
-map_x = 0
-map_y = 0
-
-
 def line_height_calc_model(x):
-    global ray_x
-    global ray_dir_x
-    global ray_dir_y
-    global perp_wall_dist
-    global inv_perp_wall_dist
-    global delta_dist_x
-    global delta_dist_y
-    global side_dist_x
-    global side_dist_y
-    global map_x
-    global map_y
-
     ray_x = fixp((x * ray_step / 2**W_FRAC - 1), signed=True)
 
     ray_dir_x = fixp(dir_x + plane_x * ray_x, signed=True)
@@ -281,20 +256,7 @@ async def game(dut):
             print("=" * 80)
             print(f"pixel {x}")
             print(f"Expected {line_height_model}, got: {line_height}")
-            p_wall_dist = fixp_to_float(
-                int(dut.line_height_calc.perp_wall_dist_ff.value)
-            )
-            inv_p_wall_dist = fixp_to_float(
-                int(dut.line_height_calc.inv_perp_wall_dist_ff.value)
-            )
-            print(f"Model ray_dir_x: {ray_dir_x}")
-            print(f"Model ray_dir_y: {ray_dir_y}\n")
-            print(f"Model delta_dist_x: {delta_dist_x}")
-            print(f"Model delta_dist_y: {delta_dist_y}\n")
-            print(f"DUT perp_wall_dist: {p_wall_dist}")
-            print(f"Model perp_wall_dist: {perp_wall_dist}\n")
-            print(f"DUT inv_perp_wall_dist: {inv_p_wall_dist}")
-            print(f"Model inv_perp_wall_dist: {inv_perp_wall_dist}")
+            print("=" * 80)
             exit(0)
 
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
