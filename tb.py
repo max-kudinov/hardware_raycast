@@ -117,20 +117,6 @@ def fixp_to_float(num_fixp):
     return float(num_fixp) / (2 ** W_FRAC)
 
 
-async def newton_inv(dut, recip):
-    await RisingEdge(dut.clk)
-    dut.start_i.value = 1
-    dut.num_i.value = float_to_fixp(recip)
-
-    await RisingEdge(dut.clk)
-    dut.start_i.value = 0
-
-    while not dut.done_o.value:
-        await RisingEdge(dut.clk)
-
-    return fixp_to_float(int(dut.num_o.value))
-
-
 def inv_model(num_in):
     num = fixp_unsigned(num_in)
     cnt = 0
