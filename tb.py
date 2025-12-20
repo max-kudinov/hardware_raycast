@@ -97,9 +97,6 @@ dir_y = fixp(-0.33, signed=True)
 plane_x = fixp(-0.22, signed=True)
 plane_y = fixp(-0.62, signed=True)
 
-time = 0
-old_time = 0
-
 step = 2.0 / FRAME_WIDTH * 2**(W_FRAC)
 
 # Mimic rounding of int cast in SystemVerilog
@@ -107,6 +104,8 @@ if step < 0.5:
     ray_step = 0
 else:
     ray_step = round(step)
+
+time = 0
 
 
 def float_to_fixp(num_float):
@@ -245,8 +244,9 @@ def line_height_calc_model(x):
         return (int(fixp_frame_height), line_color)
 
 
-async def game(dut):
-    """Game loop"""
+async def render(dut):
+    # Clear screen
+    surface.fill((0, 0, 0))
 
     for x in range(FRAME_WIDTH):
         line_height_model, _ = line_height_calc_model(x)
@@ -269,6 +269,24 @@ async def game(dut):
             end_pos = FRAME_HEIGHT - 1
 
         pg.draw.line(surface, line_color, (x, start_pos), (x, end_pos))
+    print_info()
+    pg.display.update()
+
+
+def print_info():
+    global time
+    old_time = time
+    time = pg.time.get_ticks()
+    frame_time = (time - old_time) / 1000.0
+    fps = 1 / frame_time
+
+    font.render_to(surface, (20, 20), f"FPS: {str(fps)}", (0, 255, 0))
+    font.render_to(surface, (20, 50), f"pos_x: {pos_x}", (0, 255, 0))
+    font.render_to(surface, (20, 80), f"pos_y: {pos_y}", (0, 255, 0))
+    font.render_to(surface, (20, 110), f"plane_x: {plane_x}", (0, 255, 0))
+    font.render_to(surface, (20, 140), f"plane_y: {plane_y}", (0, 255, 0))
+    font.render_to(surface, (20, 170), f"dir_x: {dir_x}", (0, 255, 0))
+    font.render_to(surface, (20, 200), f"dir_y: {dir_y}", (0, 255, 0))
 
 
 def controls():
@@ -278,22 +296,9 @@ def controls():
     global dir_y
     global plane_x
     global plane_y
-    global time
-    global old_time
 
-    old_time = time
-    time = pg.time.get_ticks()
-    frame_time = (time - old_time) / 1000.0
-    move_speed = 0.2 * 4.0
-    rot_speed = 0.2 * 2.0
-    fps = 1 / frame_time
-    font.render_to(surface, (20, 20), f"FPS: {str(fps)}", (0, 255, 0))
-    font.render_to(surface, (20, 50), f"pos_x: {pos_x}", (0, 255, 0))
-    font.render_to(surface, (20, 80), f"pos_y: {pos_y}", (0, 255, 0))
-    font.render_to(surface, (20, 110), f"plane_x: {plane_x}", (0, 255, 0))
-    font.render_to(surface, (20, 140), f"plane_y: {plane_y}", (0, 255, 0))
-    font.render_to(surface, (20, 170), f"dir_x: {dir_x}", (0, 255, 0))
-    font.render_to(surface, (20, 200), f"dir_y: {dir_y}", (0, 255, 0))
+    move_speed = 0.8
+    rot_speed = 0.4
 
     for event in pg.event.get():
         if event.type == pg.KEYDOWN:
@@ -301,18 +306,21 @@ def controls():
                 quit()
 
     keys = pg.key.get_pressed()
+
     # Forward
     if keys[pg.K_w]:
         if game_map[int(pos_y)][int(pos_x + dir_x * move_speed)] != 1:
             pos_x = fixp_unsigned(pos_x + dir_x * move_speed)
         if game_map[int(pos_y + dir_y * move_speed)][int(pos_x)] != 1:
             pos_y = fixp_unsigned(pos_y + dir_y * move_speed)
+
     # Backwards
     if keys[pg.K_s]:
         if game_map[int(pos_y)][int(pos_x - dir_x * move_speed)] != 1:
             pos_x = fixp_unsigned(pos_x - dir_x * move_speed)
         if game_map[int(pos_y - dir_y * move_speed)][int(pos_x)] != 1:
             pos_y = fixp_unsigned(pos_y - dir_y * move_speed)
+
     # Rotate right
     if keys[pg.K_d]:
         old_dir_x = fixp(dir_x, signed=True)
@@ -336,6 +344,7 @@ def controls():
             + plane_y * math.cos(-rot_speed),
             signed=True,
         )
+
     # Rotate left
     if keys[pg.K_a]:
         old_dir_x = fixp(dir_x, signed=True)
@@ -373,8 +382,7 @@ async def dut_reset(dut):
 @cocotb.test()
 async def run_raycast(dut):
     cocotb.start_soon(dut_reset(dut))
+
     while True:
-        await game(dut)
         controls()
-        pg.display.update()
-        surface.fill((0, 0, 0))
+        await render(dut)
