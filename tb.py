@@ -55,7 +55,8 @@ def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
 
     if type(val) is FpBinarySwitchable:
         return val.resize(
-            format=(int_bits, frac_bits), round_mode=RoundingEnum.direct_neg_inf
+            format=(int_bits, frac_bits),
+            round_mode=RoundingEnum.direct_neg_inf,
         )
     else:
         fp_value = FpBinary(
@@ -190,8 +191,6 @@ delta_dist_x = 0
 delta_dist_y = 0
 side_dist_x = 0
 side_dist_y = 0
-dda_side_dist_x = 0
-dda_side_dist_y = 0
 map_x = 0
 map_y = 0
 
@@ -206,8 +205,6 @@ def line_height_calc_model(x):
     global delta_dist_y
     global side_dist_x
     global side_dist_y
-    global dda_side_dist_x
-    global dda_side_dist_y
     global map_x
     global map_y
 
@@ -294,15 +291,19 @@ async def game(dut):
     """Game loop"""
 
     for x in range(FRAME_WIDTH):
-        line_height_model, line_color_model = line_height_calc_model(x)
+        line_height_model, _ = line_height_calc_model(x)
         line_height, line_color = await line_height_calc(dut, x)
 
         if abs(line_height - line_height_model) > 10:
             print("=" * 80)
             print(f"pixel {x}")
             print(f"Expected {line_height_model}, got: {line_height}")
-            p_wall_dist = fixp_to_float(int(dut.line_height_calc.perp_wall_dist_ff.value))
-            inv_p_wall_dist = fixp_to_float(int(dut.line_height_calc.inv_perp_wall_dist_ff.value))
+            p_wall_dist = fixp_to_float(
+                int(dut.line_height_calc.perp_wall_dist_ff.value)
+            )
+            inv_p_wall_dist = fixp_to_float(
+                int(dut.line_height_calc.inv_perp_wall_dist_ff.value)
+            )
             print(f"Model ray_dir_x: {ray_dir_x}")
             print(f"Model ray_dir_y: {ray_dir_y}\n")
             print(f"Model delta_dist_x: {delta_dist_x}")
@@ -371,27 +372,46 @@ def controls():
     if keys[pg.K_d]:
         old_dir_x = fixp(val=dir_x, signed=True)
         dir_x = fixp(
-            val=dir_x * math.cos(-rot_speed) - dir_y * math.sin(-rot_speed), signed=True
+            val=dir_x * math.cos(-rot_speed) - dir_y * math.sin(-rot_speed),
+            signed=True,
         )
         dir_y = fixp(
-            val=old_dir_x * math.sin(-rot_speed) + dir_y * math.cos(-rot_speed), signed=True
+            val=old_dir_x * math.sin(-rot_speed)
+            + dir_y * math.cos(-rot_speed),
+            signed=True,
         )
         old_plane_x = fixp(val=plane_x, signed=True)
         plane_x = fixp(
-            val=plane_x * math.cos(-rot_speed) - plane_y * math.sin(-rot_speed), signed=True
+            val=plane_x * math.cos(-rot_speed)
+            - plane_y * math.sin(-rot_speed),
+            signed=True,
         )
         plane_y = fixp(
-            val=old_plane_x * math.sin(-rot_speed) + plane_y * math.cos(-rot_speed),
+            val=old_plane_x * math.sin(-rot_speed)
+            + plane_y * math.cos(-rot_speed),
             signed=True,
         )
     # Rotate left
     if keys[pg.K_a]:
         old_dir_x = fixp(val=dir_x, signed=True)
-        dir_x = fixp(val=dir_x * math.cos(rot_speed) - dir_y * math.sin(rot_speed), signed=True)
-        dir_y = fixp(val=old_dir_x * math.sin(rot_speed) + dir_y * math.cos(rot_speed), signed=True)
+        dir_x = fixp(
+            val=dir_x * math.cos(rot_speed) - dir_y * math.sin(rot_speed),
+            signed=True,
+        )
+        dir_y = fixp(
+            val=old_dir_x * math.sin(rot_speed) + dir_y * math.cos(rot_speed),
+            signed=True,
+        )
         old_plane_x = fixp(val=plane_x, signed=True)
-        plane_x = fixp(val=plane_x * math.cos(rot_speed) - plane_y * math.sin(rot_speed), signed=True)
-        plane_y = fixp(val=old_plane_x * math.sin(rot_speed) + plane_y * math.cos(rot_speed), signed=True)
+        plane_x = fixp(
+            val=plane_x * math.cos(rot_speed) - plane_y * math.sin(rot_speed),
+            signed=True,
+        )
+        plane_y = fixp(
+            val=old_plane_x * math.sin(rot_speed)
+            + plane_y * math.cos(rot_speed),
+            signed=True,
+        )
 
 
 def quit():
