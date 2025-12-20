@@ -21,10 +21,7 @@ FP_MODE = True
 W_HEIGHT = int(cocotb.top.W_HEIGHT.value)  # type: ignore
 
 pg.init()
-font = freetype.Font(
-    "/usr/share/fonts/TTF/JetBrainsMonoNLNerdFont-Regular.ttf",
-    24
-)
+font = freetype.Font(None, 24)
 surface = pg.display.set_mode((FRAME_WIDTH, FRAME_HEIGHT))
 
 game_map = [
