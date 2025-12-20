@@ -2,7 +2,6 @@ import math
 from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
 import cocotb
-from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
 
@@ -51,7 +50,7 @@ game_map = [
 ]
 
 
-def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
+def fixp(val, int_bits=W_INT, frac_bits=W_FRAC, signed=False):
 
     if type(val) is FpBinarySwitchable:
         return val.resize(
@@ -73,7 +72,7 @@ def fixp(int_bits=W_INT, frac_bits=W_FRAC, val=0, signed=False):
         )
 
 
-def fixp_unsigned(int_bits=W_INT, frac_bits=W_FRAC, val=0):
+def fixp_unsigned(val, int_bits=W_INT, frac_bits=W_FRAC):
     fp_value = FpBinary(
         int_bits=int_bits,
         frac_bits=frac_bits,
@@ -89,16 +88,16 @@ def fixp_unsigned(int_bits=W_INT, frac_bits=W_FRAC, val=0):
 
 
 # Player position
-pos_x = fixp(val=10)
-pos_y = fixp(val=10)
+pos_x = fixp(10)
+pos_y = fixp(10)
 
 # Camera direction
-dir_x = fixp(val=0.94, signed=True)
-dir_y = fixp(val=-0.33, signed=True)
+dir_x = fixp(0.94, signed=True)
+dir_y = fixp(-0.33, signed=True)
 
 # Camera plane vector
-plane_x = fixp(val=-0.22, signed=True)
-plane_y = fixp(val=-0.62, signed=True)
+plane_x = fixp(-0.22, signed=True)
+plane_y = fixp(-0.62, signed=True)
 
 time = 0
 old_time = 0
@@ -135,27 +134,27 @@ async def newton_inv(dut, recip):
 
 
 def inv_model(num_in):
-    num = fixp_unsigned(val=num_in)
+    num = fixp_unsigned(num_in)
     cnt = 0
-    approx = fixp(val=1)
-    product = fixp(val=0)
-    sub = fixp(val=0)
-    fixp_2 = fixp(val=2)
+    approx = fixp(1)
+    product = fixp(0)
+    sub = fixp(0)
+    fixp_2 = fixp(2)
 
     while num > 1:
-        num = fixp(val=num >> 1)
+        num = fixp(num >> 1)
         cnt += 1
 
     for _ in range(N_ITER):
-        product = fixp(val=num * approx)
-        sub = fixp(val=fixp_2 - product)
-        approx = fixp(val=approx * sub)
+        product = fixp(num * approx)
+        sub = fixp(fixp_2 - product)
+        approx = fixp(approx * sub)
 
-    approx = fixp(val=approx >> cnt)
+    approx = fixp(approx >> cnt)
     return approx
 
 
-fixp_frame_height = fixp(val=FRAME_HEIGHT, int_bits=W_HEIGHT)
+fixp_frame_height = fixp(FRAME_HEIGHT, int_bits=W_HEIGHT)
 
 
 async def line_height_calc(dut, x):
@@ -208,13 +207,13 @@ def line_height_calc_model(x):
     global map_x
     global map_y
 
-    ray_x = fixp(val=(x * ray_step / 2**W_FRAC - 1), signed=True)
+    ray_x = fixp((x * ray_step / 2**W_FRAC - 1), signed=True)
 
-    ray_dir_x = fixp(val=dir_x + plane_x * ray_x, signed=True)
-    ray_dir_y = fixp(val=dir_y + plane_y * ray_x, signed=True)
+    ray_dir_x = fixp(dir_x + plane_x * ray_x, signed=True)
+    ray_dir_y = fixp(dir_y + plane_y * ray_x, signed=True)
 
     if ray_dir_x == 0:
-        delta_dist_x = fixp(val=2**(W_INT-1)-1)
+        delta_dist_x = fixp(2**(W_INT-1)-1)
     else:
         if ray_dir_x > 0:
             delta_dist_x = inv_model(ray_dir_x)
@@ -222,7 +221,7 @@ def line_height_calc_model(x):
             delta_dist_x = inv_model(-ray_dir_x)
 
     if ray_dir_y == 0:
-        delta_dist_y = fixp(val=2**(W_INT-1)-1)
+        delta_dist_y = fixp(2**(W_INT-1)-1)
     else:
         if ray_dir_y > 0:
             delta_dist_y = inv_model(ray_dir_y)
@@ -230,23 +229,23 @@ def line_height_calc_model(x):
             delta_dist_y = inv_model(-ray_dir_y)
 
     # Integer numbers, workaround to make side_dist_* unsigned
-    map_x = fixp(val=int(pos_x))
-    map_y = fixp(val=int(pos_y))
-    one = fixp(val=1)
+    map_x = fixp(int(pos_x))
+    map_y = fixp(int(pos_y))
+    one = fixp(1)
 
     if ray_dir_x > 0:
         step_x = 1
-        side_dist_x = fixp(val=(map_x + one - pos_x) * delta_dist_x)
+        side_dist_x = fixp((map_x + one - pos_x) * delta_dist_x)
     else:
         step_x = -1
-        side_dist_x = fixp(val=(pos_x - map_x) * delta_dist_x)
+        side_dist_x = fixp((pos_x - map_x) * delta_dist_x)
 
     if ray_dir_y > 0:
         step_y = 1
-        side_dist_y = fixp(val=(map_y + one - pos_y) * delta_dist_y)
+        side_dist_y = fixp((map_y + one - pos_y) * delta_dist_y)
     else:
         step_y = -1
-        side_dist_y = fixp(val=(pos_y - map_y) * delta_dist_y)
+        side_dist_y = fixp((pos_y - map_y) * delta_dist_y)
 
     hit_side = 0
 
@@ -258,19 +257,19 @@ def line_height_calc_model(x):
             break
 
         if (side_dist_x < side_dist_y):
-            side_dist_x = fixp(val=side_dist_x + delta_dist_x)
+            side_dist_x = fixp(side_dist_x + delta_dist_x)
             map_x += step_x
             hit_side = 0
         else:
-            side_dist_y = fixp(val=side_dist_y + delta_dist_y)
+            side_dist_y = fixp(side_dist_y + delta_dist_y)
             map_y += step_y
             hit_side = 1
 
     if hit_side == 0:
-        perp_wall_dist = fixp(val=side_dist_x - delta_dist_x)
+        perp_wall_dist = fixp(side_dist_x - delta_dist_x)
         line_color = (255, 255, 255)
     else:
-        perp_wall_dist = fixp(val=side_dist_y - delta_dist_y)
+        perp_wall_dist = fixp(side_dist_y - delta_dist_y)
         line_color = (128, 128, 128)
 
     if perp_wall_dist == 0:
@@ -280,7 +279,7 @@ def line_height_calc_model(x):
 
     if int(inv_perp_wall_dist) == 0:
         scaled_height = fixp(
-            val=fixp_frame_height * inv_perp_wall_dist, int_bits=W_HEIGHT+1
+            fixp_frame_height * inv_perp_wall_dist, int_bits=W_HEIGHT+1
         )
         return (int(scaled_height), line_color)
     else:
@@ -359,56 +358,56 @@ def controls():
     # Forward
     if keys[pg.K_w]:
         if game_map[int(pos_y)][int(pos_x + dir_x * move_speed)] != 1:
-            pos_x = fixp_unsigned(val=pos_x + dir_x * move_speed)
+            pos_x = fixp_unsigned(pos_x + dir_x * move_speed)
         if game_map[int(pos_y + dir_y * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp_unsigned(val=pos_y + dir_y * move_speed)
+            pos_y = fixp_unsigned(pos_y + dir_y * move_speed)
     # Backwards
     if keys[pg.K_s]:
         if game_map[int(pos_y)][int(pos_x - dir_x * move_speed)] != 1:
-            pos_x = fixp_unsigned(val=pos_x - dir_x * move_speed)
+            pos_x = fixp_unsigned(pos_x - dir_x * move_speed)
         if game_map[int(pos_y - dir_y * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp_unsigned(val=pos_y - dir_y * move_speed)
+            pos_y = fixp_unsigned(pos_y - dir_y * move_speed)
     # Rotate right
     if keys[pg.K_d]:
-        old_dir_x = fixp(val=dir_x, signed=True)
+        old_dir_x = fixp(dir_x, signed=True)
         dir_x = fixp(
-            val=dir_x * math.cos(-rot_speed) - dir_y * math.sin(-rot_speed),
+            dir_x * math.cos(-rot_speed) - dir_y * math.sin(-rot_speed),
             signed=True,
         )
         dir_y = fixp(
-            val=old_dir_x * math.sin(-rot_speed)
+            old_dir_x * math.sin(-rot_speed)
             + dir_y * math.cos(-rot_speed),
             signed=True,
         )
-        old_plane_x = fixp(val=plane_x, signed=True)
+        old_plane_x = fixp(plane_x, signed=True)
         plane_x = fixp(
-            val=plane_x * math.cos(-rot_speed)
+            plane_x * math.cos(-rot_speed)
             - plane_y * math.sin(-rot_speed),
             signed=True,
         )
         plane_y = fixp(
-            val=old_plane_x * math.sin(-rot_speed)
+            old_plane_x * math.sin(-rot_speed)
             + plane_y * math.cos(-rot_speed),
             signed=True,
         )
     # Rotate left
     if keys[pg.K_a]:
-        old_dir_x = fixp(val=dir_x, signed=True)
+        old_dir_x = fixp(dir_x, signed=True)
         dir_x = fixp(
-            val=dir_x * math.cos(rot_speed) - dir_y * math.sin(rot_speed),
+            dir_x * math.cos(rot_speed) - dir_y * math.sin(rot_speed),
             signed=True,
         )
         dir_y = fixp(
-            val=old_dir_x * math.sin(rot_speed) + dir_y * math.cos(rot_speed),
+            old_dir_x * math.sin(rot_speed) + dir_y * math.cos(rot_speed),
             signed=True,
         )
-        old_plane_x = fixp(val=plane_x, signed=True)
+        old_plane_x = fixp(plane_x, signed=True)
         plane_x = fixp(
-            val=plane_x * math.cos(rot_speed) - plane_y * math.sin(rot_speed),
+            plane_x * math.cos(rot_speed) - plane_y * math.sin(rot_speed),
             signed=True,
         )
         plane_y = fixp(
-            val=old_plane_x * math.sin(rot_speed)
+            old_plane_x * math.sin(rot_speed)
             + plane_y * math.cos(rot_speed),
             signed=True,
         )
@@ -427,7 +426,6 @@ async def dut_reset(dut):
 
 @cocotb.test()
 async def run_raycast(dut):
-    # Clock(dut.clk, 1, "ns").start()
     cocotb.start_soon(dut_reset(dut))
     while True:
         await game(dut)
