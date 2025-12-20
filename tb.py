@@ -252,12 +252,14 @@ async def render(dut):
         line_height_model, _ = line_height_calc_model(x)
         line_height, line_color = await line_height_calc(dut, x)
 
-        if line_height != line_height_model:
+        try:
+            assert line_height_model == line_height
+        except AssertionError as e:
             print("=" * 80)
             print(f"pixel {x}")
             print(f"Expected {line_height_model}, got: {line_height}")
             print("=" * 80)
-            exit(0)
+            raise e
 
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
