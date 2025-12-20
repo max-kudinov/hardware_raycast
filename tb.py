@@ -1,6 +1,7 @@
 import math
 from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
+from pygame import freetype
 import cocotb
 from cocotb.triggers import RisingEdge
 
@@ -17,10 +18,10 @@ N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
 
 FP_MODE = True
 
-W_HEIGHT = int(cocotb.top.W_HEIGHT.value)
+W_HEIGHT = int(cocotb.top.W_HEIGHT.value)  # type: ignore
 
 pg.init()
-font = pg.freetype.Font(
+font = freetype.Font(
     "/usr/share/fonts/TTF/JetBrainsMonoNLNerdFont-Regular.ttf",
     24
 )
