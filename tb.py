@@ -252,7 +252,7 @@ async def render(dut):
         line_height_model, _ = line_height_calc_model(x)
         line_height, line_color = await line_height_calc(dut, x)
 
-        if abs(line_height - line_height_model) > 10:
+        if line_height != line_height_model:
             print("=" * 80)
             print(f"pixel {x}")
             print(f"Expected {line_height_model}, got: {line_height}")
