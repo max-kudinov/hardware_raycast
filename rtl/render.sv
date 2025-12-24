@@ -15,6 +15,7 @@ module render
     input  var logic                          clk,
     input  var logic                          rst,
 
+    // DVI driver input
     input  var logic        [W_X_POS-1:0]     px_x_i,
     input  var logic        [W_Y_POS-1:0]     px_y_i,
     input  var logic                          in_range_i,
@@ -42,7 +43,7 @@ module render
 // ----------------------------------------------------------------------------
 
 localparam BUF_PIXELS = FRAME_WIDTH;
-localparam W_BUF_DATA = W_HEIGHT + 1;
+localparam W_BUF_DATA = W_HEIGHT;
 localparam W_BUF_ADDR = $clog2(BUF_PIXELS);
 
 // ----------------------------------------------------------------------------
@@ -55,14 +56,21 @@ logic                  buf_read;
 logic [W_BUF_ADDR-1:0] buf_addr;
 logic [W_BUF_DATA-1:0] buf_data_in;
 logic [W_BUF_DATA-1:0] buf_data_out;
+logic [W_HEIGHT-2:0]   buf_height;
+logic                  buf_color;
 
+// verilator lint_off UNUSEDSIGNAL
 logic [W_HEIGHT-1:0]   calc_height;
+// verilator lint_on UNUSEDSIGNAL
 logic                  calc_color;
 logic                  calc_start;
+// verilator lint_off UNUSEDSIGNAL
 logic                  calc_done;
+// verilator lint_on UNUSEDSIGNAL
 logic [W_X_POS-1:0]    calc_col;
 
 logic                  in_range_prev;
+logic [W_Y_POS-1:0]    px_y;
 
 // Single-port block RAM
 always_ff @(posedge clk) begin
@@ -102,12 +110,15 @@ line_height_calc #(
 );
 
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk)
     if (rst)
         in_range_prev <= '0;
     else
         in_range_prev <= in_range_i;
-end
+
+// Register input coordinate for next stage
+always_ff @(posedge clk)
+    px_y <= px_y_i;
 
 always_ff @(posedge clk) begin
     if (rst) begin
@@ -121,11 +132,29 @@ always_ff @(posedge clk) begin
     end
 end
 
+// Height divided by half is used for calculations, so we don't need LSB
+assign buf_data_in = { calc_color, calc_height[W_HEIGHT-1:1] };
 assign calc_start  = !in_range_prev &&  in_range_i;
 assign buf_write   =  in_range_prev && !in_range_i;
 assign buf_read    = in_range_i;
 assign buf_addr    = in_range_i ? px_x_i : calc_col;
-assign buf_data_in = { calc_color, calc_height };
+
+// ----------------------------------------------------------------------------
+// Calc current color based on buffer data
+// ----------------------------------------------------------------------------
+
+assign { buf_color, buf_height } = buf_data_out;
+
+always_ff @(posedge clk) begin
+    if (in_range_prev) begin
+        if ((px_y > ((FRAME_HEIGHT >> 2) - buf_height)) &&
+            (px_y < ((FRAME_HEIGHT >> 2) + buf_height))) begin
+            color_o <= buf_color ? { 8'd127, 8'd127, 8'd127 } : '0;
+        end else begin
+            color_o <= '0;
+        end
+    end
+end
 
 endmodule
 
