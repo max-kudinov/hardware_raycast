@@ -6,10 +6,11 @@ module render
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
-    parameter FRAME_WIDTH = 640,
-    parameter W_HEIGHT    = 8,
-    parameter W_X_POS     = 8,
-    parameter W_Y_POS     = 8
+    parameter FRAME_WIDTH  = 640,
+    parameter FRAME_HEIGHT = 480,
+    parameter W_HEIGHT     = 9,
+    parameter W_X_POS      = 10,
+    parameter W_Y_POS      = 9
 ) (
     input  var logic                          clk,
     input  var logic                          rst,
@@ -36,9 +37,17 @@ module render
     output var logic        [23:0]            color_o
 );
 
+// ----------------------------------------------------------------------------
+// Local parameters declaration
+// ----------------------------------------------------------------------------
+
 localparam BUF_PIXELS = FRAME_WIDTH;
 localparam W_BUF_DATA = W_HEIGHT + 1;
 localparam W_BUF_ADDR = $clog2(BUF_PIXELS);
+
+// ----------------------------------------------------------------------------
+// Local signals declaration
+// ----------------------------------------------------------------------------
 
 logic [W_BUF_DATA-1:0] frame_buffer [BUF_PIXELS];
 logic                  buf_write;
@@ -46,6 +55,14 @@ logic                  buf_read;
 logic [W_BUF_ADDR-1:0] buf_addr;
 logic [W_BUF_DATA-1:0] buf_data_in;
 logic [W_BUF_DATA-1:0] buf_data_out;
+
+logic [W_HEIGHT-1:0]   calc_height;
+logic                  calc_color;
+logic                  calc_start;
+logic                  calc_done;
+logic [W_X_POS-1:0]    calc_col;
+
+logic                  in_range_prev;
 
 // Single-port block RAM
 always_ff @(posedge clk) begin
@@ -55,6 +72,60 @@ always_ff @(posedge clk) begin
         buf_data_out <= frame_buffer[buf_addr];
     end
 end
+
+line_height_calc #(
+    .W_X_POS      (W_X_POS     ),
+    .W_HEIGHT     (W_HEIGHT    ),
+    .FRAME_WIDTH  (FRAME_WIDTH ),
+    .FRAME_HEIGHT (FRAME_HEIGHT)
+) line_height_calc (
+    .clk            (clk           ),
+    .rst            (rst           ),
+
+    .start_i        (calc_start    ),
+    .px_x_i         (px_x_i        ),
+
+    .pos_x_i        (pos_x_i       ),
+    .pos_y_i        (pos_y_i       ),
+    .dir_x_i        (dir_x_i       ),
+    .dir_y_i        (dir_y_i       ),
+    .plane_x_i      (plane_x_i     ),
+    .plane_y_i      (plane_y_i     ),
+
+    .lookup_map_x_o (lookup_map_x_o),
+    .lookup_map_y_o (lookup_map_y_o),
+    .wall_hit_i     (wall_hit_i    ),
+
+    .done_o         (calc_done     ),
+    .height_o       (calc_height   ),
+    .ray_hit_side_o (calc_color    )
+);
+
+
+always_ff @(posedge clk) begin
+    if (rst)
+        in_range_prev <= '0;
+    else
+        in_range_prev <= in_range_i;
+end
+
+always_ff @(posedge clk) begin
+    if (rst) begin
+        calc_col <= '0;
+    end else if (buf_write) begin
+        if (calc_col == (FRAME_HEIGHT - 1)) begin
+            calc_col <= '0;
+        end else begin
+            calc_col <= calc_col + 1'b1;
+        end
+    end
+end
+
+assign calc_start  = !in_range_prev &&  in_range_i;
+assign buf_write   =  in_range_prev && !in_range_i;
+assign buf_read    = in_range_i;
+assign buf_addr    = in_range_i ? px_x_i : calc_col;
+assign buf_data_in = { calc_color, calc_height };
 
 endmodule
 
