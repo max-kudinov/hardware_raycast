@@ -1,0 +1,3 @@
+[submodule "rtl/open_dvi"]
+	path = rtl/open_dvi
+	url = https://github.com/max-kudinov/open_dvi
