@@ -388,4 +388,4 @@ always_ff @(posedge clk)
 
 endmodule
 
-`default_nettype wire
+`resetall

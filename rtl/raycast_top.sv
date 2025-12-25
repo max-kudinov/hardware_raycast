@@ -1,5 +1,7 @@
 `include "fixedpoint.svh"
 
+`default_nettype none
+
 module raycast_top
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
@@ -101,3 +103,5 @@ render #(
 );
 
 endmodule
+
+`resetall
