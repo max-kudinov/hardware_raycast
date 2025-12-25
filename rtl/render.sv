@@ -149,7 +149,8 @@ always_ff @(posedge clk) begin
     if (in_range_prev) begin
         if ((px_y > ((FRAME_HEIGHT >> 2) - buf_height)) &&
             (px_y < ((FRAME_HEIGHT >> 2) + buf_height))) begin
-            color_o <= buf_color ? { 8'd127, 8'd127, 8'd127 } : '0;
+            color_o <= buf_color ? { 8'd127, 8'd127, 8'd127 } :
+                                   { 8'd255, 8'd255, 8'd255 };
         end else begin
             color_o <= '0;
         end
