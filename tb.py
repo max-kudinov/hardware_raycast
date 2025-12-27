@@ -140,30 +140,6 @@ def inv_model(num_in):
 fixp_frame_height = fixp(FRAME_HEIGHT, int_bits=W_HEIGHT)
 
 
-async def line_height_calc(dut, x):
-    await RisingEdge(dut.clk)
-    dut.start_i.value = 1
-    dut.px_x_i.value = x
-    dut.pos_x_i.value = float_to_fixp(pos_x)
-    dut.pos_y_i.value = float_to_fixp(pos_y)
-    dut.dir_x_i.value = float_to_fixp(dir_x)
-    dut.dir_y_i.value = float_to_fixp(dir_y)
-    dut.plane_x_i.value = float_to_fixp(plane_x)
-    dut.plane_y_i.value = float_to_fixp(plane_y)
-
-    await RisingEdge(dut.clk)
-    dut.start_i.value = 0
-
-    await RisingEdge(dut.done_o)
-
-    if dut.ray_hit_side_o.value:
-        line_color = (128, 128, 128)
-    else:
-        line_color = (255, 255, 255)
-
-    return (int(dut.height_o.value), line_color)
-
-
 def line_height_calc_model(x):
     ray_x = fixp((x * ray_step / 2**W_FRAC - 1), signed=True)
 
