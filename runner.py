@@ -15,7 +15,15 @@ def run_tb():
     sources += [proj_path / "rtl/dda.sv"]
     sources += [proj_path / "rtl/line_height_calc.sv"]
     sources += [proj_path / "rtl/raycast_top.sv"]
+    sources += [proj_path / "rtl/render.sv"]
+    sources += [proj_path / "rtl/open_dvi/rtl/dvi_top.sv"]
+    sources += [proj_path / "rtl/open_dvi/rtl/delay.sv"]
+    sources += [proj_path / "rtl/open_dvi/rtl/ds_buf.sv"]
+    sources += [proj_path / "rtl/open_dvi/rtl/dvi_sync.sv"]
+    sources += [proj_path / "rtl/open_dvi/rtl/serializer.sv"]
+    sources += [proj_path / "rtl/open_dvi/rtl/tmds_encoder.sv"]
     includes = [proj_path / "rtl/include"]
+    includes += [proj_path / "rtl/open_dvi/rtl/include"]
 
     runner = get_runner(sim)
 
@@ -25,8 +33,8 @@ def run_tb():
         hdl_toplevel="raycast_top",
         parameters=parameters,
         waves=waves,
-        build_args=["--timing", "--trace", "--trace-fst", "--trace-structs"]
-        # build_args=["--timing"]
+        # build_args=["--timing", "--trace", "--trace-fst", "--trace-structs"]
+        build_args=["--timing"]
     )
 
     runner.test(
