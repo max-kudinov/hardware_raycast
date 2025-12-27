@@ -3,7 +3,7 @@ from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
 from pygame import freetype
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Timer
 
 
 FRAME_WIDTH = 640
@@ -224,18 +224,41 @@ async def render(dut):
     # Clear screen
     surface.fill((0, 0, 0))
 
+    await RisingEdge(dut.px_clk)
+    dut.pos_x_i.value = float_to_fixp(pos_x)
+    dut.pos_y_i.value = float_to_fixp(pos_y)
+    dut.dir_x_i.value = float_to_fixp(dir_x)
+    dut.dir_y_i.value = float_to_fixp(dir_y)
+    dut.plane_x_i.value = float_to_fixp(plane_x)
+    dut.plane_y_i.value = float_to_fixp(plane_y)
+
+    cocotb.start_soon(timeout())
+    await RisingEdge(dut.dvi_top.i_dvi_sync.frame_done)
+    mem = dut.render.frame_buffer.value
+
     for x in range(FRAME_WIDTH):
-        line_height_model, _ = line_height_calc_model(x)
-        line_height, line_color = await line_height_calc(dut, x)
+        line_height, line_color = line_height_calc_model(x)
+
+        dut_color = int(mem[x][8])
+        dut_height = int(mem[x][7:0])
 
         try:
-            assert line_height_model == line_height
+            assert dut_height == line_height
         except AssertionError as e:
             print("=" * 80)
-            print(f"pixel {x}")
-            print(f"Expected {line_height_model}, got: {line_height}")
+            print(f"Expected height: {line_height}, got {dut_height}")
             print("=" * 80)
             raise e
+
+        try:
+            assert dut_color == line_color
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Expected color: {line_color}, got {dut_color}")
+            print("=" * 80)
+            raise e
+
+        print("good")
 
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
@@ -247,8 +270,15 @@ async def render(dut):
             end_pos = FRAME_HEIGHT - 1
 
         pg.draw.line(surface, line_color, (x, start_pos), (x, end_pos))
+
     print_info()
     pg.display.update()
+    cocotb.pass_test("Quit action")
+
+
+async def timeout():
+    await Timer(10_000, "ns")
+    assert False
 
 
 def print_info():
@@ -353,7 +383,7 @@ def quit():
 
 async def dut_reset(dut):
     dut.rst.value = 1
-    await RisingEdge(dut.clk)
+    await RisingEdge(dut.px_clk)
     dut.rst.value = 0
 
 
