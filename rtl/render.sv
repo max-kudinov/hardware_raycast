@@ -6,11 +6,10 @@ module render
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
-    parameter FRAME_WIDTH  = 640,
-    parameter FRAME_HEIGHT = 480,
-    parameter W_HEIGHT     = 9,
     parameter W_X_POS      = 10,
-    parameter W_Y_POS      = 9
+    parameter W_Y_POS      = 9,
+    parameter FRAME_WIDTH  = 640,
+    parameter FRAME_HEIGHT = 480
 ) (
     input  var logic                          clk,
     input  var logic                          rst,
@@ -43,7 +42,7 @@ module render
 // ----------------------------------------------------------------------------
 
 localparam BUF_PIXELS = FRAME_WIDTH;
-localparam W_BUF_DATA = W_HEIGHT;
+localparam W_BUF_DATA = W_Y_POS;
 localparam W_BUF_ADDR = $clog2(BUF_PIXELS);
 
 // ----------------------------------------------------------------------------
@@ -56,11 +55,11 @@ logic                  buf_read;
 logic [W_BUF_ADDR-1:0] buf_addr;
 logic [W_BUF_DATA-1:0] buf_data_in;
 logic [W_BUF_DATA-1:0] buf_data_out;
-logic [W_HEIGHT-2:0]   buf_height;
+logic [W_Y_POS-2:0]    buf_height;
 logic                  buf_color;
 
 // verilator lint_off UNUSEDSIGNAL
-logic [W_HEIGHT-1:0]   calc_height;
+logic [W_Y_POS-1:0]   calc_height;
 // verilator lint_on UNUSEDSIGNAL
 logic                  calc_color;
 logic                  calc_start;
@@ -83,7 +82,7 @@ end
 
 line_height_calc #(
     .W_X_POS      (W_X_POS     ),
-    .W_HEIGHT     (W_HEIGHT    ),
+    .W_HEIGHT     (W_Y_POS     ),
     .FRAME_WIDTH  (FRAME_WIDTH ),
     .FRAME_HEIGHT (FRAME_HEIGHT)
 ) line_height_calc (
@@ -133,7 +132,7 @@ always_ff @(posedge clk) begin
 end
 
 // Height divided by half is used for calculations, so we don't need LSB
-assign buf_data_in = { calc_color, calc_height[W_HEIGHT-1:1] };
+assign buf_data_in = { calc_color, calc_height[W_Y_POS-1:1] };
 assign calc_start  = !in_range_prev &&  in_range_i;
 assign buf_write   =  in_range_prev && !in_range_i;
 assign buf_read    = in_range_i;
