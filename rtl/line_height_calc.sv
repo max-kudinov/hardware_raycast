@@ -6,10 +6,10 @@ module line_height_calc
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
-    parameter W_X_POS      = 8,
-    parameter W_HEIGHT     = 8,
-    parameter FRAME_WIDTH  = 640,
-    parameter FRAME_HEIGHT = 480
+    parameter int unsigned        W_X_POS      = 10,
+    parameter int unsigned        W_Y_POS      = 9,
+    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
+    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
     input  var logic                          clk,
     input  var logic                          rst,
@@ -34,7 +34,7 @@ module line_height_calc
     input  var logic                          wall_hit_i,
 
     output var logic                          done_o,
-    output var logic        [W_HEIGHT-1:0]    height_o,
+    output var logic        [W_Y_POS-1:0]     height_o,
     output var logic                          ray_hit_side_o
 );
 
@@ -42,7 +42,7 @@ module line_height_calc
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam RAY_STEP  = int'(2.0 / real'(FRAME_WIDTH) * (2**W_FRAC));
+localparam int unsigned RAY_STEP  = int'(2.0 / real'(FRAME_WIDTH) * (2**W_FRAC));
 localparam DELTA_MAX = fixedpoint::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
 
 // ----------------------------------------------------------------------------
@@ -191,7 +191,7 @@ end
 
 always_ff @(posedge clk)
     if (state == ST_CALC_RAY_X)
-        ray_x <= (W_INT + W_FRAC)'(px_x * RAY_STEP) - fixedpoint::int_to_fixp(W_INT'(1));
+        ray_x <= signed'((W_INT + W_FRAC)'(px_x * RAY_STEP) - fixedpoint::int_to_fixp(W_INT'(1)));
 
 // ----------------------------------------------------------------------------
 // Calculate ray dir x/y components
@@ -376,9 +376,9 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
         if (inv_perp_wall_dist_ff[W_INT-1:0] == '0)
-            height_o <= W_HEIGHT'(fixedpoint::int_mult(FRAME_HEIGHT, inv_perp_wall_dist_ff));
+            height_o <= W_Y_POS'(fixedpoint::int_mult(FRAME_HEIGHT, inv_perp_wall_dist_ff));
         else
-            height_o <= W_HEIGHT'(FRAME_HEIGHT);
+            height_o <= FRAME_HEIGHT;
 
 always_ff @(posedge clk)
     if (rst)
