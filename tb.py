@@ -201,10 +201,10 @@ def line_height_calc_model(x):
 
     if hit_side == 0:
         perp_wall_dist = fixp(side_dist_x - delta_dist_x)
-        line_color = (255, 255, 255)
+        line_color = 0
     else:
         perp_wall_dist = fixp(side_dist_y - delta_dist_y)
-        line_color = (128, 128, 128)
+        line_color = 1
 
     if perp_wall_dist == 0:
         inv_perp_wall_dist = 2**W_INT
@@ -242,11 +242,14 @@ async def render(dut):
         dut_color = int(mem[x][8])
         dut_height = int(mem[x][7:0])
 
+        height_div2 = line_height // 2
+
         try:
-            assert dut_height == line_height
+            assert dut_height == height_div2
         except AssertionError as e:
             print("=" * 80)
-            print(f"Expected height: {line_height}, got {dut_height}")
+            print(f"Pixel {x}")
+            print(f"Expected height: {height_div2}, got {dut_height}")
             print("=" * 80)
             raise e
 
@@ -254,6 +257,7 @@ async def render(dut):
             assert dut_color == line_color
         except AssertionError as e:
             print("=" * 80)
+            print(f"Pixel {x}")
             print(f"Expected color: {line_color}, got {dut_color}")
             print("=" * 80)
             raise e
@@ -269,7 +273,8 @@ async def render(dut):
         if end_pos > FRAME_HEIGHT - 1:
             end_pos = FRAME_HEIGHT - 1
 
-        pg.draw.line(surface, line_color, (x, start_pos), (x, end_pos))
+        pg_color = (127, 127, 127) if line_color else (255, 255, 255)
+        pg.draw.line(surface, pg_color, (x, start_pos), (x, end_pos))
 
     print_info()
     pg.display.update()

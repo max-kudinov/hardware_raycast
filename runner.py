@@ -33,8 +33,8 @@ def run_tb():
         hdl_toplevel="raycast_top",
         parameters=parameters,
         waves=waves,
-        # build_args=["--timing", "--trace", "--trace-fst", "--trace-structs"]
-        build_args=["--timing"]
+        build_args=["--timing", "--trace", "--trace-fst", "--trace-structs"]
+        # build_args=["--timing"]
     )
 
     runner.test(
