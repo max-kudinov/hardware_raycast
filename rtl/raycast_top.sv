@@ -7,11 +7,10 @@ module raycast_top
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
-    parameter FRAME_WIDTH  = 640,
-    parameter FRAME_HEIGHT = 480,
-    parameter W_HEIGHT     = 9,
-    parameter W_X_POS      = 10,
-    parameter W_Y_POS      = 9
+    parameter int unsigned        W_X_POS      = 10,
+    parameter int unsigned        W_Y_POS      = 9,
+    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
+    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
     // input  var logic                          clk,
     input  var logic                          rst,
@@ -99,7 +98,6 @@ assign wall_hit = map[map_y][map_x];
 render #(
     .FRAME_WIDTH  (FRAME_WIDTH ),
     .FRAME_HEIGHT (FRAME_HEIGHT),
-    .W_HEIGHT     (W_HEIGHT    ),
     .W_X_POS      (W_X_POS     ),
     .W_Y_POS      (W_Y_POS     )
 ) render (
