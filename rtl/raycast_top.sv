@@ -43,7 +43,7 @@ always #5  board_clk  = !board_clk;
 always #1  serial_clk = !serial_clk;
 always #10 px_clk     = !px_clk;
 
-localparam MAP_SIDE = 20;
+localparam int unsigned MAP_SIDE = 20;
 
 // verilator lint_off UNUSEDSIGNAL
 logic [W_INT-1:0] map_x;

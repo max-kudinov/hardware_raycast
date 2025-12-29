@@ -41,15 +41,14 @@ module render
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam BUF_PIXELS = FRAME_WIDTH;
-localparam W_BUF_DATA = W_Y_POS;
-localparam W_BUF_ADDR = $clog2(BUF_PIXELS);
+localparam int unsigned W_BUF_DATA = W_Y_POS; // Height without LSB + 1 bit for color
+localparam int unsigned W_BUF_ADDR = $clog2(FRAME_WIDTH);
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic [W_BUF_DATA-1:0] frame_buffer [BUF_PIXELS];
+logic [W_BUF_DATA-1:0] frame_buffer [FRAME_WIDTH];
 logic                  buf_write;
 logic                  buf_read;
 logic [W_BUF_ADDR-1:0] buf_addr;

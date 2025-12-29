@@ -20,9 +20,9 @@ module newton_inv
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam W_SHIFT       = $clog2(W_INT + 1);
-localparam N_ITER_CYCLES = fixedpoint::N_ITER * 2;
-localparam W_CNT         = $clog2(N_ITER_CYCLES);
+localparam int unsigned W_SHIFT       = $clog2(W_INT + 1);
+localparam int unsigned N_ITER_CYCLES = fixedpoint::N_ITER * 2;
+localparam int unsigned W_CNT         = $clog2(N_ITER_CYCLES);
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
@@ -99,8 +99,8 @@ always_ff @(posedge clk)
     if (state == ST_CALC_SHIFT) begin
         shift_amount <= '0;
 
-        for (int i = 0; i < W_INT; i++) begin
-            if (num_ff[i]) shift_amount <= unsigned'(W_SHIFT'(i + 1));
+        for (int unsigned i = 0; i < W_INT; i++) begin
+            if (num_ff[i]) shift_amount <= W_SHIFT'(i + 1);
         end
     end
 
@@ -114,7 +114,7 @@ always_ff @(posedge clk)
     else if (state == ST_ITERATE)
         iter_cnt <= iter_cnt + 1'b1;
 
-assign cnt_done = iter_cnt == unsigned'(W_CNT'(N_ITER_CYCLES - 1));
+assign cnt_done = iter_cnt == W_CNT'(N_ITER_CYCLES - 1);
 
 always_comb begin
     approx_next     = approx_ff;
