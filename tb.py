@@ -18,7 +18,7 @@ N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
 
 FP_MODE = True
 
-W_HEIGHT = int(cocotb.top.W_HEIGHT.value)  # type: ignore
+W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
 
 pg.init()
 font = freetype.Font(None, 24)
