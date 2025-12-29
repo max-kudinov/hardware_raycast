@@ -31,8 +31,8 @@ package fixedpoint;
         return signed'(mult_res[W_INT-1:-W_FRAC]);
     endfunction
 
-    function automatic integer int_mult (
-        input integer                 num_a,
+    function automatic integer unsigned int_mult (
+        input integer unsigned        num_a,
         input logic [W_INT-1:-W_FRAC] num_b
     );
         // Bits are truncated after multiplication
@@ -40,7 +40,7 @@ package fixedpoint;
         logic [31:-W_FRAC*2] mult_res;
         // verilator lint_on UNUSEDSIGNAL
         mult_res = {num_a, {W_FRAC {1'b0} } } * (32+W_FRAC)'(num_b);
-        return integer'(mult_res[31:0]);
+        return mult_res[31:0];
     endfunction
 
 
