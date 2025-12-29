@@ -65,7 +65,7 @@ logic                  calc_start;
 // verilator lint_off UNUSEDSIGNAL
 logic                  calc_done;
 // verilator lint_on UNUSEDSIGNAL
-logic [W_X_POS-1:0]    calc_col;
+logic [W_X_POS-1:0]    calc_px_x;
 
 logic                  in_range_prev;
 logic [W_Y_POS-1:0]    px_y;
@@ -89,7 +89,7 @@ line_height_calc #(
     .rst            (rst           ),
 
     .start_i        (calc_start    ),
-    .px_x_i         (px_x_i        ),
+    .px_x_i         (calc_px_x     ),
 
     .pos_x_i        (pos_x_i       ),
     .pos_y_i        (pos_y_i       ),
@@ -120,12 +120,12 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (rst) begin
-        calc_col <= '0;
+        calc_px_x <= '0;
     end else if (buf_write) begin
-        if (calc_col == (FRAME_HEIGHT - 1)) begin
-            calc_col <= '0;
+        if (calc_px_x == (FRAME_WIDTH - 1)) begin
+            calc_px_x <= '0;
         end else begin
-            calc_col <= calc_col + 1'b1;
+            calc_px_x <= calc_px_x + 1'b1;
         end
     end
 end
@@ -135,7 +135,7 @@ assign buf_data_in = { calc_color, calc_height[W_Y_POS-1:1] };
 assign calc_start  = !in_range_prev &&  in_range_i;
 assign buf_write   =  in_range_prev && !in_range_i;
 assign buf_read    = in_range_i;
-assign buf_addr    = in_range_i ? px_x_i : calc_col;
+assign buf_addr    = in_range_i ? px_x_i : calc_px_x;
 
 // ----------------------------------------------------------------------------
 // Calc current color based on buffer data
