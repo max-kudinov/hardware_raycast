@@ -6,10 +6,10 @@ module render
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
-    parameter W_X_POS      = 10,
-    parameter W_Y_POS      = 9,
-    parameter FRAME_WIDTH  = 640,
-    parameter FRAME_HEIGHT = 480
+    parameter int unsigned        W_X_POS      = 10,
+    parameter int unsigned        W_Y_POS      = 9,
+    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
+    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
     input  var logic                          clk,
     input  var logic                          rst,
@@ -146,8 +146,8 @@ assign { buf_color, buf_height } = buf_data_out;
 
 always_ff @(posedge clk) begin
     if (in_range_prev) begin
-        if ((px_y > ((FRAME_HEIGHT >> 2) - buf_height)) &&
-            (px_y < ((FRAME_HEIGHT >> 2) + buf_height))) begin
+        if ((px_y > ((FRAME_HEIGHT >> 2) - W_Y_POS'(buf_height))) &&
+            (px_y < ((FRAME_HEIGHT >> 2) + W_Y_POS'(buf_height)))) begin
             color_o <= buf_color ? { 8'd127, 8'd127, 8'd127 } :
                                    { 8'd255, 8'd255, 8'd255 };
         end else begin
