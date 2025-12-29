@@ -82,7 +82,7 @@ end
 
 line_height_calc #(
     .W_X_POS      (W_X_POS     ),
-    .W_HEIGHT     (W_Y_POS     ),
+    .W_Y_POS      (W_Y_POS     ),
     .FRAME_WIDTH  (FRAME_WIDTH ),
     .FRAME_HEIGHT (FRAME_HEIGHT)
 ) line_height_calc (
