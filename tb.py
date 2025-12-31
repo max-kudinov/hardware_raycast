@@ -262,8 +262,6 @@ async def render(dut):
             print("=" * 80)
             raise e
 
-        print("good")
-
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
         if start_pos < 0:
