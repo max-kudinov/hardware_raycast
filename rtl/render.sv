@@ -51,32 +51,34 @@ localparam int unsigned W_BUF_ADDR = $clog2(FRAME_WIDTH);
 logic [W_BUF_DATA-1:0] frame_buffer [FRAME_WIDTH];
 logic                  buf_write;
 logic                  buf_read;
-logic [W_BUF_ADDR-1:0] buf_addr;
-logic [W_BUF_DATA-1:0] buf_data_in;
-logic [W_BUF_DATA-1:0] buf_data_out;
+logic [W_BUF_ADDR-1:0] buf_rd_addr;
+logic [W_BUF_ADDR-1:0] buf_wr_addr;
+logic [W_BUF_DATA-1:0] buf_wr_data;
+logic [W_BUF_DATA-1:0] buf_rd_data;
 logic [W_Y_POS-2:0]    buf_height;
 logic                  buf_color;
 
+// LSB is not used
 // verilator lint_off UNUSEDSIGNAL
-logic [W_Y_POS-1:0]   calc_height;
+logic [W_Y_POS-1:0]    calc_height;
 // verilator lint_on UNUSEDSIGNAL
 logic                  calc_color;
 logic                  calc_start;
-// verilator lint_off UNUSEDSIGNAL
 logic                  calc_done;
-// verilator lint_on UNUSEDSIGNAL
 logic [W_X_POS-1:0]    calc_px_x;
+logic                  calc_active;
+logic                  new_frame;
 
 logic                  in_range_prev;
 logic [W_Y_POS-1:0]    px_y;
 
-// Single-port block RAM
+// Simple dual-port block RAM with read-first behavior
 always_ff @(posedge clk) begin
-    if (buf_write) begin
-        frame_buffer[buf_addr] <= buf_data_in;
-    end else if (buf_read) begin
-        buf_data_out <= frame_buffer[buf_addr];
-    end
+    if (buf_write)
+        frame_buffer[buf_wr_addr] <= buf_wr_data;
+
+    if (buf_read)
+        buf_rd_data <= frame_buffer[buf_rd_addr];
 end
 
 line_height_calc #(
@@ -107,7 +109,6 @@ line_height_calc #(
     .ray_hit_side_o (calc_color    )
 );
 
-
 always_ff @(posedge clk)
     if (rst)
         in_range_prev <= '0;
@@ -120,8 +121,8 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (rst) begin
-        calc_px_x <= '0;
-    end else if (buf_write) begin
+        calc_px_x  <= '0;
+    end else if (calc_done) begin
         if (calc_px_x == (FRAME_WIDTH - 1)) begin
             calc_px_x <= '0;
         end else begin
@@ -130,18 +131,37 @@ always_ff @(posedge clk) begin
     end
 end
 
+always_ff @(posedge clk) begin
+    if (rst)
+        calc_active <= '0;
+    else if (new_frame)
+        calc_active <= '1;
+    else if (calc_start && (calc_px_x == (FRAME_WIDTH - 1)))
+        calc_active <= '0;
+end
+
+assign new_frame = (px_x_i == '0) && (px_y_i == '0) && in_range_i;
+
+always_ff @(posedge clk)
+    if (rst)
+        calc_start <= '0;
+    else if (new_frame)
+        calc_start <= '1;
+    else
+        calc_start <= calc_active && calc_done;
+
 // Height divided by half is used for calculations, so we don't need LSB
-assign buf_data_in = { calc_color, calc_height[W_Y_POS-1:1] };
-assign calc_start  = !in_range_prev &&  in_range_i;
-assign buf_write   =  in_range_prev && !in_range_i;
+assign buf_wr_data = { calc_color, calc_height[W_Y_POS-1:1] };
+assign buf_write   = calc_done;
+assign buf_wr_addr = calc_px_x;
 assign buf_read    = in_range_i;
-assign buf_addr    = in_range_i ? px_x_i : calc_px_x;
+assign buf_rd_addr = px_x_i;
 
 // ----------------------------------------------------------------------------
 // Calc current color based on buffer data
 // ----------------------------------------------------------------------------
 
-assign { buf_color, buf_height } = buf_data_out;
+assign { buf_color, buf_height } = buf_rd_data;
 
 always_ff @(posedge clk) begin
     if (in_range_prev) begin
