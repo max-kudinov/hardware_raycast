@@ -3,7 +3,7 @@ from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
 from pygame import freetype
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import FallingEdge, RisingEdge, Timer
 
 
 FRAME_WIDTH = 640
@@ -233,7 +233,8 @@ async def render(dut):
     dut.plane_y_i.value = float_to_fixp(plane_y)
 
     cocotb.start_soon(timeout())
-    await RisingEdge(dut.dvi_top.i_dvi_sync.frame_done)
+
+    await RisingEdge(dut.render.new_frame)
     mem = dut.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
