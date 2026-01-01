@@ -33,7 +33,7 @@ package dvi_pkg;
     parameter VS_W          = $clog2(V_TOTAL + 1);
 
     parameter COLOR_W       = 8;
-    parameter DEL_CYCLES    = 1;
+    parameter DEL_CYCLES    = 2;
 
 endpackage : dvi_pkg
 
