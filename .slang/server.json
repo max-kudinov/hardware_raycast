@@ -1,5 +1,5 @@
 {
-    "flags": "-Irtl/include -Irtl/open_dvi/rtl/include -Wno-case-default",
+    "flags": "-Irtl/include -Wno-case-default",
     "indexGlobs": ["rtl/.../*.sv*"],
     "excludeDirs": ["sim_build", "__pycache__"]
 }
