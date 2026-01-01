@@ -19,21 +19,17 @@ module dvi_sync
     logic [HS_W-1:0] h_cnt;
     logic [VS_W-1:0] v_cnt_next;
     logic [VS_W-1:0] v_cnt;
-    logic frame_done;
 
     always_comb begin
         h_cnt_max  = h_cnt == (H_TOTAL - 1);
         h_cnt_next = h_cnt_max ? '0 : h_cnt + 1'b1;
         v_cnt_next = v_cnt;
-        frame_done = 0;
 
         if (h_cnt_max) begin
             v_cnt_next = v_cnt + 1'b1;
 
-            if (v_cnt == (V_TOTAL - 1)) begin
+            if (v_cnt == (V_TOTAL - 1))
                 v_cnt_next = '0;
-                frame_done = 1;
-            end
         end
     end
 
