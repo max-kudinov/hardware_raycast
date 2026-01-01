@@ -33,6 +33,7 @@ module raycast_top
 
 import dvi_pkg::X_POS_W;
 import dvi_pkg::Y_POS_W;
+import dvi_pkg::COLOR_W;
 
 
 bit board_clk;
@@ -56,10 +57,9 @@ logic [0:MAP_SIDE-1] map [MAP_SIDE];
 // verilator lint_on ASCRANGE
 logic wall_hit;
 
-logic [23:0] color;
-logic [7:0] red;
-logic [7:0] green;
-logic [7:0] blue;
+logic [COLOR_W-1:0] red;
+logic [COLOR_W-1:0] green;
+logic [COLOR_W-1:0] blue;
 
 logic [X_POS_W-1:0] px_x;
 logic [Y_POS_W-1:0] px_y;
@@ -106,6 +106,9 @@ render #(
     .px_x_i         (px_x     ),
     .px_y_i         (px_y     ),
     .in_range_i     (in_range ),
+    .red_o          (red      ),
+    .green_o        (green    ),
+    .blue_o         (blue     ),
     .pos_x_i        (pos_x_i  ),
     .pos_y_i        (pos_y_i  ),
     .dir_x_i        (dir_x_i  ),
@@ -114,11 +117,8 @@ render #(
     .plane_y_i      (plane_y_i),
     .lookup_map_x_o (map_x    ),
     .lookup_map_y_o (map_y    ),
-    .wall_hit_i     (wall_hit ),
-    .color_o        (color    )
+    .wall_hit_i     (wall_hit )
 );
-
-assign { red, green, blue } = color;
 
 dvi_top dvi_top (
     .serial_clk_i (serial_clk ),

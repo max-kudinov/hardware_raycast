@@ -1,10 +1,12 @@
 `include "fixedpoint.svh"
+`include "dvi_pkg.svh"
 
 `default_nettype none
 
 module render
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
+    import dvi_pkg::COLOR_W;
 #(
     parameter int unsigned        W_X_POS      = 10,
     parameter int unsigned        W_Y_POS      = 9,
@@ -14,10 +16,13 @@ module render
     input  var logic                          clk,
     input  var logic                          rst,
 
-    // DVI driver input
+    // DVI
     input  var logic        [W_X_POS-1:0]     px_x_i,
     input  var logic        [W_Y_POS-1:0]     px_y_i,
     input  var logic                          in_range_i,
+    output var logic        [COLOR_W-1:0]     red_o,
+    output var logic        [COLOR_W-1:0]     green_o,
+    output var logic        [COLOR_W-1:0]     blue_o,
 
     // Camera coordinates
     input  var logic        [W_INT-1:-W_FRAC] pos_x_i,
@@ -32,9 +37,7 @@ module render
     // Map coordinates to check for a wall
     output var logic        [W_INT-1:0]       lookup_map_x_o,
     output var logic        [W_INT-1:0]       lookup_map_y_o,
-    input  var logic                          wall_hit_i,
-
-    output var logic        [23:0]            color_o
+    input  var logic                          wall_hit_i
 );
 
 // ----------------------------------------------------------------------------
@@ -167,10 +170,10 @@ always_ff @(posedge clk) begin
     if (in_range_prev) begin
         if ((px_y > ((FRAME_HEIGHT >> 2) - W_Y_POS'(buf_height))) &&
             (px_y < ((FRAME_HEIGHT >> 2) + W_Y_POS'(buf_height)))) begin
-            color_o <= buf_color ? { 8'd127, 8'd127, 8'd127 } :
-                                   { 8'd255, 8'd255, 8'd255 };
+            { red_o, green_o, blue_o } <= buf_color ? { 8'd127, 8'd127, 8'd127 } :
+                                                      { 8'd255, 8'd255, 8'd255 };
         end else begin
-            color_o <= '0;
+            { red_o, green_o, blue_o } <= '0;
         end
     end
 end
