@@ -59,6 +59,22 @@ package fixedpoint;
         return { num, { W_FRAC {1'b0} } };
     endfunction
 
+    // TODO: make those types global
+    typedef logic        [W_INT-1:-W_FRAC] fixp_t;
+    typedef logic signed [W_INT-1:-W_FRAC] sfixp_t;
+
+    function automatic fixp_t real_to_fixp (
+        input real num
+    );
+        return fixp_t'(num * 2**W_FRAC);
+    endfunction
+
+    function automatic sfixp_t real_to_sfixp (
+        input real num
+    );
+        return sfixp_t'(num * 2**W_FRAC);
+    endfunction
+
 endpackage
 
 `endif // FIXEDPOINT_PKG_SVH
