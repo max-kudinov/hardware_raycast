@@ -333,8 +333,22 @@ def controls():
         if game_map[int(pos_y - dir_y * move_speed)][int(pos_x)] != 1:
             pos_y = fixp_unsigned(pos_y - dir_y * move_speed)
 
-    # Rotate right
+    # Move right
     if keys[pg.K_d]:
+        if game_map[int(pos_y)][int(pos_x + dir_y * move_speed)] != 1:
+            pos_x = fixp_unsigned(pos_x + dir_y * move_speed)
+        if game_map[int(pos_y - dir_x * move_speed)][int(pos_x)] != 1:
+            pos_y = fixp_unsigned(pos_y - dir_x * move_speed)
+
+    # Move left
+    if keys[pg.K_a]:
+        if game_map[int(pos_y)][int(pos_x - dir_y * move_speed)] != 1:
+            pos_x = fixp_unsigned(pos_x - dir_y * move_speed)
+        if game_map[int(pos_y + dir_x * move_speed)][int(pos_x)] != 1:
+            pos_y = fixp_unsigned(pos_y + dir_x * move_speed)
+
+    # Rotate right
+    if keys[pg.K_RIGHT]:
         old_dir_x = fixp(dir_x, signed=True)
         dir_x = fixp(
             dir_x * math.cos(-rot_speed) - dir_y * math.sin(-rot_speed),
@@ -358,7 +372,7 @@ def controls():
         )
 
     # Rotate left
-    if keys[pg.K_a]:
+    if keys[pg.K_LEFT]:
         old_dir_x = fixp(dir_x, signed=True)
         dir_x = fixp(
             dir_x * math.cos(rot_speed) - dir_y * math.sin(rot_speed),
