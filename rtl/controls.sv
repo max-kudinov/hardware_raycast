@@ -51,6 +51,16 @@ localparam real START_PLANE_X = -0.22;
 localparam real START_PLANE_Y = -0.62;
 
 // ----------------------------------------------------------------------------
+// Local types declaration
+// ----------------------------------------------------------------------------
+
+typedef enum {
+    ST_IDLE,
+    ST_CALC_DELTA,
+    ST_CALC_POS
+} state_t;
+
+// ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
@@ -61,7 +71,47 @@ logic signed [W_INT-1:-W_FRAC] dir_y_next;
 logic signed [W_INT-1:-W_FRAC] plane_x_next;
 logic signed [W_INT-1:-W_FRAC] plane_y_next;
 
+logic signed [W_INT-1:-W_FRAC] delta_dir_x;
+logic signed [W_INT-1:-W_FRAC] delta_dir_y;
+
+logic signed [W_INT-1:-W_FRAC] pos_x_inc_x;
+logic signed [W_INT-1:-W_FRAC] pos_y_inc_y;
+logic signed [W_INT-1:-W_FRAC] pos_x_dec_x;
+logic signed [W_INT-1:-W_FRAC] pos_y_dec_y;
+
+logic signed [W_INT-1:-W_FRAC] pos_x_inc_y;
+logic signed [W_INT-1:-W_FRAC] pos_y_inc_x;
+logic signed [W_INT-1:-W_FRAC] pos_x_dec_y;
+logic signed [W_INT-1:-W_FRAC] pos_y_dec_x;
+
 logic start_update;
+
+state_t state, next_state;
+
+always_ff @(posedge clk)
+    if (rst)
+        state <= ST_IDLE;
+    else
+        state <= next_state;
+
+always_comb begin
+    next_state = state;
+
+    case (state)
+        ST_IDLE: if (start_update) next_state = ST_CALC_DELTA;
+        ST_CALC_DELTA: next_state = ST_CALC_POS;
+    endcase
+end
+
+always_ff @(posedge clk) begin
+    if (state == ST_CALC_DELTA) begin
+        delta_dir_x <= fixedpoint::real_to_sfixp(MOVEMENT_SPEED) * dir_x_o;
+        delta_dir_y <= fixedpoint::real_to_sfixp(MOVEMENT_SPEED) * dir_y_o;
+    end
+
+    if (state == ST_CALC_POS) begin
+    end
+end
 
 assign start_update = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1);
 
