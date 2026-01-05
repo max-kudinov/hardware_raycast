@@ -110,15 +110,15 @@ always_ff @(posedge clk) begin
     end
 
     if (state == ST_CALC_POS) begin
-        pos_x_inc_x = pos_x_o + delta_dir_x;
-        pos_y_inc_y = pos_y_o + delta_dir_y;
-        pos_x_inc_x = pos_x_o - delta_dir_x;
-        pos_y_inc_y = pos_y_o - delta_dir_y;
+        pos_x_inc_x <= pos_x_o + delta_dir_x;
+        pos_y_inc_y <= pos_y_o + delta_dir_y;
+        pos_x_inc_x <= pos_x_o - delta_dir_x;
+        pos_y_inc_y <= pos_y_o - delta_dir_y;
 
-        pos_x_inc_y = pos_x_o + delta_dir_y;
-        pos_y_inc_x = pos_y_o + delta_dir_x;
-        pos_x_dec_y = pos_x_o - delta_dir_y;
-        pos_y_dec_x = pos_y_o - delta_dir_x;
+        pos_x_inc_y <= pos_x_o + delta_dir_y;
+        pos_y_inc_x <= pos_y_o + delta_dir_x;
+        pos_x_dec_y <= pos_x_o - delta_dir_y;
+        pos_y_dec_x <= pos_y_o - delta_dir_x;
     end
 end
 
