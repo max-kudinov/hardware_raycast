@@ -24,6 +24,11 @@ module controls
     input  var logic                          key_rotate_left_i,
     input  var logic                          key_rotate_right_i,
 
+    // Map coordinates to check for a wall
+    output var logic        [W_INT-1:0]       lookup_map_x_o,
+    output var logic        [W_INT-1:0]       lookup_map_y_o,
+    input  var logic                          wall_hit_i,
+
     // DVI
     input  var logic        [W_X_POS-1:0]     px_x_i,
     input  var logic        [W_Y_POS-1:0]     px_y_i,
@@ -55,10 +60,24 @@ localparam real START_PLANE_Y = -0.62;
 // ----------------------------------------------------------------------------
 
 typedef enum {
+    ST_POS_X,
+    ST_POS_Y
+} axis_state_t;
+
+typedef enum {
+    ST_FORWARD,
+    ST_BACKWARD,
+    ST_LEFT,
+    ST_RIGHT
+} cntrl_state_t;
+
+typedef enum {
     ST_IDLE,
-    ST_CALC_DELTA,
-    ST_CALC_POS
-} state_t;
+    ST_CALC_DIR,
+    ST_SCALE_DIR,
+    ST_CALC_POS,
+    ST_UPDATE_POS
+} calc_state_t;
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
@@ -71,58 +90,84 @@ logic signed [W_INT-1:-W_FRAC] dir_y_next;
 logic signed [W_INT-1:-W_FRAC] plane_x_next;
 logic signed [W_INT-1:-W_FRAC] plane_y_next;
 
-logic signed [W_INT-1:-W_FRAC] delta_dir_x;
-logic signed [W_INT-1:-W_FRAC] delta_dir_y;
+logic update_start;
+logic update_done;
+logic calc_done;
+logic axis_done;  // Vector x/y projections, not AXI stream
 
-logic signed [W_INT-1:-W_FRAC] pos_x_inc_x;
-logic signed [W_INT-1:-W_FRAC] pos_y_inc_y;
-logic signed [W_INT-1:-W_FRAC] pos_x_dec_x;
-logic signed [W_INT-1:-W_FRAC] pos_y_dec_y;
+axis_state_t  axis_state;
+axis_state_t  axis_next_state;
 
-logic signed [W_INT-1:-W_FRAC] pos_x_inc_y;
-logic signed [W_INT-1:-W_FRAC] pos_y_inc_x;
-logic signed [W_INT-1:-W_FRAC] pos_x_dec_y;
-logic signed [W_INT-1:-W_FRAC] pos_y_dec_x;
+cntrl_state_t cntrl_state;
+cntrl_state_t cntrl_next_state;
 
-logic start_update;
+calc_state_t  calc_state;
+calc_state_t  calc_next_state;
 
-state_t state, next_state;
+// ----------------------------------------------------------------------------
+// FSMs
+// ----------------------------------------------------------------------------
+
+// Global control
+assign update_start = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1);
+assign update_done  = (axis_state == ST_POS_Y) && (cntrl_state == ST_RIGHT);
+assign calc_done    = calc_state == ST_UPDATE_POS;
+assign axis_done    = calc_done && (calc_state == ST_RIGHT);
 
 always_ff @(posedge clk)
     if (rst)
-        state <= ST_IDLE;
+        axis_state <= ST_POS_X;
     else
-        state <= next_state;
+        axis_state <= axis_next_state;
 
 always_comb begin
-    next_state = state;
+    axis_next_state = axis_state;
 
-    case (state)
-        ST_IDLE: if (start_update) next_state = ST_CALC_DELTA;
-        ST_CALC_DELTA: next_state = ST_CALC_POS;
+    case (axis_state)
+        ST_POS_X: if (axis_done) axis_next_state = ST_POS_Y;
+        ST_POS_Y: if (axis_done) axis_next_state = ST_POS_X;
     endcase
 end
 
-always_ff @(posedge clk) begin
-    if (state == ST_CALC_DELTA) begin
-        delta_dir_x <= fixedpoint::real_to_sfixp(MOVEMENT_SPEED) * dir_x_o;
-        delta_dir_y <= fixedpoint::real_to_sfixp(MOVEMENT_SPEED) * dir_y_o;
-    end
+always_ff @(posedge clk)
+    if (rst)
+        cntrl_state <= ST_FORWARD;
+    else
+        cntrl_state <= cntrl_next_state;
 
-    if (state == ST_CALC_POS) begin
-        pos_x_inc_x <= pos_x_o + delta_dir_x;
-        pos_y_inc_y <= pos_y_o + delta_dir_y;
-        pos_x_inc_x <= pos_x_o - delta_dir_x;
-        pos_y_inc_y <= pos_y_o - delta_dir_y;
+always_comb begin
+    cntrl_next_state = cntrl_state;
 
-        pos_x_inc_y <= pos_x_o + delta_dir_y;
-        pos_y_inc_x <= pos_y_o + delta_dir_x;
-        pos_x_dec_y <= pos_x_o - delta_dir_y;
-        pos_y_dec_x <= pos_y_o - delta_dir_x;
-    end
+    case (cntrl_state)
+        ST_FORWARD:  if (calc_done) cntrl_next_state = ST_BACKWARD;
+        ST_BACKWARD: if (calc_done) cntrl_next_state = ST_LEFT;
+        ST_LEFT:     if (calc_done) cntrl_next_state = ST_RIGHT;
+        ST_RIGHT:    if (calc_done) cntrl_next_state = ST_FORWARD;
+    endcase
 end
 
-assign start_update = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1);
+always_ff @(posedge clk)
+    if (rst)
+        calc_state <= ST_IDLE;
+    else
+        calc_state <= calc_next_state;
+
+always_comb begin
+    calc_next_state = calc_state;
+
+    case (calc_state)
+        ST_IDLE:       if (update_start) calc_next_state = ST_CALC_DIR;
+        ST_CALC_DIR:                     calc_next_state = ST_SCALE_DIR;
+        ST_SCALE_DIR:                    calc_next_state = ST_CALC_POS;
+        ST_UPDATE_POS: if (update_done)  calc_next_state = ST_IDLE;
+                       else              calc_next_state = ST_CALC_DIR;
+    endcase
+end
+
+
+// ----------------------------------------------------------------------------
+// Output
+// ----------------------------------------------------------------------------
 
 always_ff @(posedge clk) begin
     if (rst) begin
@@ -134,7 +179,7 @@ always_ff @(posedge clk) begin
 
         plane_x_o <= fixedpoint::real_to_sfixp(START_PLANE_X);
         plane_y_o <= fixedpoint::real_to_sfixp(START_PLANE_Y);
-    end else if (start_update) begin
+    end else if (update_start) begin
         pos_x_o   <= pos_x_next;
         pos_y_o   <= pos_y_next;
 
@@ -155,11 +200,6 @@ always_comb begin
 
     plane_x_next = plane_x_o;
     plane_y_next = plane_y_o;
-
-    // Forward
-    if (key_forward_i) begin
-
-    end
 end
 
 endmodule
