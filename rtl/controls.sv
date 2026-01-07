@@ -90,6 +90,11 @@ logic signed [W_INT-1:-W_FRAC] dir_y_next;
 logic signed [W_INT-1:-W_FRAC] plane_x_next;
 logic signed [W_INT-1:-W_FRAC] plane_y_next;
 
+logic        [W_INT-1:-W_FRAC] new_pos;
+
+logic signed [W_INT-1:-W_FRAC] new_dir_next;
+logic signed [W_INT-1:-W_FRAC] new_dir_ff;
+
 logic update_start;
 logic update_done;
 logic calc_done;
@@ -123,7 +128,7 @@ always_ff @(posedge clk)
 always_comb begin
     axis_next_state = axis_state;
 
-    case (axis_state)
+    unique case (axis_state)
         ST_POS_X: if (axis_done) axis_next_state = ST_POS_Y;
         ST_POS_Y: if (axis_done) axis_next_state = ST_POS_X;
     endcase
@@ -138,7 +143,7 @@ always_ff @(posedge clk)
 always_comb begin
     cntrl_next_state = cntrl_state;
 
-    case (cntrl_state)
+    unique case (cntrl_state)
         ST_FORWARD:  if (calc_done) cntrl_next_state = ST_BACKWARD;
         ST_BACKWARD: if (calc_done) cntrl_next_state = ST_LEFT;
         ST_LEFT:     if (calc_done) cntrl_next_state = ST_RIGHT;
@@ -155,10 +160,11 @@ always_ff @(posedge clk)
 always_comb begin
     calc_next_state = calc_state;
 
-    case (calc_state)
+    unique case (calc_state)
         ST_IDLE:       if (update_start) calc_next_state = ST_CALC_DIR;
         ST_CALC_DIR:                     calc_next_state = ST_SCALE_DIR;
         ST_SCALE_DIR:                    calc_next_state = ST_CALC_POS;
+        ST_CALC_POS:                     calc_next_state = ST_UPDATE_POS;
         ST_UPDATE_POS: if (update_done)  calc_next_state = ST_IDLE;
                        else              calc_next_state = ST_CALC_DIR;
     endcase
@@ -200,6 +206,54 @@ always_comb begin
 
     plane_x_next = plane_x_o;
     plane_y_next = plane_y_o;
+
+    if (calc_state == ST_UPDATE_POS)
+        if (!wall_hit_i)
+            if (axis_state == ST_POS_X)
+                pos_x_next = new_pos;
+            else
+                pos_y_next = new_pos;
+end
+
+always_comb
+    if (calc_state == ST_CALC_DIR)
+        unique case ({ axis_state, cntrl_state })
+            // X-axis
+            { ST_POS_X, ST_FORWARD  }: new_dir_next =  dir_x_o;
+            { ST_POS_X, ST_BACKWARD }: new_dir_next = -dir_x_o;
+            { ST_POS_X, ST_LEFT     }: new_dir_next = -dir_y_o;
+            { ST_POS_X, ST_RIGHT    }: new_dir_next =  dir_y_o;
+
+            // Y-axis
+            { ST_POS_Y, ST_FORWARD  }: new_dir_next =  dir_y_o;
+            { ST_POS_Y, ST_BACKWARD }: new_dir_next = -dir_y_o;
+            { ST_POS_Y, ST_LEFT     }: new_dir_next =  dir_x_o;
+            { ST_POS_Y, ST_RIGHT    }: new_dir_next = -dir_x_o;
+        endcase
+    else if (calc_state == ST_SCALE_DIR)
+        new_dir_next = fixedpoint::signed_mult(
+            new_dir_ff,
+            fixedpoint::real_to_sfixp(MOVEMENT_SPEED)
+        );
+
+always_ff @(posedge clk)
+    new_dir_ff <= new_dir_next;
+
+always_ff @(posedge clk)
+    if (calc_state == ST_CALC_POS)
+        if (axis_state == ST_POS_X)
+            new_pos <= pos_x_o + new_dir_ff;
+        else
+            new_pos <= pos_y_o + new_dir_ff;
+
+always_comb begin
+    if (axis_state == ST_POS_X) begin
+        lookup_map_x_o = new_pos[W_INT-1:0];
+        lookup_map_y_o = pos_y_o[W_INT-1:0];
+    end else begin
+        lookup_map_x_o = pos_x_o[W_INT-1:0];
+        lookup_map_y_o = new_pos[W_INT-1:0];
+    end
 end
 
 endmodule
