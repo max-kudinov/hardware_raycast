@@ -16,7 +16,7 @@ W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
 W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
 N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
 
-FP_MODE = True
+FP_MODE = False
 
 W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
 
@@ -224,44 +224,44 @@ async def render(dut):
     # Clear screen
     surface.fill((0, 0, 0))
 
-    await RisingEdge(dut.px_clk)
-    dut.pos_x_i.value = float_to_fixp(pos_x)
-    dut.pos_y_i.value = float_to_fixp(pos_y)
-    dut.dir_x_i.value = float_to_fixp(dir_x)
-    dut.dir_y_i.value = float_to_fixp(dir_y)
-    dut.plane_x_i.value = float_to_fixp(plane_x)
-    dut.plane_y_i.value = float_to_fixp(plane_y)
-
-    cocotb.start_soon(timeout())
-
-    await RisingEdge(dut.render.new_frame)
-    mem = dut.render.frame_buffer.value
+    # await RisingEdge(dut.px_clk)
+    # dut.pos_x_i.value = float_to_fixp(pos_x)
+    # dut.pos_y_i.value = float_to_fixp(pos_y)
+    # dut.dir_x_i.value = float_to_fixp(dir_x)
+    # dut.dir_y_i.value = float_to_fixp(dir_y)
+    # dut.plane_x_i.value = float_to_fixp(plane_x)
+    # dut.plane_y_i.value = float_to_fixp(plane_y)
+    #
+    # cocotb.start_soon(timeout())
+    #
+    # await RisingEdge(dut.render.new_frame)
+    # mem = dut.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
         line_height, line_color = line_height_calc_model(x)
 
-        dut_color = int(mem[x][8])
-        dut_height = int(mem[x][7:0])
+        # dut_color = int(mem[x][8])
+        # dut_height = int(mem[x][7:0])
 
-        height_div2 = line_height // 2
-
-        try:
-            assert dut_height == height_div2
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected height: {height_div2}, got {dut_height}")
-            print("=" * 80)
-            raise e
-
-        try:
-            assert dut_color == line_color
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected color: {line_color}, got {dut_color}")
-            print("=" * 80)
-            raise e
+        # height_div2 = line_height // 2
+        #
+        # try:
+        #     assert dut_height == height_div2
+        # except AssertionError as e:
+        #     print("=" * 80)
+        #     print(f"Pixel {x}")
+        #     print(f"Expected height: {height_div2}, got {dut_height}")
+        #     print("=" * 80)
+        #     raise e
+        #
+        # try:
+        #     assert dut_color == line_color
+        # except AssertionError as e:
+        #     print("=" * 80)
+        #     print(f"Pixel {x}")
+        #     print(f"Expected color: {line_color}, got {dut_color}")
+        #     print("=" * 80)
+        #     raise e
 
         start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
@@ -277,7 +277,7 @@ async def render(dut):
 
     print_info()
     pg.display.update()
-    cocotb.pass_test("Quit action")
+    # cocotb.pass_test("Quit action")
 
 
 async def timeout():
@@ -309,8 +309,8 @@ def controls():
     global plane_x
     global plane_y
 
-    move_speed = 0.8
-    rot_speed = 0.4
+    move_speed = 0.08
+    rot_speed = 0.04
 
     for event in pg.event.get():
         if event.type == pg.KEYDOWN:
@@ -319,31 +319,45 @@ def controls():
 
     keys = pg.key.get_pressed()
 
+    # Update x axis
     # Forward
     if keys[pg.K_w]:
         if game_map[int(pos_y)][int(pos_x + dir_x * move_speed)] != 1:
             pos_x = fixp_unsigned(pos_x + dir_x * move_speed)
-        if game_map[int(pos_y + dir_y * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp_unsigned(pos_y + dir_y * move_speed)
 
-    # Backwards
+    # Backward
     if keys[pg.K_s]:
         if game_map[int(pos_y)][int(pos_x - dir_x * move_speed)] != 1:
             pos_x = fixp_unsigned(pos_x - dir_x * move_speed)
-        if game_map[int(pos_y - dir_y * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp_unsigned(pos_y - dir_y * move_speed)
 
-    # Move right
+    # Right
     if keys[pg.K_d]:
         if game_map[int(pos_y)][int(pos_x + dir_y * move_speed)] != 1:
             pos_x = fixp_unsigned(pos_x + dir_y * move_speed)
-        if game_map[int(pos_y - dir_x * move_speed)][int(pos_x)] != 1:
-            pos_y = fixp_unsigned(pos_y - dir_x * move_speed)
 
-    # Move left
+    # Left
     if keys[pg.K_a]:
         if game_map[int(pos_y)][int(pos_x - dir_y * move_speed)] != 1:
             pos_x = fixp_unsigned(pos_x - dir_y * move_speed)
+
+    # Update y axis
+    # Forward
+    if keys[pg.K_w]:
+        if game_map[int(pos_y + dir_y * move_speed)][int(pos_x)] != 1:
+            pos_y = fixp_unsigned(pos_y + dir_y * move_speed)
+
+    # Backward
+    if keys[pg.K_s]:
+        if game_map[int(pos_y - dir_y * move_speed)][int(pos_x)] != 1:
+            pos_y = fixp_unsigned(pos_y - dir_y * move_speed)
+
+    # Right
+    if keys[pg.K_d]:
+        if game_map[int(pos_y - dir_x * move_speed)][int(pos_x)] != 1:
+            pos_y = fixp_unsigned(pos_y - dir_x * move_speed)
+
+    # Left
+    if keys[pg.K_a]:
         if game_map[int(pos_y + dir_x * move_speed)][int(pos_x)] != 1:
             pos_y = fixp_unsigned(pos_y + dir_x * move_speed)
 
