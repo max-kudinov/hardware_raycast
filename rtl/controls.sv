@@ -117,7 +117,7 @@ calc_state_t  calc_next_state;
 assign update_start = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1);
 assign update_done  = (axis_state == ST_POS_Y) && (cntrl_state == ST_RIGHT);
 assign calc_done    = calc_state == ST_UPDATE_POS;
-assign axis_done    = calc_done && (calc_state == ST_RIGHT);
+assign axis_done    = calc_done && (cntrl_state == ST_RIGHT);
 
 always_ff @(posedge clk)
     if (rst)
@@ -185,7 +185,7 @@ always_ff @(posedge clk) begin
 
         plane_x_o <= fixedpoint::real_to_sfixp(START_PLANE_X);
         plane_y_o <= fixedpoint::real_to_sfixp(START_PLANE_Y);
-    end else if (update_start) begin
+    end else begin
         pos_x_o   <= pos_x_next;
         pos_y_o   <= pos_y_next;
 
@@ -207,12 +207,11 @@ always_comb begin
     plane_x_next = plane_x_o;
     plane_y_next = plane_y_o;
 
-    if (calc_state == ST_UPDATE_POS)
-        if (!wall_hit_i)
-            if (axis_state == ST_POS_X)
-                pos_x_next = new_pos;
-            else
-                pos_y_next = new_pos;
+    if (calc_done && !wall_hit_i)
+        if (axis_state == ST_POS_X)
+            pos_x_next = new_pos;
+        else
+            pos_y_next = new_pos;
 end
 
 always_comb
