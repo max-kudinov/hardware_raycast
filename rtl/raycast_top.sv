@@ -12,23 +12,21 @@ module raycast_top
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
     parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
-    // input  var logic                          clk,
-    input  var logic                          rst,
+    // input  var logic       clk,
+    input  var logic       rst,
 
-    // Camera coordinates
-    input  var logic        [W_INT-1:-W_FRAC] pos_x_i,
-    input  var logic        [W_INT-1:-W_FRAC] pos_y_i,
-    // Camera direction
-    input  var logic signed [W_INT-1:-W_FRAC] dir_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] dir_y_i,
-    // Camera plane
-    input  var logic signed [W_INT-1:-W_FRAC] plane_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] plane_y_i,
+    // Key input
+    input  var logic       key_forward_i,
+    input  var logic       key_backward_i,
+    input  var logic       key_left_i,
+    input  var logic       key_right_i,
+    input  var logic       key_rotate_left_i,
+    input  var logic       key_rotate_right_i,
 
-    output var logic        [2:0]             tmds_data_p,
-    output var logic        [2:0]             tmds_data_n,
-    output var logic                          tmds_clk_p,
-    output var logic                          tmds_clk_n
+    output var logic [2:0] tmds_data_p,
+    output var logic [2:0] tmds_data_n,
+    output var logic       tmds_clk_p,
+    output var logic       tmds_clk_n
 );
 
 import dvi_pkg::X_POS_W;
@@ -46,9 +44,24 @@ always #10 px_clk     = !px_clk;
 
 localparam int unsigned MAP_SIDE = 20;
 
+logic        [W_INT-1:-W_FRAC] pos_x;
+logic        [W_INT-1:-W_FRAC] pos_y;
+logic signed [W_INT-1:-W_FRAC] dir_x;
+logic signed [W_INT-1:-W_FRAC] dir_y;
+logic signed [W_INT-1:-W_FRAC] plane_x;
+logic signed [W_INT-1:-W_FRAC] plane_y;
+
 // verilator lint_off UNUSEDSIGNAL
 logic [W_INT-1:0] map_x;
 logic [W_INT-1:0] map_y;
+
+logic [W_INT-1:0] render_map_x;
+logic [W_INT-1:0] render_map_y;
+
+logic [W_INT-1:0] controls_map_x;
+logic [W_INT-1:0] controls_map_y;
+
+logic lookup_render;
 // verilator lint_on UNUSEDSIGNAL
 
 // Big-endian to match Python list order
@@ -90,35 +103,20 @@ initial begin
     };
 end
 
+always_ff @(posedge px_clk)
+    if (rst)
+        lookup_render <= '1;
+    else if ((px_x == '0) && (px_y == '0) && in_range)
+        lookup_render <= '1;
+    else if ((px_x == FRAME_WIDTH - 1) && (px_y == FRAME_HEIGHT - 1))
+        lookup_render <= '0;
+
+assign map_x = lookup_render ? render_map_x : controls_map_x;
+assign map_y = lookup_render ? render_map_y : controls_map_y;
 
 // verilator lint_off WIDTHTRUNC
 assign wall_hit = map[map_y][map_x];
 // verilator lint_on WIDTHTRUNC
-
-render #(
-    .FRAME_WIDTH  (FRAME_WIDTH ),
-    .FRAME_HEIGHT (FRAME_HEIGHT),
-    .W_X_POS      (W_X_POS     ),
-    .W_Y_POS      (W_Y_POS     )
-) render (
-    .clk            (px_clk   ),
-    .rst            (rst      ),
-    .px_x_i         (px_x     ),
-    .px_y_i         (px_y     ),
-    .in_range_i     (in_range ),
-    .red_o          (red      ),
-    .green_o        (green    ),
-    .blue_o         (blue     ),
-    .pos_x_i        (pos_x_i  ),
-    .pos_y_i        (pos_y_i  ),
-    .dir_x_i        (dir_x_i  ),
-    .dir_y_i        (dir_y_i  ),
-    .plane_x_i      (plane_x_i),
-    .plane_y_i      (plane_y_i),
-    .lookup_map_x_o (map_x    ),
-    .lookup_map_y_o (map_y    ),
-    .wall_hit_i     (wall_hit )
-);
 
 dvi_top dvi_top (
     .serial_clk_i (serial_clk ),
@@ -134,6 +132,66 @@ dvi_top dvi_top (
     .tmds_data_n  (tmds_data_n),
     .tmds_clk_p   (tmds_clk_p ),
     .tmds_clk_n   (tmds_clk_n )
+);
+
+render #(
+    .FRAME_WIDTH  (FRAME_WIDTH ),
+    .FRAME_HEIGHT (FRAME_HEIGHT),
+    .W_X_POS      (W_X_POS     ),
+    .W_Y_POS      (W_Y_POS     )
+) render (
+    .clk            (px_clk      ),
+    .rst            (rst         ),
+    .px_x_i         (px_x        ),
+    .px_y_i         (px_y        ),
+    .in_range_i     (in_range    ),
+    .red_o          (red         ),
+    .green_o        (green       ),
+    .blue_o         (blue        ),
+    .pos_x_i        (pos_x       ),
+    .pos_y_i        (pos_y       ),
+    .dir_x_i        (dir_x       ),
+    .dir_y_i        (dir_y       ),
+    .plane_x_i      (plane_x     ),
+    .plane_y_i      (plane_y     ),
+    .lookup_map_x_o (render_map_x),
+    .lookup_map_y_o (render_map_y),
+    .wall_hit_i     (wall_hit    )
+);
+
+controls #(
+    .MOVEMENT_SPEED (0.08        ),
+    .ROTATION_SPEED (0.04        ),
+    .W_X_POS        (W_X_POS     ),
+    .W_Y_POS        (W_Y_POS     ),
+    .FRAME_WIDTH    (FRAME_WIDTH ),
+    .FRAME_HEIGHT   (FRAME_HEIGHT)
+) controls (
+    .clk                (px_clk            ),
+    .rst                (rst               ),
+
+    .key_forward_i      (key_forward_i     ),
+    .key_backward_i     (key_backward_i    ),
+    .key_left_i         (key_left_i        ),
+    .key_right_i        (key_right_i       ),
+    .key_rotate_left_i  (key_rotate_left_i ),
+    .key_rotate_right_i (key_rotate_right_i),
+
+    .lookup_map_x_o     (controls_map_x    ),
+    .lookup_map_y_o     (controls_map_y    ),
+    .wall_hit_i         (wall_hit          ),
+
+    .px_x_i             (px_x              ),
+    .px_y_i             (px_y              ),
+
+    .pos_x_o            (pos_x             ),
+    .pos_y_o            (pos_y             ),
+
+    .dir_x_o            (dir_x             ),
+    .dir_y_o            (dir_y             ),
+
+    .plane_x_o          (plane_x           ),
+    .plane_y_o          (plane_y           )
 );
 
 endmodule
