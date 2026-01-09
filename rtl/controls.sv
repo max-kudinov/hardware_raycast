@@ -256,9 +256,10 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (calc_state == ST_CALC_POS)
         if (axis_state == ST_POS_X)
-            new_pos <= pos_x_o + new_dir_ff;
+            // Signed addition, then cast back to unsigned
+            new_pos <= unsigned'(signed'(pos_x_o) + new_dir_ff);
         else
-            new_pos <= pos_y_o + new_dir_ff;
+            new_pos <= unsigned'(signed'(pos_y_o) + new_dir_ff);
 
 always_comb begin
     if (axis_state == ST_POS_X) begin
