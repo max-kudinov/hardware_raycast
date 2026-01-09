@@ -97,6 +97,7 @@ logic signed [W_INT-1:-W_FRAC] new_dir_ff;
 
 logic update_start;
 logic update_done;
+logic update_enable;
 logic calc_done;
 logic axis_done;  // Vector x/y projections, not AXI stream
 
@@ -118,6 +119,20 @@ assign update_start = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1
 assign update_done  = (axis_state == ST_POS_Y) && (cntrl_state == ST_RIGHT);
 assign calc_done    = calc_state == ST_UPDATE_POS;
 assign axis_done    = calc_done && (cntrl_state == ST_RIGHT);
+
+always_ff @(posedge clk)
+    if (rst) begin
+        update_enable <= '0;
+    end else begin
+        update_enable <= '0;
+
+        case (cntrl_state)
+            ST_FORWARD:  if (key_forward_i)  update_enable <= '1;
+            ST_BACKWARD: if (key_backward_i) update_enable <= '1;
+            ST_LEFT:     if (key_left_i)     update_enable <= '1;
+            ST_RIGHT:    if (key_right_i)    update_enable <= '1;
+        endcase
+    end
 
 always_ff @(posedge clk)
     if (rst)
@@ -207,7 +222,7 @@ always_comb begin
     plane_x_next = plane_x_o;
     plane_y_next = plane_y_o;
 
-    if (calc_done && !wall_hit_i)
+    if (update_enable && calc_done && !wall_hit_i)
         if (axis_state == ST_POS_X)
             pos_x_next = new_pos;
         else
