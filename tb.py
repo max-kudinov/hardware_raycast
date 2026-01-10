@@ -227,7 +227,7 @@ async def render(dut):
     await RisingEdge(dut.px_clk)
     # cocotb.start_soon(timeout())
 
-    await RisingEdge(dut.render.new_frame)
+    await RisingEdge(dut.frame_done)
     mem = dut.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
