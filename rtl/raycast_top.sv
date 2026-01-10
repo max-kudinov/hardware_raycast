@@ -170,11 +170,7 @@ render #(
 
 controls #(
     .MOVEMENT_SPEED (MOVEMENT_SPEED),
-    .ROTATION_SPEED (ROTATION_SPEED),
-    .W_X_POS        (W_X_POS       ),
-    .W_Y_POS        (W_Y_POS       ),
-    .FRAME_WIDTH    (FRAME_WIDTH   ),
-    .FRAME_HEIGHT   (FRAME_HEIGHT  )
+    .ROTATION_SPEED (ROTATION_SPEED)
 ) controls (
     .clk                (px_clk            ),
     .rst                (rst               ),

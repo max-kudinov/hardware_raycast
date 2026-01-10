@@ -23,6 +23,8 @@ def run_tb():
     sources += [proj_path / "rtl/dvi/serializer.sv"]
     sources += [proj_path / "rtl/dvi/tmds_encoder.sv"]
     sources += [proj_path / "rtl/controls.sv"]
+    sources += [proj_path / "rtl/position.sv"]
+    sources += [proj_path / "rtl/rotation.sv"]
     includes = [proj_path / "rtl/include"]
     includes += [proj_path / "rtl/open_dvi/rtl/include"]
 
