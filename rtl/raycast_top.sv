@@ -7,6 +7,8 @@ module raycast_top
     import fixedpoint::W_INT;
     import fixedpoint::W_FRAC;
 #(
+    parameter real         MOVEMENT_SPEED      = 0.8,
+    parameter real         ROTATION_SPEED      = 0.4,
     parameter int unsigned        W_X_POS      = 10,
     parameter int unsigned        W_Y_POS      = 9,
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
@@ -167,12 +169,12 @@ render #(
 );
 
 controls #(
-    .MOVEMENT_SPEED (0.08        ),
-    .ROTATION_SPEED (0.04        ),
-    .W_X_POS        (W_X_POS     ),
-    .W_Y_POS        (W_Y_POS     ),
-    .FRAME_WIDTH    (FRAME_WIDTH ),
-    .FRAME_HEIGHT   (FRAME_HEIGHT)
+    .MOVEMENT_SPEED (MOVEMENT_SPEED),
+    .ROTATION_SPEED (ROTATION_SPEED),
+    .W_X_POS        (W_X_POS       ),
+    .W_Y_POS        (W_Y_POS       ),
+    .FRAME_WIDTH    (FRAME_WIDTH   ),
+    .FRAME_HEIGHT   (FRAME_HEIGHT  )
 ) controls (
     .clk                (px_clk            ),
     .rst                (rst               ),
