@@ -15,6 +15,8 @@ MAP_HEIGHT = 20
 W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
 W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
 N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
+MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)
+ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)
 
 FP_MODE = True
 
@@ -84,6 +86,9 @@ def fixp_unsigned(val, int_bits=W_INT, frac_bits=W_FRAC):
         float_value=val
     )
 
+
+move_speed = fixp(MOVEMENT_SPEED, signed=True)
+rot_speed = fixp(ROTATION_SPEED)
 
 # Player position
 pos_x = fixp(10)
@@ -316,9 +321,6 @@ def controls(dut):
     global dir_y
     global plane_x
     global plane_y
-
-    move_speed = fixp(0.08, signed=True)
-    rot_speed = fixp(0.04)
 
     for event in pg.event.get():
         if event.type == pg.KEYDOWN:
