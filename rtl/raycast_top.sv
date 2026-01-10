@@ -78,6 +78,9 @@ logic [X_POS_W-1:0] px_x;
 logic [Y_POS_W-1:0] px_y;
 logic in_range;
 
+logic frame_start;
+logic frame_done;
+
 initial begin
     map = '{
         20'b11111111111111111111,
@@ -103,12 +106,15 @@ initial begin
     };
 end
 
+assign frame_start = (px_x == '0) && (px_y == '0) && in_range;
+assign frame_done  = (px_x == FRAME_WIDTH - 1) && (px_y == FRAME_HEIGHT - 1);
+
 always_ff @(posedge px_clk)
     if (rst)
         lookup_render <= '1;
-    else if ((px_x == '0) && (px_y == '0) && in_range)
+    else if (frame_start)
         lookup_render <= '1;
-    else if ((px_x == FRAME_WIDTH - 1) && (px_y == FRAME_HEIGHT - 1))
+    else if (frame_done)
         lookup_render <= '0;
 
 assign map_x = lookup_render ? render_map_x : controls_map_x;
