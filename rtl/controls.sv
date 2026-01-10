@@ -24,14 +24,12 @@ module controls
     input  var logic                          key_rotate_left_i,
     input  var logic                          key_rotate_right_i,
 
+    input  var logic                          update_start_i,
+
     // Map coordinates to check for a wall
     output var logic        [W_INT-1:0]       lookup_map_x_o,
     output var logic        [W_INT-1:0]       lookup_map_y_o,
     input  var logic                          wall_hit_i,
-
-    // DVI
-    input  var logic        [W_X_POS-1:0]     px_x_i,
-    input  var logic        [W_Y_POS-1:0]     px_y_i,
 
     // Camera coordinates
     output var logic        [W_INT-1:-W_FRAC] pos_x_o,
@@ -95,7 +93,6 @@ logic        [W_INT-1:-W_FRAC] new_pos;
 logic signed [W_INT-1:-W_FRAC] new_dir_next;
 logic signed [W_INT-1:-W_FRAC] new_dir_ff;
 
-logic update_start;
 logic update_done;
 logic update_enable;
 logic calc_done;
@@ -115,7 +112,6 @@ calc_state_t  calc_next_state;
 // ----------------------------------------------------------------------------
 
 // Global control
-assign update_start = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1);
 assign update_done  = (axis_state == ST_POS_Y) && (cntrl_state == ST_RIGHT);
 assign calc_done    = calc_state == ST_UPDATE_POS;
 assign axis_done    = calc_done && (cntrl_state == ST_RIGHT);
@@ -176,12 +172,12 @@ always_comb begin
     calc_next_state = calc_state;
 
     unique case (calc_state)
-        ST_IDLE:       if (update_start) calc_next_state = ST_CALC_DIR;
-        ST_CALC_DIR:                     calc_next_state = ST_SCALE_DIR;
-        ST_SCALE_DIR:                    calc_next_state = ST_CALC_POS;
-        ST_CALC_POS:                     calc_next_state = ST_UPDATE_POS;
-        ST_UPDATE_POS: if (update_done)  calc_next_state = ST_IDLE;
-                       else              calc_next_state = ST_CALC_DIR;
+        ST_IDLE:       if (update_start_i) calc_next_state = ST_CALC_DIR;
+        ST_CALC_DIR:                       calc_next_state = ST_SCALE_DIR;
+        ST_SCALE_DIR:                      calc_next_state = ST_CALC_POS;
+        ST_CALC_POS:                       calc_next_state = ST_UPDATE_POS;
+        ST_UPDATE_POS: if (update_done)    calc_next_state = ST_IDLE;
+                       else                calc_next_state = ST_CALC_DIR;
     endcase
 end
 

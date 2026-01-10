@@ -20,6 +20,7 @@ module render
     input  var logic        [W_X_POS-1:0]     px_x_i,
     input  var logic        [W_Y_POS-1:0]     px_y_i,
     input  var logic                          in_range_i,
+    input  var logic                          new_frame_i,
     output var logic        [COLOR_W-1:0]     red_o,
     output var logic        [COLOR_W-1:0]     green_o,
     output var logic        [COLOR_W-1:0]     blue_o,
@@ -70,7 +71,6 @@ logic                  calc_start;
 logic                  calc_done;
 logic [W_X_POS-1:0]    calc_px_x;
 logic                  calc_active;
-logic                  new_frame;
 
 logic                  in_range_prev;
 logic [W_Y_POS-1:0]    px_y;
@@ -137,18 +137,16 @@ end
 always_ff @(posedge clk) begin
     if (rst)
         calc_active <= '0;
-    else if (new_frame)
+    else if (new_frame_i)
         calc_active <= '1;
     else if (calc_start && (calc_px_x == (FRAME_WIDTH - 1)))
         calc_active <= '0;
 end
 
-assign new_frame = (px_x_i == '0) && (px_y_i == '0) && in_range_i;
-
 always_ff @(posedge clk)
     if (rst)
         calc_start <= '0;
-    else if (new_frame)
+    else if (new_frame_i)
         calc_start <= '1;
     else
         calc_start <= calc_active && calc_done;

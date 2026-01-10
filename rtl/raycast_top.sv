@@ -151,6 +151,7 @@ render #(
     .px_x_i         (px_x        ),
     .px_y_i         (px_y        ),
     .in_range_i     (in_range    ),
+    .new_frame_i    (frame_start ),
     .red_o          (red         ),
     .green_o        (green       ),
     .blue_o         (blue        ),
@@ -183,12 +184,11 @@ controls #(
     .key_rotate_left_i  (key_rotate_left_i ),
     .key_rotate_right_i (key_rotate_right_i),
 
+    .update_start_i     (frame_done        ),
+
     .lookup_map_x_o     (controls_map_x    ),
     .lookup_map_y_o     (controls_map_y    ),
     .wall_hit_i         (wall_hit          ),
-
-    .px_x_i             (px_x              ),
-    .px_y_i             (px_y              ),
 
     .pos_x_o            (pos_x             ),
     .pos_y_o            (pos_y             ),
