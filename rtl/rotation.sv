@@ -24,14 +24,22 @@ module rotation
     output var logic signed [W_INT-1:-W_FRAC] plane_y_o
 );
 
+import fixedpoint::sfixp_t;
+
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam real START_DIR_X   =  0.94;
-localparam real START_DIR_Y   = -0.33;
-localparam real START_PLANE_X = -0.22;
-localparam real START_PLANE_Y = -0.62;
+localparam real    START_DIR_X   =  0.94;
+localparam real    START_DIR_Y   = -0.33;
+localparam real    START_PLANE_X = -0.22;
+localparam real    START_PLANE_Y = -0.62;
+
+// Precalculated trig constants for rotation matrix
+localparam sfixp_t COS_ANGLE     = fixedpoint::real_to_sfixp($cos(ROTATION_SPEED));
+localparam sfixp_t SIN_ANGLE     = fixedpoint::real_to_sfixp($sin(ROTATION_SPEED));
+localparam sfixp_t COS_NEG_ANGLE = fixedpoint::real_to_sfixp($cos(-ROTATION_SPEED));
+localparam sfixp_t SIN_NEG_ANGLE = fixedpoint::real_to_sfixp($sin(-ROTATION_SPEED));
 
 always_ff @(posedge clk)
     if (rst) begin
