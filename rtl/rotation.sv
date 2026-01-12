@@ -69,6 +69,8 @@ logic update_enable;
 logic signed [W_INT-1:-W_FRAC] cur_cos;
 logic signed [W_INT-1:-W_FRAC] cur_sin;
 
+logic vect_done;
+
 vect_state_t vect_state;
 vect_state_t vect_next_state;
 
@@ -88,10 +90,10 @@ always_ff @(posedge clk)
 always_comb begin
     vect_next_state = vect_state;
 
-    // case (vect_state)
-    //     ST_UPDATE_DIR: if (/* DONE*/)
-    //     ST_UPDATE_PLANE: if (/* DONE */)
-    // endcase
+    case (vect_state)
+        ST_UPDATE_DIR:   if (vect_done) vect_next_state = ST_UPDATE_PLANE;
+        ST_UPDATE_PLANE: if (vect_done) vect_next_state = ST_UPDATE_DIR;
+    endcase
 end
 
 always_ff @(posedge clk)
@@ -120,6 +122,8 @@ end
 
 // Rotate only when 1 key is pressed
 assign update_enable = key_rotate_left_i ^ key_rotate_right_i;
+assign vect_done     = calc_state == ST_Y_ADD;
+assign update_done   = vect_done && (vect_state == ST_UPDATE_PLANE);
 
 // To rotate we have to multiply vector components by rotation matrix
 // The formula is:
