@@ -15,8 +15,8 @@ MAP_HEIGHT = 20
 W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
 W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
 N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
-MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)
-ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)
+MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
+ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 
 FP_MODE = True
 
@@ -88,7 +88,10 @@ def fixp_unsigned(val, int_bits=W_INT, frac_bits=W_FRAC):
 
 
 move_speed = fixp(MOVEMENT_SPEED, signed=True)
-rot_speed = fixp(ROTATION_SPEED)
+cos_angle = fixp(math.cos(ROTATION_SPEED), signed=True)
+sin_angle = fixp(math.sin(ROTATION_SPEED), signed=True)
+cos_neg_angle = fixp(math.cos(-ROTATION_SPEED), signed=True)
+sin_neg_angle = fixp(math.sin(-ROTATION_SPEED), signed=True)
 
 # Player position
 pos_x = fixp(10)
@@ -391,49 +394,43 @@ def controls(dut):
             pos_y = new_pos
 
     # Rotate right
-    if keys[pg.K_RIGHT]:
-        old_dir_x = fixp(dir_x, signed=True)
+    if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:
+        dut.key_rotate_right_i.value = 1
+
+        old_dir_x = fixp(dir_x)
         dir_x = fixp(
-            dir_x * math.cos(-rot_speed) - dir_y * math.sin(-rot_speed),
-            signed=True,
+            fixp(dir_x * cos_neg_angle) - fixp(dir_y * sin_neg_angle),
         )
         dir_y = fixp(
-            old_dir_x * math.sin(-rot_speed)
-            + dir_y * math.cos(-rot_speed),
-            signed=True,
+            fixp(old_dir_x * sin_neg_angle) + fixp(dir_y * cos_neg_angle),
         )
-        old_plane_x = fixp(plane_x, signed=True)
+
+        old_plane_x = fixp(plane_x)
         plane_x = fixp(
-            plane_x * math.cos(-rot_speed)
-            - plane_y * math.sin(-rot_speed),
-            signed=True,
+            fixp(plane_x * cos_neg_angle) - fixp(plane_y * sin_neg_angle),
         )
         plane_y = fixp(
-            old_plane_x * math.sin(-rot_speed)
-            + plane_y * math.cos(-rot_speed),
-            signed=True,
+            fixp(old_plane_x * sin_neg_angle) + fixp(plane_y * cos_neg_angle),
         )
 
     # Rotate left
-    if keys[pg.K_LEFT]:
-        old_dir_x = fixp(dir_x, signed=True)
+    if keys[pg.K_LEFT] and not keys[pg.K_RIGHT]:
+        dut.key_rotate_left_i.value = 1
+
+        old_dir_x = fixp(dir_x)
         dir_x = fixp(
-            dir_x * math.cos(rot_speed) - dir_y * math.sin(rot_speed),
-            signed=True,
+            fixp(dir_x * cos_angle) - fixp(dir_y * sin_angle),
         )
         dir_y = fixp(
-            old_dir_x * math.sin(rot_speed) + dir_y * math.cos(rot_speed),
-            signed=True,
+            fixp(old_dir_x * sin_angle) + fixp(dir_y * cos_angle),
         )
-        old_plane_x = fixp(plane_x, signed=True)
+
+        old_plane_x = fixp(plane_x)
         plane_x = fixp(
-            plane_x * math.cos(rot_speed) - plane_y * math.sin(rot_speed),
-            signed=True,
+            fixp(plane_x * cos_angle) - fixp(plane_y * sin_angle),
         )
         plane_y = fixp(
-            old_plane_x * math.sin(rot_speed)
-            + plane_y * math.cos(rot_speed),
-            signed=True,
+            fixp(old_plane_x * sin_angle) + fixp(plane_y * cos_angle),
         )
 
 
