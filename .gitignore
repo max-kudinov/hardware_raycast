@@ -6,3 +6,4 @@ ray/
 sim_build/
 .nvim/
 __pycache__/
+.python-version
