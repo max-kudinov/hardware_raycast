@@ -172,8 +172,8 @@ always_comb begin
 
     unique0 case (calc_state)
         ST_X_MULT_COS: cos_mult_next = fixedpoint::signed_mult(x_prev, cur_cos);
-        ST_X_MULT_SIN: sin_mult_next = fixedpoint::signed_mult(x_prev, cur_sin);
-        ST_Y_MULT_SIN: sin_mult_next = fixedpoint::signed_mult(y_prev, cur_sin);
+        ST_X_MULT_SIN: sin_mult_next = fixedpoint::signed_mult(y_prev, cur_sin);
+        ST_Y_MULT_SIN: sin_mult_next = fixedpoint::signed_mult(x_prev, cur_sin);
         ST_Y_MULT_COS: cos_mult_next = fixedpoint::signed_mult(y_prev, cur_cos);
     endcase
 
