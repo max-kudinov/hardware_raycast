@@ -18,6 +18,7 @@ module position
     input  var logic                          key_right_i,
 
     input  var logic                          update_start_i,
+    output var logic                          update_done_o,
 
     // Map coordinates to check for a wall
     output var logic        [W_INT-1:0]       lookup_map_x_o,
@@ -92,9 +93,9 @@ calc_state_t                   calc_next_state;
 // Global control
 // ----------------------------------------------------------------------------
 
-assign update_done = (axis_state == ST_POS_Y) && (cntrl_state == ST_RIGHT);
 assign calc_done   = calc_state == ST_UPDATE_POS;
 assign axis_done   = calc_done && (cntrl_state == ST_RIGHT);
+assign update_done = axis_done && (axis_state == ST_POS_Y);
 
 always_ff @(posedge clk)
     if (rst) begin
@@ -234,6 +235,13 @@ always_ff @(posedge clk)
         pos_x_o <= pos_x_next;
         pos_y_o <= pos_y_next;
     end
+
+// Delay by 1 clock cycle to update position before asserting done
+always_ff @(posedge clk)
+    if (rst)
+        update_done_o <= '0;
+    else
+        update_done_o <= update_done;
 
 endmodule
 

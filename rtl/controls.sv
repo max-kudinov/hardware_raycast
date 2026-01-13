@@ -38,6 +38,8 @@ module controls
     output var logic signed [W_INT-1:-W_FRAC] plane_y_o
 );
 
+logic pos_done;
+
 position #(
     .MOVEMENT_SPEED (MOVEMENT_SPEED)
 ) position (
@@ -50,6 +52,7 @@ position #(
     .key_right_i    (key_right_i   ),
 
     .update_start_i (update_start_i),
+    .update_done_o  (pos_done      ),
 
     .lookup_map_x_o (lookup_map_x_o),
     .lookup_map_y_o (lookup_map_y_o),
@@ -70,7 +73,7 @@ rotation #(
     .key_rotate_left_i  (key_rotate_left_i ),
     .key_rotate_right_i (key_rotate_right_i),
 
-    .update_start_i     (update_start_i    ),
+    .update_start_i     (pos_done          ),
 
     .dir_x_o            (dir_x_o           ),
     .dir_y_o            (dir_y_o           ),
