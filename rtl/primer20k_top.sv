@@ -8,7 +8,9 @@ module primer20k_top #(
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
     parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
+    // verilator lint_off UNUSEDSIGNAL
     input  var logic       clk,
+    // verilator lint_on UNUSEDSIGNAL
     input  var logic       rst_n,
     input  var logic [5:0] keys_inv_i,
     output var logic [2:0] tmds_data_p,
