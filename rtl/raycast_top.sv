@@ -14,7 +14,8 @@ module raycast_top
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
     parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
-    // input  var logic       clk,
+    input  var logic       serial_clk,
+    input  var logic       px_clk,
     input  var logic       rst,
 
     // Key input
@@ -34,15 +35,6 @@ module raycast_top
 import dvi_pkg::X_POS_W;
 import dvi_pkg::Y_POS_W;
 import dvi_pkg::COLOR_W;
-
-
-bit board_clk;
-bit px_clk;
-bit serial_clk;
-
-always #5  board_clk  = !board_clk;
-always #1  serial_clk = !serial_clk;
-always #10 px_clk     = !px_clk;
 
 localparam int unsigned MAP_SIDE = 20;
 
