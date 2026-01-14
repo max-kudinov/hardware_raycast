@@ -1,0 +1,27 @@
+IO_LOC "clk" IOT27A;
+IO_LOC "rst_n" T10;
+
+IO_LOC "keys_inv_i[0]" T3;
+IO_LOC "keys_inv_i[1]" T2;
+IO_LOC "keys_inv_i[2]" D7;
+IO_LOC "keys_inv_i[3]" C7;
+IO_LOC "keys_inv_i[4]" T5;
+IO_LOC "keys_inv_i[5]" T4;
+
+# DVI
+IO_LOC "tmds_clk_p" G16;
+IO_PORT "tmds_clk_p" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_clk_n" H15;
+IO_PORT "tmds_clk_n" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_data_p[0]" H14;
+IO_PORT "tmds_data_p[0]" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_data_n[0]" H16;
+IO_PORT "tmds_data_n[0]" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_data_p[1]" J15;
+IO_PORT "tmds_data_p[1]" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_data_n[1]" K16;
+IO_PORT "tmds_data_n[1]" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_data_p[2]" K14;
+IO_PORT "tmds_data_p[2]" PULL_MODE=NONE DRIVE=3.5;
+IO_LOC "tmds_data_n[2]" K15;
+IO_PORT "tmds_data_n[2]" PULL_MODE=NONE DRIVE=3.5;
