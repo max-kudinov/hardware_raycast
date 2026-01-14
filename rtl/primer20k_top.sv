@@ -52,7 +52,7 @@ assign keys = ~keys_inv_i;
         .FBDIV_SEL (27  ),
         .ODIV_SEL  (4   )
     ) rpll (
-        .CLKIN   (clk_i     ), // 27 MHZ
+        .CLKIN   (clk       ), // 27 MHZ
         .CLKOUT  (serial_clk), // 252 MHz
         .LOCK    (pll_lock  ),
         .RESET   ('0        ),
