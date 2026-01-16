@@ -40,6 +40,7 @@ def run_tb():
         waves=waves,
         build_args=[
             "-DSIMULATION",
+            "-Wno-CASEINCOMPLETE",
             "--timing",
             "--trace",
             "--trace-fst",
