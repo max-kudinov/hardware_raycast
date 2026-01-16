@@ -6,6 +6,7 @@ from cocotb_tools.runner import get_runner
 def run_tb():
     sim = "verilator"
     waves = True
+    hdl_toplevel = "primer20k_top"
 
     parameters = {
     }
@@ -25,6 +26,7 @@ def run_tb():
     sources += [proj_path / "rtl/controls.sv"]
     sources += [proj_path / "rtl/position.sv"]
     sources += [proj_path / "rtl/rotation.sv"]
+    sources += [proj_path / "rtl/primer20k_top.sv"]
     includes = [proj_path / "rtl/include"]
     includes += [proj_path / "rtl/open_dvi/rtl/include"]
 
@@ -33,15 +35,20 @@ def run_tb():
     runner.build(
         sources=sources,
         includes=includes,
-        hdl_toplevel="raycast_top",
+        hdl_toplevel=hdl_toplevel,
         parameters=parameters,
         waves=waves,
-        build_args=["--timing", "--trace", "--trace-fst", "--trace-structs"]
-        # build_args=["--timing"]
+        build_args=[
+            "-DSIMULATION",
+            "--timing",
+            "--trace",
+            "--trace-fst",
+            "--trace-structs"
+        ]
     )
 
     runner.test(
-        hdl_toplevel="raycast_top",
+        hdl_toplevel=hdl_toplevel,
         test_module="tb",
         parameters=parameters,
         waves=waves

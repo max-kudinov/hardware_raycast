@@ -3,6 +3,7 @@ from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
 from pygame import freetype
 import cocotb
+from cocotb.types import LogicArray
 from cocotb.triggers import FallingEdge, RisingEdge, Timer
 
 
@@ -235,8 +236,8 @@ async def render(dut):
     await RisingEdge(dut.px_clk)
     # cocotb.start_soon(timeout())
 
-    await RisingEdge(dut.frame_done)
-    mem = dut.render.frame_buffer.value
+    await RisingEdge(dut.raycast_top.frame_done)
+    mem = dut.raycast_top.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
         line_height, line_color = line_height_calc_model(x)
@@ -254,19 +255,19 @@ async def render(dut):
             print(f"Expected height: {height_div2}, got {dut_height}")
 
             print(f"Expected dir_x: {dir_x}")
-            print(f"Got dir_x: {dut.dir_x.value.to_signed() / 2**W_FRAC}")
+            print(f"Got dir_x: {dut.raycast_top.dir_x.value.to_signed() / 2**W_FRAC}")
             print(f"Expected dir_y: {dir_y}")
-            print(f"Got dir_y: {dut.dir_y.value.to_signed() / 2**W_FRAC}\n")
+            print(f"Got dir_y: {dut.raycast_top.dir_y.value.to_signed() / 2**W_FRAC}\n")
 
             print(f"Expected plane_x: {plane_x}")
-            print(f"Got plane_x: {dut.plane_x.value.to_signed() / 2**W_FRAC}")
+            print(f"Got plane_x: {dut.raycast_top.plane_x.value.to_signed() / 2**W_FRAC}")
             print(f"Expected plane_y: {plane_y}")
-            print(f"Got plane_y: {dut.plane_y.value.to_signed() / 2**W_FRAC}\n")
+            print(f"Got plane_y: {dut.raycast_top.plane_y.value.to_signed() / 2**W_FRAC}\n")
 
             print(f"Expected pos_x: {pos_x}")
-            print(f"Got pos_x: {dut.pos_x.value.to_unsigned() / 2**W_FRAC}")
+            print(f"Got pos_x: {dut.raycast_top.pos_x.value.to_unsigned() / 2**W_FRAC}")
             print(f"Expected pos_y: {pos_y}")
-            print(f"Got pos_y: {dut.pos_y.value.to_unsigned() / 2**W_FRAC}")
+            print(f"Got pos_y: {dut.raycast_top.pos_y.value.to_unsigned() / 2**W_FRAC}")
             print("=" * 80)
             raise e
 
@@ -332,38 +333,38 @@ def controls(dut):
 
     keys = pg.key.get_pressed()
 
-    dut.key_forward_i.value = 0
-    dut.key_backward_i.value = 0
-    dut.key_left_i.value = 0
-    dut.key_right_i.value = 0
-    dut.key_rotate_left_i.value = 0
-    dut.key_rotate_right_i.value = 0
+    forward = 0
+    backward = 0
+    left = 0
+    right = 0
+    rot_left = 0
+    rot_right = 0
 
     # Update x axis
     # Forward
     if keys[pg.K_w]:
-        dut.key_forward_i.value = 1
+        forward = 1
         new_pos = fixp_unsigned(pos_x + fixp(dir_x * move_speed))
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Backward
     if keys[pg.K_s]:
-        dut.key_backward_i.value = 1
+        backward = 1
         new_pos = fixp_unsigned(pos_x + fixp(-dir_x * move_speed))
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Left
     if keys[pg.K_a]:
-        dut.key_left_i.value = 1
+        left = 1
         new_pos = fixp_unsigned(pos_x + fixp(-dir_y * move_speed))
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Right
     if keys[pg.K_d]:
-        dut.key_right_i.value = 1
+        right = 1
         new_pos = fixp_unsigned(pos_x + fixp(dir_y * move_speed))
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
@@ -395,7 +396,7 @@ def controls(dut):
 
     # Rotate right
     if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:
-        dut.key_rotate_right_i.value = 1
+        rot_right = 1
 
         old_dir_x = fixp(dir_x)
         dir_x = fixp(
@@ -415,7 +416,7 @@ def controls(dut):
 
     # Rotate left
     if keys[pg.K_LEFT] and not keys[pg.K_RIGHT]:
-        dut.key_rotate_left_i.value = 1
+        rot_left = 1
 
         old_dir_x = fixp(dir_x)
         dir_x = fixp(
@@ -433,6 +434,10 @@ def controls(dut):
             fixp(old_plane_x * sin_angle) + fixp(plane_y * cos_angle),
         )
 
+    # Cocotb doesn't allow indexing of packed arrays, so yikes
+    key_str = f"{rot_right}{rot_left}{right}{left}{backward}{forward}"
+    dut.keys_inv_i.value = ~LogicArray(key_str)
+
 
 def quit():
     pg.quit()
@@ -440,9 +445,9 @@ def quit():
 
 
 async def dut_reset(dut):
-    dut.rst.value = 1
+    dut.rst_n.value = 0
     await RisingEdge(dut.px_clk)
-    dut.rst.value = 0
+    dut.rst_n.value = 1
 
 
 @cocotb.test()
@@ -450,5 +455,5 @@ async def run_raycast(dut):
     cocotb.start_soon(dut_reset(dut))
 
     while True:
-        await render(dut)
         controls(dut)
+        await render(dut)
