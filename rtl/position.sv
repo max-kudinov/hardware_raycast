@@ -170,7 +170,9 @@ end
 // New position calculation
 // ----------------------------------------------------------------------------
 
-always_comb
+always_comb begin
+    new_dir_next = new_dir_ff;
+
     if (calc_state == ST_CALC_DIR)
         unique case ({ axis_state, cntrl_state })
             // X-axis
@@ -190,6 +192,7 @@ always_comb
             new_dir_ff,
             fixedpoint::real_to_sfixp(MOVEMENT_SPEED)
         );
+end
 
 always_ff @(posedge clk)
     new_dir_ff <= new_dir_next;
