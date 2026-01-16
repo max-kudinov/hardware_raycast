@@ -44,19 +44,19 @@ localparam real START_POS_Y = 10.0;
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef enum {
+typedef enum logic {
     ST_POS_X,
     ST_POS_Y
 } axis_state_t;
 
-typedef enum {
+typedef enum logic [1:0] {
     ST_FORWARD,
     ST_BACKWARD,
     ST_LEFT,
     ST_RIGHT
 } cntrl_state_t;
 
-typedef enum {
+typedef enum logic [2:0] {
     ST_IDLE,
     ST_CALC_DIR,
     ST_SCALE_DIR,

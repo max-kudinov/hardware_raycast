@@ -38,7 +38,7 @@ logic [W_SHIFT-1:0]         shift_amount;
 logic [W_CNT-1:0]           iter_cnt;
 logic                       cnt_done;
 
-typedef enum {
+typedef enum logic [2:0] {
     ST_IDLE,
     ST_CALC_SHIFT,
     ST_SHIFT_INPUT,

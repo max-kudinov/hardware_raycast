@@ -29,7 +29,7 @@ module dda
     output var logic                   done_o
 );
 
-typedef enum {
+typedef enum logic {
     ST_IDLE,
     ST_CALC_DDA
 } state_t;

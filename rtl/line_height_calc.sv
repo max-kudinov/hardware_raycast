@@ -49,7 +49,7 @@ localparam logic [W_INT-1:-W_FRAC] DELTA_MAX = fixedpoint::int_to_fixp(W_INT'(2*
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef enum {
+typedef enum logic [3:0] {
     ST_IDLE,
     ST_CALC_RAY_X,
     ST_CALC_RAY_DIR,

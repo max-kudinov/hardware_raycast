@@ -45,12 +45,12 @@ localparam sfixp_t SIN_NEG_ANGLE = fixedpoint::real_to_sfixp($sin(-ROTATION_SPEE
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef enum {
+typedef enum logic {
     ST_UPDATE_DIR,
     ST_UPDATE_PLANE
 } vect_state_t;
 
-typedef enum {
+typedef enum logic [2:0] {
     ST_CALC_IDLE,
     ST_X_MULT_COS,
     ST_X_MULT_SIN,
