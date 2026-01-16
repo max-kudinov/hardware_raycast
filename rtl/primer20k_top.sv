@@ -21,7 +21,7 @@ module primer20k_top #(
 
 // verilator lint_off UNUSEDSIGNAL
 // verilator lint_off UNDRIVEN
-logic       pixel_clk;
+logic       px_clk;
 logic       pixel_clk_div2;
 logic       serial_clk;
 logic       pll_lock;
@@ -36,7 +36,7 @@ initial begin
     power_on_rst_n = '0;
 end
 
-always_ff @(posedge pixel_clk)
+always_ff @(posedge px_clk)
     power_on_rst_n <= '1;
 
 // Invert board signals
@@ -78,7 +78,7 @@ assign keys = ~keys_inv_i;
         .DIV_MODE ("5")
     ) div_5 (
         .HCLKIN (pixel_clk_div2),
-        .CLKOUT (pixel_clk     ),
+        .CLKOUT (px_clk        ),
         .RESETN (pll_lock      )
     );
 
@@ -86,7 +86,7 @@ assign keys = ~keys_inv_i;
 
 `ifdef SIMULATION
     always #1  serial_clk = !serial_clk;
-    always #10 pixel_clk  = !pixel_clk;
+    always #10 px_clk     = !px_clk;
 `endif
 
 raycast_top #(
@@ -98,7 +98,7 @@ raycast_top #(
     .FRAME_HEIGHT   (FRAME_HEIGHT  )
 ) raycast_top (
     .serial_clk         (serial_clk ),
-    .px_clk             (pixel_clk  ),
+    .px_clk             (px_clk     ),
     .rst                (rst        ),
 
     .key_forward_i      (keys[0]    ),
