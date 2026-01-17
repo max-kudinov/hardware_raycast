@@ -8,7 +8,7 @@ IO_LOC "keys_inv_i[3]" C7;
 IO_LOC "keys_inv_i[4]" T5;
 IO_LOC "keys_inv_i[5]" T4;
 
-# DVI
+// DVI
 IO_LOC "tmds_clk_p" G16;
 IO_PORT "tmds_clk_p" PULL_MODE=NONE DRIVE=3.5;
 IO_LOC "tmds_clk_n" H15;
