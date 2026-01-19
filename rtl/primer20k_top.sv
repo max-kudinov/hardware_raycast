@@ -32,9 +32,7 @@ logic       power_on_rst_n;
 logic [5:0] keys;
 
 // Reset on upload
-initial begin
-    power_on_rst_n = '0;
-end
+initial power_on_rst_n = '0;
 
 always_ff @(posedge px_clk)
     power_on_rst_n <= '1;
@@ -82,11 +80,11 @@ assign keys = ~keys_inv_i;
         .RESETN (pll_lock      )
     );
 
-`endif
+`elsif SIMULATION
 
-`ifdef SIMULATION
     always #1  serial_clk = !serial_clk;
     always #10 px_clk     = !px_clk;
+
 `endif
 
 raycast_top #(
