@@ -18,12 +18,12 @@ then
     exit 1
 fi
 
-if ! nextpnr-himbaechel --json netlist.json       \
-                   --write pnr.json              \
-                   --device GW2A-LV18PG256C8/I7  \
-                   --vopt family=GW2A-18         \
-                   --vopt cst=primer20k/pins.cst \
-                   --sdc primer20k/constrainsts.sdc
+if ! nextpnr-himbaechel --json netlist.json           \
+                        --write pnr.json              \
+                        --device GW2A-LV18PG256C8/I7  \
+                        --vopt family=GW2A-18         \
+                        --vopt cst=primer20k/pins.cst \
+                        --sdc primer20k/constraints.sdc
 then
     exit 1
 fi
