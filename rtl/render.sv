@@ -166,8 +166,8 @@ assign { buf_color, buf_height } = buf_rd_data;
 
 always_ff @(posedge clk) begin
     if (in_range_prev) begin
-        if ((px_y > ((FRAME_HEIGHT >> 2) - W_Y_POS'(buf_height))) &&
-            (px_y < ((FRAME_HEIGHT >> 2) + W_Y_POS'(buf_height)))) begin
+        if ((px_y >= ((FRAME_HEIGHT >> 1) - W_Y_POS'(buf_height))) &&
+            (px_y <= ((FRAME_HEIGHT >> 1) + W_Y_POS'(buf_height)))) begin
             { red_o, green_o, blue_o } <= buf_color ? { 8'd127, 8'd127, 8'd127 } :
                                                       { 8'd255, 8'd255, 8'd255 };
         end else begin
