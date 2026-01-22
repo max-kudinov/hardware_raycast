@@ -1,12 +1,12 @@
 IO_LOC "clk" IOT27A;
 IO_LOC "rst_n" T10;
 
-IO_LOC "keys_inv_i[0]" T3;
-IO_LOC "keys_inv_i[1]" T2;
-IO_LOC "keys_inv_i[2]" D7;
-IO_LOC "keys_inv_i[3]" C7;
-IO_LOC "keys_inv_i[4]" T5;
-IO_LOC "keys_inv_i[5]" T4;
+IO_LOC  "keys_inv_i[0]" T9;
+IO_LOC  "keys_inv_i[1]" P8;
+IO_LOC  "keys_inv_i[2]" T7;
+IO_LOC  "keys_inv_i[3]" P6;
+IO_LOC  "keys_inv_i[4]" P9;
+IO_LOC  "keys_inv_i[5]" T8;
 
 // DVI
 IO_LOC "tmds_clk_p" G16;
