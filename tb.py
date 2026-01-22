@@ -280,11 +280,11 @@ async def render(dut):
             print("=" * 80)
             raise e
 
-        start_pos = FRAME_HEIGHT // 2 - dut_height // 2
+        start_pos = FRAME_HEIGHT // 2 - dut_height
 
         if start_pos < 0:
             start_pos = 0
-        end_pos = FRAME_HEIGHT // 2 + dut_height // 2
+        end_pos = FRAME_HEIGHT // 2 + dut_height
 
         if end_pos > FRAME_HEIGHT - 1:
             end_pos = FRAME_HEIGHT - 1
