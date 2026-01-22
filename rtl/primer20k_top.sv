@@ -1,8 +1,8 @@
 `default_nettype none
 
 module primer20k_top #(
-    parameter real         MOVEMENT_SPEED      = 0.8,
-    parameter real         ROTATION_SPEED      = 0.4,
+    parameter real         MOVEMENT_SPEED      = 0.08,
+    parameter real         ROTATION_SPEED      = 0.04,
     parameter int unsigned        W_X_POS      = 10,
     parameter int unsigned        W_Y_POS      = 9,
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
