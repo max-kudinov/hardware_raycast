@@ -4,7 +4,7 @@
 package fixedpoint;
 
     localparam int unsigned W_INT  = 8;
-    localparam int unsigned W_FRAC = 10;
+    localparam int          W_FRAC = 10;
     localparam int unsigned N_ITER = 8;
 
     function automatic logic [W_INT-1:-W_FRAC] mult (
