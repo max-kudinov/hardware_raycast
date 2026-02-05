@@ -8,9 +8,9 @@ module primer20k_top #(
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
     parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
-    // verilator lint_off UNUSEDSIGNAL
+`ifndef SIMULATION
     input  var logic       clk,
-    // verilator lint_on UNUSEDSIGNAL
+`endif
     input  var logic       rst_n,
     input  var logic [5:0] keys_inv_i,
     output var logic [2:0] tmds_data_p,
@@ -19,30 +19,18 @@ module primer20k_top #(
     output var logic       tmds_clk_n
 );
 
-// verilator lint_off UNUSEDSIGNAL
-// verilator lint_off UNDRIVEN
-logic       px_clk;
-logic       pixel_clk_div2;
-logic       serial_clk;
-logic       pll_lock;
-// verilator lint_on UNDRIVEN
-// verilator lint_on UNUSEDSIGNAL
-logic       rst;
 logic       power_on_rst_n;
+logic       rst;
 logic [5:0] keys;
 
-// Reset on upload
-initial power_on_rst_n = '0;
-
-always_ff @(posedge px_clk)
-    power_on_rst_n <= '1;
-
-// Invert board signals
-assign rst  = !rst_n || !power_on_rst_n;
 assign keys = ~keys_inv_i;
 
-// Hide blackboxes from lint
 `ifdef GOWIN
+
+    logic px_clk;
+    logic pixel_clk_div2;
+    logic serial_clk;
+    logic pll_lock;
 
     rPLL #(
         .FCLKIN    ("27"),
@@ -82,10 +70,23 @@ assign keys = ~keys_inv_i;
 
 `elsif SIMULATION
 
+    bit serial_clk;
+    bit px_clk;
+
     always #1  serial_clk = !serial_clk;
     always #10 px_clk     = !px_clk;
 
 `endif
+
+// Reset after bitstream upload
+initial power_on_rst_n = '0;
+
+// always_ff can't have LHS values that are also driven by other processes
+// (like initial), see IEEE-1800 2023 9.2.2.4
+always @(posedge px_clk)
+    power_on_rst_n <= '1;
+
+assign rst = !rst_n || !power_on_rst_n;
 
 raycast_top #(
     .MOVEMENT_SPEED (MOVEMENT_SPEED),

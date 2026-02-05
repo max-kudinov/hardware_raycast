@@ -1,5 +1,5 @@
 {
-    "flags": "-Irtl/include -Wno-case-default",
+    "flags": "-Irtl/include -DSIMULATION -Wno-case-default -Wno-case-enum",
     "indexGlobs": ["rtl/.../*.sv*"],
     "excludeDirs": ["sim_build", "__pycache__"]
 }
