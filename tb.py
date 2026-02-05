@@ -95,16 +95,28 @@ cos_neg_angle = fixp(math.cos(-ROTATION_SPEED), signed=True)
 sin_neg_angle = fixp(math.sin(-ROTATION_SPEED), signed=True)
 
 # Player position
-pos_x = fixp(10)
-pos_y = fixp(10)
+pos_x = fixp(int(cocotb.top.raycast_top.controls.position.START_POS_X.value))
+pos_y = fixp(int(cocotb.top.raycast_top.controls.position.START_POS_Y.value))
 
 # Camera direction
-dir_x = fixp(0.94, signed=True)
-dir_y = fixp(-0.33, signed=True)
+dir_x = fixp(
+    float(cocotb.top.raycast_top.controls.rotation.START_DIR_X.value),
+    signed=True,
+)
+dir_y = fixp(
+    float(cocotb.top.raycast_top.controls.rotation.START_DIR_Y.value),
+    signed=True,
+)
 
 # Camera plane vector
-plane_x = fixp(-0.22, signed=True)
-plane_y = fixp(-0.62, signed=True)
+plane_x = fixp(
+    float(cocotb.top.raycast_top.controls.rotation.START_PLANE_X.value),
+    signed=True,
+)
+plane_y = fixp(
+    float(cocotb.top.raycast_top.controls.rotation.START_PLANE_Y.value),
+    signed=True,
+)
 
 step = 2.0 / FRAME_WIDTH * 2**(W_FRAC)
 
