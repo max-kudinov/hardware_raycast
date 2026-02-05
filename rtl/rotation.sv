@@ -30,34 +30,33 @@ import fixedpoint::sfixp_t;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam real    START_DIR_X   = -1;
-localparam real    START_DIR_Y   = 0;
-localparam real    START_PLANE_X = 0;
-localparam real    START_PLANE_Y = 0.66;
+localparam real    PLANE_COEFF      = 0.66;
+localparam real    START_DIR_X      = -1;
+localparam real    START_DIR_Y      = 0;
+localparam real    START_PLANE_X    = START_DIR_Y * PLANE_COEFF;
+localparam real    START_PLANE_Y    = -START_DIR_X * PLANE_COEFF;
 
 // Precalculated trig constants for rotation matrix
-localparam sfixp_t COS_ANGLE     = fixedpoint::real_to_sfixp($cos(ROTATION_SPEED));
-localparam sfixp_t SIN_ANGLE     = fixedpoint::real_to_sfixp($sin(ROTATION_SPEED));
-localparam sfixp_t COS_NEG_ANGLE = fixedpoint::real_to_sfixp($cos(-ROTATION_SPEED));
-localparam sfixp_t SIN_NEG_ANGLE = fixedpoint::real_to_sfixp($sin(-ROTATION_SPEED));
+localparam sfixp_t FIXP_PLANE_COEFF = fixedpoint::real_to_sfixp(PLANE_COEFF);
+localparam sfixp_t COS_ANGLE        = fixedpoint::real_to_sfixp($cos( ROTATION_SPEED));
+localparam sfixp_t SIN_ANGLE        = fixedpoint::real_to_sfixp($sin( ROTATION_SPEED));
+localparam sfixp_t COS_NEG_ANGLE    = fixedpoint::real_to_sfixp($cos(-ROTATION_SPEED));
+localparam sfixp_t SIN_NEG_ANGLE    = fixedpoint::real_to_sfixp($sin(-ROTATION_SPEED));
 
 // ----------------------------------------------------------------------------
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef enum logic {
-    ST_UPDATE_DIR,
-    ST_UPDATE_PLANE
-} vect_state_t;
-
-typedef enum logic [2:0] {
+typedef enum logic [3:0] {
     ST_CALC_IDLE,
     ST_X_MULT_COS,
     ST_X_MULT_SIN,
     ST_X_SUB,
+    ST_X_MULT_COEFF,
     ST_Y_MULT_SIN,
     ST_Y_MULT_COS,
-    ST_Y_ADD
+    ST_Y_ADD,
+    ST_Y_MULT_COEFF
 } calc_state_t;
 
 // ----------------------------------------------------------------------------
@@ -82,34 +81,14 @@ logic signed [W_INT-1:-W_FRAC] x_prev;
 logic signed [W_INT-1:-W_FRAC] y_prev;
 logic signed [W_INT-1:-W_FRAC] comp_new;
 
-logic                          update_done;
 logic                          update_enable;
-logic                          vect_done;
-
-vect_state_t                   vect_state;
-vect_state_t                   vect_next_state;
 
 calc_state_t                   calc_state;
 calc_state_t                   calc_next_state;
 
 // ----------------------------------------------------------------------------
-// FSMs
+// FSM
 // ----------------------------------------------------------------------------
-
-always_ff @(posedge clk)
-    if (rst)
-        vect_state <= ST_UPDATE_DIR;
-    else
-        vect_state <= vect_next_state;
-
-always_comb begin
-    vect_next_state = vect_state;
-
-    unique case (vect_state)
-        ST_UPDATE_DIR:   if (vect_done) vect_next_state = ST_UPDATE_PLANE;
-        ST_UPDATE_PLANE: if (vect_done) vect_next_state = ST_UPDATE_DIR;
-    endcase
-end
 
 always_ff @(posedge clk)
     if (rst)
@@ -127,8 +106,9 @@ always_comb begin
         ST_X_SUB:                          calc_next_state = ST_Y_MULT_SIN;
         ST_Y_MULT_SIN:                     calc_next_state = ST_Y_MULT_COS;
         ST_Y_MULT_COS:                     calc_next_state = ST_Y_ADD;
-        ST_Y_ADD:      if (update_done)    calc_next_state = ST_CALC_IDLE;
-                       else                calc_next_state = ST_X_MULT_COS;
+        ST_Y_ADD:                          calc_next_state = ST_X_MULT_COEFF;
+        ST_X_MULT_COEFF:                   calc_next_state = ST_Y_MULT_COEFF;
+        ST_Y_MULT_COEFF:                   calc_next_state = ST_CALC_IDLE;
     endcase
 end
 
@@ -138,8 +118,6 @@ end
 
 // Rotate only when 1 key is pressed
 assign update_enable = key_rotate_left_i ^ key_rotate_right_i;
-assign vect_done     = calc_state == ST_Y_ADD;
-assign update_done   = vect_done && (vect_state == ST_UPDATE_PLANE);
 
 // To rotate we have to multiply vector components by rotation matrix
 // The formula is:
@@ -148,7 +126,7 @@ assign update_done   = vect_done && (vect_state == ST_UPDATE_PLANE);
 
 always_ff @(posedge clk)
     if (update_start_i)
-        if (key_rotate_left_i) begin // Counter clockwise
+        if (key_rotate_left_i) begin // Counterclockwise
             cur_cos <= COS_ANGLE;
             cur_sin <= SIN_ANGLE;
         end else begin               // Clockwise
@@ -157,18 +135,15 @@ always_ff @(posedge clk)
         end
 
 always_ff @(posedge clk)
-    if (update_start_i || vect_done)
-        if (vect_next_state == ST_UPDATE_DIR) begin
-            x_prev <= dir_x_o;
-            y_prev <= dir_y_o;
-        end else begin
-            x_prev <= plane_x_o;
-            y_prev <= plane_y_o;
-        end
+    if (update_start_i) begin
+        x_prev <= dir_x_o;
+        y_prev <= dir_y_o;
+    end
 
 always_comb begin
     cos_mult_next = cos_mult_ff;
     sin_mult_next = sin_mult_ff;
+    comp_new      = '0;
 
     unique0 case (calc_state)
         ST_X_MULT_COS: cos_mult_next = fixedpoint::signed_mult(x_prev, cur_cos);
@@ -177,10 +152,12 @@ always_comb begin
         ST_Y_MULT_COS: cos_mult_next = fixedpoint::signed_mult(y_prev, cur_cos);
     endcase
 
-    if (calc_state == ST_X_SUB)
-        comp_new = cos_mult_ff - sin_mult_ff;
-    else
-        comp_new = sin_mult_ff + cos_mult_ff;
+    unique0 case (calc_state)
+        ST_X_SUB:        comp_new = cos_mult_ff - sin_mult_ff;
+        ST_Y_ADD:        comp_new = sin_mult_ff + cos_mult_ff;
+        ST_X_MULT_COEFF: comp_new = fixedpoint::signed_mult(dir_y_o, FIXP_PLANE_COEFF);
+        ST_Y_MULT_COEFF: comp_new = fixedpoint::signed_mult(-dir_x_o, FIXP_PLANE_COEFF);
+    endcase
 end
 
 always_ff @(posedge clk) begin
@@ -200,11 +177,11 @@ always_comb begin
     plane_y_next = plane_y_o;
 
     if (update_enable) begin
-        unique0 case ({ vect_state, calc_state })
-            { ST_UPDATE_DIR,   ST_X_SUB }: dir_x_next   = comp_new;
-            { ST_UPDATE_DIR,   ST_Y_ADD }: dir_y_next   = comp_new;
-            { ST_UPDATE_PLANE, ST_X_SUB }: plane_x_next = comp_new;
-            { ST_UPDATE_PLANE, ST_Y_ADD }: plane_y_next = comp_new;
+        unique0 case (calc_state)
+            ST_X_SUB:        dir_x_next   = comp_new;
+            ST_Y_ADD:        dir_y_next   = comp_new;
+            ST_X_MULT_COEFF: plane_x_next = comp_new;
+            ST_Y_MULT_COEFF: plane_y_next = comp_new;
         endcase
     end
 end
