@@ -22,6 +22,9 @@ ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 FP_MODE = True
 
 W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
+PLANE_COEFF = float(
+    cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value
+)
 
 pg.init()
 font = freetype.Font(None, 24)
@@ -88,6 +91,7 @@ def fixp_unsigned(val, int_bits=W_INT, frac_bits=W_FRAC):
     )
 
 
+FIXP_MULT_COEFF = fixp(PLANE_COEFF, signed=True)
 move_speed = fixp(MOVEMENT_SPEED, signed=True)
 cos_angle = fixp(math.cos(ROTATION_SPEED), signed=True)
 sin_angle = fixp(math.sin(ROTATION_SPEED), signed=True)
@@ -418,13 +422,8 @@ def controls(dut):
             fixp(old_dir_x * sin_neg_angle) + fixp(dir_y * cos_neg_angle),
         )
 
-        old_plane_x = fixp(plane_x)
-        plane_x = fixp(
-            fixp(plane_x * cos_neg_angle) - fixp(plane_y * sin_neg_angle),
-        )
-        plane_y = fixp(
-            fixp(old_plane_x * sin_neg_angle) + fixp(plane_y * cos_neg_angle),
-        )
+        plane_x = fixp(dir_y * FIXP_MULT_COEFF)
+        plane_y = fixp(-dir_x * FIXP_MULT_COEFF)
 
     # Rotate left
     if keys[pg.K_LEFT] and not keys[pg.K_RIGHT]:
@@ -438,13 +437,8 @@ def controls(dut):
             fixp(old_dir_x * sin_angle) + fixp(dir_y * cos_angle),
         )
 
-        old_plane_x = fixp(plane_x)
-        plane_x = fixp(
-            fixp(plane_x * cos_angle) - fixp(plane_y * sin_angle),
-        )
-        plane_y = fixp(
-            fixp(old_plane_x * sin_angle) + fixp(plane_y * cos_angle),
-        )
+        plane_x = fixp(dir_y * FIXP_MULT_COEFF)
+        plane_y = fixp(-dir_x * FIXP_MULT_COEFF)
 
     # Cocotb doesn't allow indexing of packed arrays, so yikes
     key_str = f"{rot_right}{rot_left}{right}{left}{backward}{forward}"
