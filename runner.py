@@ -9,6 +9,8 @@ def run_tb():
     hdl_toplevel = "primer20k_top"
 
     parameters = {
+        "MOVEMENT_SPEED": 0.8,
+        "ROTATION_SPEED": 0.4
     }
 
     proj_path = Path(__file__).resolve().parent
