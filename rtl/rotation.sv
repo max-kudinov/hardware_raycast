@@ -146,17 +146,18 @@ always_comb begin
     comp_new      = '0;
 
     unique0 case (calc_state)
-        ST_X_MULT_COS: cos_mult_next = fixedpoint::signed_mult(x_prev, cur_cos);
-        ST_X_MULT_SIN: sin_mult_next = fixedpoint::signed_mult(y_prev, cur_sin);
-        ST_Y_MULT_SIN: sin_mult_next = fixedpoint::signed_mult(x_prev, cur_sin);
-        ST_Y_MULT_COS: cos_mult_next = fixedpoint::signed_mult(y_prev, cur_cos);
-    endcase
+        // Direction vector intermediate values
+        ST_X_MULT_COS:   cos_mult_next = fixedpoint::signed_mult(x_prev, cur_cos);
+        ST_X_MULT_SIN:   sin_mult_next = fixedpoint::signed_mult(y_prev, cur_sin);
+        ST_Y_MULT_SIN:   sin_mult_next = fixedpoint::signed_mult(x_prev, cur_sin);
+        ST_Y_MULT_COS:   cos_mult_next = fixedpoint::signed_mult(y_prev, cur_cos);
 
-    unique0 case (calc_state)
-        ST_X_SUB:        comp_new = cos_mult_ff - sin_mult_ff;
-        ST_Y_ADD:        comp_new = sin_mult_ff + cos_mult_ff;
-        ST_X_MULT_COEFF: comp_new = fixedpoint::signed_mult(dir_y_o, FIXP_PLANE_COEFF);
-        ST_Y_MULT_COEFF: comp_new = fixedpoint::signed_mult(-dir_x_o, FIXP_PLANE_COEFF);
+        // Direction vector results
+        ST_X_SUB:        comp_new      = cos_mult_ff - sin_mult_ff;
+        ST_Y_ADD:        comp_new      = sin_mult_ff + cos_mult_ff;
+        // Plane vector results
+        ST_X_MULT_COEFF: comp_new      = fixedpoint::signed_mult(dir_y_o, FIXP_PLANE_COEFF);
+        ST_Y_MULT_COEFF: comp_new      = fixedpoint::signed_mult(-dir_x_o, FIXP_PLANE_COEFF);
     endcase
 end
 
