@@ -38,11 +38,14 @@ module line_height_calc
     output var logic                          ray_hit_side_o
 );
 
+import fixedpoint::fixp_t;
+import fixedpoint::sfixp_t;
+
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned            RAY_STEP  = int'(2.0 / real'(FRAME_WIDTH) * (2**W_FRAC));
+localparam fixp_t                  RAY_STEP  = fixedpoint::real_to_fixp(2.0 / real'(FRAME_WIDTH));
 localparam logic [W_INT-1:-W_FRAC] DELTA_MAX = fixedpoint::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
 
 // ----------------------------------------------------------------------------
@@ -191,7 +194,10 @@ end
 
 always_ff @(posedge clk)
     if (state == ST_CALC_RAY_X)
-        ray_x <= signed'((W_INT + W_FRAC)'(px_x * RAY_STEP) - fixedpoint::int_to_fixp(W_INT'(1)));
+        // (px_x * 2 / FRAME_WIDTH) - 1, gets [-1:1) range
+        // 2 / FRAME_WIDTH is precalculated in RAY_STEP
+        ray_x <= sfixp_t'((fixp_t'(px_x) * RAY_STEP) -
+                          fixedpoint::int_to_fixp(W_INT'(1)));
 
 // ----------------------------------------------------------------------------
 // Calculate ray dir x/y components
@@ -376,7 +382,7 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
         if (inv_perp_wall_dist_ff[W_INT-1:0] == '0)
-            height_o <= W_Y_POS'(fixedpoint::int_mult(FRAME_HEIGHT, inv_perp_wall_dist_ff));
+            height_o <= W_Y_POS'(fixedpoint::mult(fixp_t'(FRAME_HEIGHT), inv_perp_wall_dist_ff));
         else
             height_o <= FRAME_HEIGHT;
 
