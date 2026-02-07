@@ -1,41 +1,42 @@
-`include "fixedpoint.svh"
+`include "fixp_pkg.svh"
 
 `default_nettype none
 
 module controls
     import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::fixp_t;
+    import fixp_pkg::sfixp_t;
 #(
     parameter real MOVEMENT_SPEED = 0.8,
     parameter real ROTATION_SPEED = 0.4
 ) (
-    input  var logic                          clk,
-    input  var logic                          rst,
+    input  var logic             clk,
+    input  var logic             rst,
 
     // Key input
-    input  var logic                          key_forward_i,
-    input  var logic                          key_backward_i,
-    input  var logic                          key_left_i,
-    input  var logic                          key_right_i,
-    input  var logic                          key_rotate_left_i,
-    input  var logic                          key_rotate_right_i,
+    input  var logic             key_forward_i,
+    input  var logic             key_backward_i,
+    input  var logic             key_left_i,
+    input  var logic             key_right_i,
+    input  var logic             key_rotate_left_i,
+    input  var logic             key_rotate_right_i,
 
-    input  var logic                          update_start_i,
+    input  var logic             update_start_i,
 
     // Map coordinates to check for a wall
-    output var logic        [W_INT-1:0]       lookup_map_x_o,
-    output var logic        [W_INT-1:0]       lookup_map_y_o,
-    input  var logic                          wall_hit_i,
+    output var logic [W_INT-1:0] lookup_map_x_o,
+    output var logic [W_INT-1:0] lookup_map_y_o,
+    input  var logic             wall_hit_i,
 
     // Camera coordinates
-    output var logic        [W_INT-1:-W_FRAC] pos_x_o,
-    output var logic        [W_INT-1:-W_FRAC] pos_y_o,
+    output var fixp_t            pos_x_o,
+    output var fixp_t            pos_y_o,
     // Camera direction
-    output var logic signed [W_INT-1:-W_FRAC] dir_x_o,
-    output var logic signed [W_INT-1:-W_FRAC] dir_y_o,
+    output var sfixp_t           dir_x_o,
+    output var sfixp_t           dir_y_o,
     // Camera plane
-    output var logic signed [W_INT-1:-W_FRAC] plane_x_o,
-    output var logic signed [W_INT-1:-W_FRAC] plane_y_o
+    output var sfixp_t           plane_x_o,
+    output var sfixp_t           plane_y_o
 );
 
 logic pos_done;

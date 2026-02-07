@@ -1,11 +1,14 @@
-`ifndef FIXEDPOINT_PKG_SVH
-`define FIXEDPOINT_PKG_SVH
+`ifndef FIXP_PKG_SVH
+`define FIXP_PKG_SVH
 
 package fixp_pkg;
 
     localparam int unsigned W_INT  = 8;
     localparam int          W_FRAC = 10;
     localparam int unsigned N_ITER = 8;
+
+    typedef logic        [W_INT-1:-W_FRAC] fixp_t;
+    typedef logic signed [W_INT-1:-W_FRAC] sfixp_t;
 
     function automatic logic [W_INT-1:-W_FRAC] mult (
         input logic [W_INT-1:-W_FRAC] num_a,
@@ -46,10 +49,6 @@ package fixp_pkg;
         return { num, { W_FRAC {1'b0} } };
     endfunction
 
-    // TODO: make those types global
-    typedef logic        [W_INT-1:-W_FRAC] fixp_t;
-    typedef logic signed [W_INT-1:-W_FRAC] sfixp_t;
-
     function automatic fixp_t real_to_fixp (
         input real num
     );
@@ -64,4 +63,4 @@ package fixp_pkg;
 
 endpackage
 
-`endif // FIXEDPOINT_PKG_SVH
+`endif // FIXP_PKG_SVH

@@ -1,4 +1,4 @@
-`include "fixedpoint.svh"
+`include "fixp_pkg.svh"
 
 `default_nettype none
 
