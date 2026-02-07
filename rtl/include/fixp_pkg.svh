@@ -10,9 +10,9 @@ package fixp_pkg;
     typedef logic        [W_INT-1:-W_FRAC] fixp_t;
     typedef logic signed [W_INT-1:-W_FRAC] sfixp_t;
 
-    function automatic logic [W_INT-1:-W_FRAC] mult (
-        input logic [W_INT-1:-W_FRAC] num_a,
-        input logic [W_INT-1:-W_FRAC] num_b
+    function automatic fixp_t mult (
+        input fixp_t num_a,
+        input fixp_t num_b
     );
         // Bits are truncated after multiplication
         // verilator lint_off UNUSEDSIGNAL
@@ -22,20 +22,20 @@ package fixp_pkg;
         return mult_res[W_INT-1:-W_FRAC];
     endfunction
 
-    function automatic logic signed [W_INT-1:-W_FRAC] signed_mult (
-        input logic signed [W_INT-1:-W_FRAC] num_a,
-        input logic signed [W_INT-1:-W_FRAC] num_b
+    function automatic sfixp_t signed_mult (
+        input sfixp_t num_a,
+        input sfixp_t num_b
     );
         // Bits are truncated after multiplication
         // verilator lint_off UNUSEDSIGNAL
         logic signed [W_INT*2-1:-W_FRAC*2] mult_res;
         // verilator lint_on UNUSEDSIGNAL
         mult_res = num_a * num_b;
-        return signed'(mult_res[W_INT-1:-W_FRAC]);
+        return sfixp_t'(mult_res[W_INT-1:-W_FRAC]);
     endfunction
 
-    function automatic logic [W_INT-1:-W_FRAC] abs (
-        input logic signed [W_INT-1:-W_FRAC] num
+    function automatic fixp_t abs (
+        input sfixp_t num
     );
         if (num < 0)
             return unsigned'(-num);
@@ -43,7 +43,7 @@ package fixp_pkg;
             return unsigned'(num);
     endfunction
 
-    function automatic logic [W_INT-1:-W_FRAC] int_to_fixp (
+    function automatic fixp_t int_to_fixp (
         input [W_INT-1:0] num
     );
         return { num, { W_FRAC {1'b0} } };
