@@ -3,8 +3,8 @@
 `default_nettype none
 
 module rotation
-    import fixedpoint::W_INT;
-    import fixedpoint::W_FRAC;
+    import fixp_pkg::W_INT;
+    import fixp_pkg::W_FRAC;
 #(
     parameter real ROTATION_SPEED = 0.4
 )(
@@ -24,7 +24,7 @@ module rotation
     output var logic signed [W_INT-1:-W_FRAC] plane_y_o
 );
 
-import fixedpoint::sfixp_t;
+import fixp_pkg::sfixp_t;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -37,11 +37,11 @@ localparam real    START_PLANE_X    = START_DIR_Y * PLANE_COEFF;
 localparam real    START_PLANE_Y    = -START_DIR_X * PLANE_COEFF;
 
 // Precalculated trig constants for rotation matrix
-localparam sfixp_t FIXP_PLANE_COEFF = fixedpoint::real_to_sfixp(PLANE_COEFF);
-localparam sfixp_t COS_ANGLE        = fixedpoint::real_to_sfixp($cos( ROTATION_SPEED));
-localparam sfixp_t SIN_ANGLE        = fixedpoint::real_to_sfixp($sin( ROTATION_SPEED));
-localparam sfixp_t COS_NEG_ANGLE    = fixedpoint::real_to_sfixp($cos(-ROTATION_SPEED));
-localparam sfixp_t SIN_NEG_ANGLE    = fixedpoint::real_to_sfixp($sin(-ROTATION_SPEED));
+localparam sfixp_t FIXP_PLANE_COEFF = fixp_pkg::real_to_sfixp(PLANE_COEFF);
+localparam sfixp_t COS_ANGLE        = fixp_pkg::real_to_sfixp($cos( ROTATION_SPEED));
+localparam sfixp_t SIN_ANGLE        = fixp_pkg::real_to_sfixp($sin( ROTATION_SPEED));
+localparam sfixp_t COS_NEG_ANGLE    = fixp_pkg::real_to_sfixp($cos(-ROTATION_SPEED));
+localparam sfixp_t SIN_NEG_ANGLE    = fixp_pkg::real_to_sfixp($sin(-ROTATION_SPEED));
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -147,17 +147,17 @@ always_comb begin
 
     unique0 case (calc_state)
         // Direction vector intermediate values
-        ST_X_MULT_COS:   cos_mult_next = fixedpoint::signed_mult(x_prev, cur_cos);
-        ST_X_MULT_SIN:   sin_mult_next = fixedpoint::signed_mult(y_prev, cur_sin);
-        ST_Y_MULT_SIN:   sin_mult_next = fixedpoint::signed_mult(x_prev, cur_sin);
-        ST_Y_MULT_COS:   cos_mult_next = fixedpoint::signed_mult(y_prev, cur_cos);
+        ST_X_MULT_COS:   cos_mult_next = fixp_pkg::signed_mult(x_prev, cur_cos);
+        ST_X_MULT_SIN:   sin_mult_next = fixp_pkg::signed_mult(y_prev, cur_sin);
+        ST_Y_MULT_SIN:   sin_mult_next = fixp_pkg::signed_mult(x_prev, cur_sin);
+        ST_Y_MULT_COS:   cos_mult_next = fixp_pkg::signed_mult(y_prev, cur_cos);
 
         // Direction vector results
         ST_X_SUB:        comp_new      = cos_mult_ff - sin_mult_ff;
         ST_Y_ADD:        comp_new      = sin_mult_ff + cos_mult_ff;
         // Plane vector results
-        ST_X_MULT_COEFF: comp_new      = fixedpoint::signed_mult(dir_y_o, FIXP_PLANE_COEFF);
-        ST_Y_MULT_COEFF: comp_new      = fixedpoint::signed_mult(-dir_x_o, FIXP_PLANE_COEFF);
+        ST_X_MULT_COEFF: comp_new      = fixp_pkg::signed_mult(dir_y_o, FIXP_PLANE_COEFF);
+        ST_Y_MULT_COEFF: comp_new      = fixp_pkg::signed_mult(-dir_x_o, FIXP_PLANE_COEFF);
     endcase
 end
 
@@ -189,11 +189,11 @@ end
 
 always_ff @(posedge clk)
     if (rst) begin
-        dir_x_o   <= fixedpoint::real_to_sfixp(START_DIR_X);
-        dir_y_o   <= fixedpoint::real_to_sfixp(START_DIR_Y);
+        dir_x_o   <= fixp_pkg::real_to_sfixp(START_DIR_X);
+        dir_y_o   <= fixp_pkg::real_to_sfixp(START_DIR_Y);
 
-        plane_x_o <= fixedpoint::real_to_sfixp(START_PLANE_X);
-        plane_y_o <= fixedpoint::real_to_sfixp(START_PLANE_Y);
+        plane_x_o <= fixp_pkg::real_to_sfixp(START_PLANE_X);
+        plane_y_o <= fixp_pkg::real_to_sfixp(START_PLANE_Y);
     end else begin
         dir_x_o   <= dir_x_next;
         dir_y_o   <= dir_y_next;

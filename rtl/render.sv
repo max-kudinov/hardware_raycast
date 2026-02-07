@@ -4,8 +4,8 @@
 `default_nettype none
 
 module render
-    import fixedpoint::W_INT;
-    import fixedpoint::W_FRAC;
+    import fixp_pkg::W_INT;
+    import fixp_pkg::W_FRAC;
     import dvi_pkg::COLOR_W;
 #(
     parameter int unsigned        W_X_POS      = 10,

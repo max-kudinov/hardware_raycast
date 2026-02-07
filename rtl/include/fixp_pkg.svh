@@ -1,7 +1,7 @@
 `ifndef FIXEDPOINT_PKG_SVH
 `define FIXEDPOINT_PKG_SVH
 
-package fixedpoint;
+package fixp_pkg;
 
     localparam int unsigned W_INT  = 8;
     localparam int          W_FRAC = 10;

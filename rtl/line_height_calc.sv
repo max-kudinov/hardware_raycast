@@ -3,8 +3,8 @@
 `default_nettype none
 
 module line_height_calc
-    import fixedpoint::W_INT;
-    import fixedpoint::W_FRAC;
+    import fixp_pkg::W_INT;
+    import fixp_pkg::W_FRAC;
 #(
     parameter int unsigned        W_X_POS      = 10,
     parameter int unsigned        W_Y_POS      = 9,
@@ -38,15 +38,15 @@ module line_height_calc
     output var logic                          ray_hit_side_o
 );
 
-import fixedpoint::fixp_t;
-import fixedpoint::sfixp_t;
+import fixp_pkg::fixp_t;
+import fixp_pkg::sfixp_t;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam fixp_t                  RAY_STEP  = fixedpoint::real_to_fixp(2.0 / real'(FRAME_WIDTH));
-localparam logic [W_INT-1:-W_FRAC] DELTA_MAX = fixedpoint::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
+localparam fixp_t                  RAY_STEP  = fixp_pkg::real_to_fixp(2.0 / real'(FRAME_WIDTH));
+localparam logic [W_INT-1:-W_FRAC] DELTA_MAX = fixp_pkg::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -197,7 +197,7 @@ always_ff @(posedge clk)
         // (px_x * 2 / FRAME_WIDTH) - 1, gets [-1:1) range
         // 2 / FRAME_WIDTH is precalculated in RAY_STEP
         ray_x <= sfixp_t'((fixp_t'(px_x) * RAY_STEP) -
-                          fixedpoint::int_to_fixp(W_INT'(1)));
+                          fixp_pkg::int_to_fixp(W_INT'(1)));
 
 // ----------------------------------------------------------------------------
 // Calculate ray dir x/y components
@@ -205,8 +205,8 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_RAY_DIR) begin
-        ray_dir_x <= dir_x + fixedpoint::signed_mult(plane_x, ray_x);
-        ray_dir_y <= dir_y + fixedpoint::signed_mult(plane_y, ray_x);
+        ray_dir_x <= dir_x + fixp_pkg::signed_mult(plane_x, ray_x);
+        ray_dir_y <= dir_y + fixp_pkg::signed_mult(plane_y, ray_x);
     end
 end
 
@@ -246,14 +246,14 @@ always_comb begin
     inv_perp_wall_dist_next = inv_perp_wall_dist_ff;
 
     if (state == ST_CALC_DELTA_DIST_X) begin
-        inv_num_in = fixedpoint::abs(ray_dir_x);
+        inv_num_in = fixp_pkg::abs(ray_dir_x);
 
         if (inv_done)
             delta_dist_x_next = (ray_dir_x == '0) ? DELTA_MAX : inv_num_out;
     end
 
     if (state == ST_CALC_DELTA_DIST_Y) begin
-        inv_num_in = fixedpoint::abs(ray_dir_y);
+        inv_num_in = fixp_pkg::abs(ray_dir_y);
 
         if (inv_done)
             delta_dist_y_next = (ray_dir_y == '0) ? DELTA_MAX : inv_num_out;
@@ -288,18 +288,18 @@ always_comb begin
 
         if (ray_dir_x > 0) begin
             step_x_next           = '1;
-            side_perp_dist_x_next = fixedpoint::int_to_fixp(init_map_x + 1'b1) - pos_x;
+            side_perp_dist_x_next = fixp_pkg::int_to_fixp(init_map_x + 1'b1) - pos_x;
         end else begin
             step_x_next           = '0;
-            side_perp_dist_x_next = pos_x - fixedpoint::int_to_fixp(init_map_x);
+            side_perp_dist_x_next = pos_x - fixp_pkg::int_to_fixp(init_map_x);
         end
 
         if (ray_dir_y > 0) begin
             step_y_next           = '1;
-            side_perp_dist_y_next = fixedpoint::int_to_fixp(init_map_y + 1'b1) - pos_y;
+            side_perp_dist_y_next = fixp_pkg::int_to_fixp(init_map_y + 1'b1) - pos_y;
         end else begin
             step_y_next           = '0;
-            side_perp_dist_y_next = pos_y - fixedpoint::int_to_fixp(init_map_y);
+            side_perp_dist_y_next = pos_y - fixp_pkg::int_to_fixp(init_map_y);
         end
 
     end
@@ -318,8 +318,8 @@ end
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_SIDE_DIST) begin
-        init_side_dist_x <= fixedpoint::mult(side_perp_dist_x_ff, delta_dist_x_ff);
-        init_side_dist_y <= fixedpoint::mult(side_perp_dist_y_ff, delta_dist_y_ff);
+        init_side_dist_x <= fixp_pkg::mult(side_perp_dist_x_ff, delta_dist_x_ff);
+        init_side_dist_y <= fixp_pkg::mult(side_perp_dist_y_ff, delta_dist_y_ff);
     end
 end
 
@@ -382,7 +382,7 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
         if (inv_perp_wall_dist_ff[W_INT-1:0] == '0)
-            height_o <= W_Y_POS'(fixedpoint::mult(fixp_t'(FRAME_HEIGHT), inv_perp_wall_dist_ff));
+            height_o <= W_Y_POS'(fixp_pkg::mult(fixp_t'(FRAME_HEIGHT), inv_perp_wall_dist_ff));
         else
             height_o <= FRAME_HEIGHT;
 

@@ -13,9 +13,9 @@ FRAME_HEIGHT = 480
 MAP_WIDTH = 20
 MAP_HEIGHT = 20
 
-W_INT = int(cocotb.packages.fixedpoint.W_INT.value)
-W_FRAC = int(cocotb.packages.fixedpoint.W_FRAC.value)
-N_ITER = int(cocotb.packages.fixedpoint.N_ITER.value)
+W_INT = int(cocotb.packages.fixp_pkg.W_INT.value)
+W_FRAC = int(cocotb.packages.fixp_pkg.W_FRAC.value)
+N_ITER = int(cocotb.packages.fixp_pkg.N_ITER.value)
 MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 

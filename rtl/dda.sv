@@ -3,8 +3,8 @@
 `default_nettype none
 
 module dda
-    import fixedpoint::W_INT;
-    import fixedpoint::W_FRAC;
+    import fixp_pkg::W_INT;
+    import fixp_pkg::W_FRAC;
 (
     input  var logic                   clk,
     input  var logic                   rst,

@@ -3,8 +3,8 @@
 `default_nettype none
 
 module newton_inv
-    import fixedpoint::W_INT;
-    import fixedpoint::W_FRAC;
+    import fixp_pkg::W_INT;
+    import fixp_pkg::W_FRAC;
 (
     input  var logic                   clk,
     input  var logic                   rst,
@@ -21,7 +21,7 @@ module newton_inv
 // ----------------------------------------------------------------------------
 
 localparam int unsigned W_SHIFT       = $clog2(W_INT + 1);
-localparam int unsigned N_ITER_CYCLES = fixedpoint::N_ITER * 2;
+localparam int unsigned N_ITER_CYCLES = fixp_pkg::N_ITER * 2;
 localparam int unsigned W_CNT         = $clog2(N_ITER_CYCLES);
 
 // ----------------------------------------------------------------------------
@@ -121,12 +121,12 @@ always_comb begin
     approx_mid_next = approx_mid_ff;
 
     if (state == ST_SHIFT_INPUT) begin
-        approx_next = fixedpoint::int_to_fixp(1);
+        approx_next = fixp_pkg::int_to_fixp(1);
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = fixedpoint::int_to_fixp(2) - fixedpoint::mult(num_ff,  approx_ff);
+            approx_mid_next = fixp_pkg::int_to_fixp(2) - fixp_pkg::mult(num_ff,  approx_ff);
         end else begin
-            approx_next = fixedpoint::mult(approx_ff, approx_mid_ff);
+            approx_next = fixp_pkg::mult(approx_ff, approx_mid_ff);
         end
     end
 

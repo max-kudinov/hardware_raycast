@@ -3,8 +3,8 @@
 `default_nettype none
 
 module controls
-    import fixedpoint::W_INT;
-    import fixedpoint::W_FRAC;
+    import fixp_pkg::W_INT;
+    import fixp_pkg::W_FRAC;
 #(
     parameter real MOVEMENT_SPEED = 0.8,
     parameter real ROTATION_SPEED = 0.4
