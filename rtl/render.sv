@@ -151,7 +151,7 @@ always_ff @(posedge clk)
     else
         calc_start <= calc_active && calc_done;
 
-// Height divided by half is used for calculations, so we don't need LSB
+// Height divided in half is used for calculations, so we don't need LSB
 assign buf_wr_data = { calc_color, calc_height[W_Y_POS-1:1] };
 assign buf_write   = calc_done;
 assign buf_wr_addr = calc_px_x;
