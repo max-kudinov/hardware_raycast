@@ -4,16 +4,16 @@
 
 module newton_inv
     import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::fixp_t;
 (
-    input  var logic                   clk,
-    input  var logic                   rst,
+    input  var logic  clk,
+    input  var logic  rst,
 
-    input  var logic                   start_i,
-    input  var logic [W_INT-1:-W_FRAC] num_i,
+    input  var logic  start_i,
+    input  var fixp_t num_i,
 
-    output var logic                   done_o,
-    output var logic [W_INT-1:-W_FRAC] num_o
+    output var logic  done_o,
+    output var fixp_t num_o
 );
 
 // ----------------------------------------------------------------------------
@@ -28,15 +28,15 @@ localparam int unsigned W_CNT         = $clog2(N_ITER_CYCLES);
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic [W_INT-1:-W_FRAC]     num_next;
-logic [W_INT-1:-W_FRAC]     num_ff;
-logic [W_INT-1:-W_FRAC]     approx_next;
-logic [W_INT-1:-W_FRAC]     approx_ff;
-logic [W_INT-1:-W_FRAC]     approx_mid_next;
-logic [W_INT-1:-W_FRAC]     approx_mid_ff;
-logic [W_SHIFT-1:0]         shift_amount;
-logic [W_CNT-1:0]           iter_cnt;
-logic                       cnt_done;
+fixp_t              num_next;
+fixp_t              num_ff;
+fixp_t              approx_next;
+fixp_t              approx_ff;
+fixp_t              approx_mid_next;
+fixp_t              approx_mid_ff;
+logic [W_SHIFT-1:0] shift_amount;
+logic [W_CNT-1:0]   iter_cnt;
+logic               cnt_done;
 
 typedef enum logic [2:0] {
     ST_IDLE,

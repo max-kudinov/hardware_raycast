@@ -3,28 +3,25 @@
 `default_nettype none
 
 module rotation
-    import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::sfixp_t;
 #(
     parameter real ROTATION_SPEED = 0.4
-)(
-    input  var logic                          clk,
-    input  var logic                          rst,
+) (
+    input  var logic   clk,
+    input  var logic   rst,
 
-    input  var logic                          key_rotate_left_i,
-    input  var logic                          key_rotate_right_i,
+    input  var logic   key_rotate_left_i,
+    input  var logic   key_rotate_right_i,
 
-    input  var logic                          update_start_i,
+    input  var logic   update_start_i,
 
     // Camera direction
-    output var logic signed [W_INT-1:-W_FRAC] dir_x_o,
-    output var logic signed [W_INT-1:-W_FRAC] dir_y_o,
+    output var sfixp_t dir_x_o,
+    output var sfixp_t dir_y_o,
     // Camera plane
-    output var logic signed [W_INT-1:-W_FRAC] plane_x_o,
-    output var logic signed [W_INT-1:-W_FRAC] plane_y_o
+    output var sfixp_t plane_x_o,
+    output var sfixp_t plane_y_o
 );
-
-import fixp_pkg::sfixp_t;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -63,28 +60,28 @@ typedef enum logic [3:0] {
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic signed [W_INT-1:-W_FRAC] dir_x_next;
-logic signed [W_INT-1:-W_FRAC] dir_y_next;
+sfixp_t      dir_x_next;
+sfixp_t      dir_y_next;
 
-logic signed [W_INT-1:-W_FRAC] plane_x_next;
-logic signed [W_INT-1:-W_FRAC] plane_y_next;
+sfixp_t      plane_x_next;
+sfixp_t      plane_y_next;
 
-logic signed [W_INT-1:-W_FRAC] cur_cos;
-logic signed [W_INT-1:-W_FRAC] cur_sin;
+sfixp_t      cur_cos;
+sfixp_t      cur_sin;
 
-logic signed [W_INT-1:-W_FRAC] cos_mult_next;
-logic signed [W_INT-1:-W_FRAC] sin_mult_next;
-logic signed [W_INT-1:-W_FRAC] cos_mult_ff;
-logic signed [W_INT-1:-W_FRAC] sin_mult_ff;
+sfixp_t      cos_mult_next;
+sfixp_t      sin_mult_next;
+sfixp_t      cos_mult_ff;
+sfixp_t      sin_mult_ff;
 
-logic signed [W_INT-1:-W_FRAC] x_prev;
-logic signed [W_INT-1:-W_FRAC] y_prev;
-logic signed [W_INT-1:-W_FRAC] comp_new;
+sfixp_t      x_prev;
+sfixp_t      y_prev;
+sfixp_t      comp_new;
 
-logic                          update_enable;
+logic        update_enable;
 
-calc_state_t                   calc_state;
-calc_state_t                   calc_next_state;
+calc_state_t calc_state;
+calc_state_t calc_next_state;
 
 // ----------------------------------------------------------------------------
 // FSM

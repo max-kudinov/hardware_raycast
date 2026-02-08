@@ -4,29 +4,29 @@
 
 module dda
     import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::fixp_t;
 (
-    input  var logic                   clk,
-    input  var logic                   rst,
+    input  var logic             clk,
+    input  var logic             rst,
 
-    input  var logic                   start_i,
+    input  var logic             start_i,
 
-    input  var logic [W_INT-1:0]       init_map_x_i,
-    input  var logic [W_INT-1:0]       init_map_y_i,
-    output var logic [W_INT-1:0]       map_x_o,
-    output var logic [W_INT-1:0]       map_y_o,
-    input  var logic                   step_x_i,
-    input  var logic                   step_y_i,
-    input  var logic                   wall_hit_i,
+    input  var logic [W_INT-1:0] init_map_x_i,
+    input  var logic [W_INT-1:0] init_map_y_i,
+    output var logic [W_INT-1:0] map_x_o,
+    output var logic [W_INT-1:0] map_y_o,
+    input  var logic             step_x_i,
+    input  var logic             step_y_i,
+    input  var logic             wall_hit_i,
 
-    input  var logic [W_INT-1:-W_FRAC] init_side_dist_x_i,
-    input  var logic [W_INT-1:-W_FRAC] init_side_dist_y_i,
-    output var logic [W_INT-1:-W_FRAC] side_dist_x_o,
-    output var logic [W_INT-1:-W_FRAC] side_dist_y_o,
-    input  var logic [W_INT-1:-W_FRAC] delta_dist_x_i,
-    input  var logic [W_INT-1:-W_FRAC] delta_dist_y_i,
-    output var logic                   hit_side_o,
-    output var logic                   done_o
+    input  var fixp_t            init_side_dist_x_i,
+    input  var fixp_t            init_side_dist_y_i,
+    output var fixp_t            side_dist_x_o,
+    output var fixp_t            side_dist_y_o,
+    input  var fixp_t            delta_dist_x_i,
+    input  var fixp_t            delta_dist_y_i,
+    output var logic             hit_side_o,
+    output var logic             done_o
 );
 
 typedef enum logic {

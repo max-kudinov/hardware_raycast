@@ -5,7 +5,8 @@
 
 module render
     import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::fixp_t;
+    import fixp_pkg::sfixp_t;
     import dvi_pkg::COLOR_W;
 #(
     parameter int unsigned        W_X_POS      = 10,
@@ -13,32 +14,32 @@ module render
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
     parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
-    input  var logic                          clk,
-    input  var logic                          rst,
+    input  var logic               clk,
+    input  var logic               rst,
 
     // DVI
-    input  var logic        [W_X_POS-1:0]     px_x_i,
-    input  var logic        [W_Y_POS-1:0]     px_y_i,
-    input  var logic                          in_range_i,
-    input  var logic                          new_frame_i,
-    output var logic        [COLOR_W-1:0]     red_o,
-    output var logic        [COLOR_W-1:0]     green_o,
-    output var logic        [COLOR_W-1:0]     blue_o,
-
-    // Camera coordinates
-    input  var logic        [W_INT-1:-W_FRAC] pos_x_i,
-    input  var logic        [W_INT-1:-W_FRAC] pos_y_i,
-    // Camera direction
-    input  var logic signed [W_INT-1:-W_FRAC] dir_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] dir_y_i,
-    // Camera plane
-    input  var logic signed [W_INT-1:-W_FRAC] plane_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] plane_y_i,
+    input  var logic [W_X_POS-1:0] px_x_i,
+    input  var logic [W_Y_POS-1:0] px_y_i,
+    input  var logic               in_range_i,
+    input  var logic               new_frame_i,
+    output var logic [COLOR_W-1:0] red_o,
+    output var logic [COLOR_W-1:0] green_o,
+    output var logic [COLOR_W-1:0] blue_o,
 
     // Map coordinates to check for a wall
-    output var logic        [W_INT-1:0]       lookup_map_x_o,
-    output var logic        [W_INT-1:0]       lookup_map_y_o,
-    input  var logic                          wall_hit_i
+    output var logic [W_INT-1:0]   lookup_map_x_o,
+    output var logic [W_INT-1:0]   lookup_map_y_o,
+    input  var logic               wall_hit_i,
+
+    // Camera coordinates
+    input  var fixp_t              pos_x_i,
+    input  var fixp_t              pos_y_i,
+    // Camera direction
+    input  var sfixp_t             dir_x_i,
+    input  var sfixp_t             dir_y_i,
+    // Camera plane
+    input  var sfixp_t             plane_x_i,
+    input  var sfixp_t             plane_y_i
 );
 
 // ----------------------------------------------------------------------------

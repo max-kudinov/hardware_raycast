@@ -4,49 +4,56 @@
 
 module line_height_calc
     import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::fixp_t;
+    import fixp_pkg::sfixp_t;
 #(
     parameter int unsigned        W_X_POS      = 10,
     parameter int unsigned        W_Y_POS      = 9,
     parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
     parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
 ) (
-    input  var logic                          clk,
-    input  var logic                          rst,
+    input  var logic               clk,
+    input  var logic               rst,
 
-    input  var logic                          start_i,
+    input  var logic               start_i,
     // Horizontal position of input pixel on the screen
-    input  var logic        [W_X_POS-1:0]     px_x_i,
+    input  var logic [W_X_POS-1:0] px_x_i,
 
     // Camera coordinates
-    input  var logic        [W_INT-1:-W_FRAC] pos_x_i,
-    input  var logic        [W_INT-1:-W_FRAC] pos_y_i,
+    input  var fixp_t              pos_x_i,
+    input  var fixp_t              pos_y_i,
     // Camera direction
-    input  var logic signed [W_INT-1:-W_FRAC] dir_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] dir_y_i,
+    input  var sfixp_t             dir_x_i,
+    input  var sfixp_t             dir_y_i,
     // Camera plane
-    input  var logic signed [W_INT-1:-W_FRAC] plane_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] plane_y_i,
+    input  var sfixp_t             plane_x_i,
+    input  var sfixp_t             plane_y_i,
 
     // Map coordinates to check for a wall
-    output var logic        [W_INT-1:0]       lookup_map_x_o,
-    output var logic        [W_INT-1:0]       lookup_map_y_o,
-    input  var logic                          wall_hit_i,
+    output var logic [W_INT-1:0]   lookup_map_x_o,
+    output var logic [W_INT-1:0]   lookup_map_y_o,
+    input  var logic               wall_hit_i,
 
-    output var logic                          done_o,
-    output var logic        [W_Y_POS-1:0]     height_o,
-    output var logic                          ray_hit_side_o
+    output var logic               done_o,
+    output var logic [W_Y_POS-1:0] height_o,
+    output var logic               ray_hit_side_o
 );
-
-import fixp_pkg::fixp_t;
-import fixp_pkg::sfixp_t;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam fixp_t                  RAY_STEP  = fixp_pkg::real_to_fixp(2.0 / real'(FRAME_WIDTH));
-localparam logic [W_INT-1:-W_FRAC] DELTA_MAX = fixp_pkg::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
+localparam fixp_t RAY_STEP  = fixp_pkg::real_to_fixp(2.0 / real'(FRAME_WIDTH));
+localparam fixp_t DELTA_MAX = fixp_pkg::int_to_fixp(W_INT'(2**(W_INT-1) - 1));
+
+// ----------------------------------------------------------------------------
+// Elaboration checks
+// ----------------------------------------------------------------------------
+
+if (RAY_STEP == 0) begin : gen_elab_check
+    $error("Incompatible input parameters: RAY_STEP is 0.");
+    $error("Either increase W_FRAC or decrease FRAME_WIDTH");
+end
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -67,76 +74,67 @@ typedef enum logic [3:0] {
 } state_t;
 
 // ----------------------------------------------------------------------------
-// Elaboration checks
-// ----------------------------------------------------------------------------
-
-if (RAY_STEP == 0) begin : gen_elab_check
-    $error("Incompatible input parameters: RAY_STEP is 0.");
-    $error("Either increase W_FRAC or decrease FRAME_WIDTH");
-end
-
-// ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
 // Ray direction for current screen pixel
-logic        [W_X_POS-1:0]     px_x;
-logic signed [W_INT-1:-W_FRAC] ray_x;
-logic signed [W_INT-1:-W_FRAC] dir_x;
-logic signed [W_INT-1:-W_FRAC] dir_y;
-logic signed [W_INT-1:-W_FRAC] plane_x;
-logic signed [W_INT-1:-W_FRAC] plane_y;
-logic signed [W_INT-1:-W_FRAC] ray_dir_x;
-logic signed [W_INT-1:-W_FRAC] ray_dir_y;
+logic   [W_X_POS-1:0] px_x;
+sfixp_t               ray_x;
+sfixp_t               dir_x;
+sfixp_t               dir_y;
+sfixp_t               plane_x;
+sfixp_t               plane_y;
+sfixp_t               ray_dir_x;
+sfixp_t               ray_dir_y;
 
 // Inversion module
-logic [W_INT-1:-W_FRAC]        inv_num_in;
-logic [W_INT-1:-W_FRAC]        inv_num_out;
-logic                          inv_start_next;
-logic                          inv_start_ff;
-logic                          inv_done;
+fixp_t                inv_num_in;
+fixp_t                inv_num_out;
+logic                 inv_start_next;
+logic                 inv_start_ff;
+logic                 inv_done;
 
 // Ray distance in one map cell
-logic [W_INT-1:-W_FRAC]        delta_dist_x_next;
-logic [W_INT-1:-W_FRAC]        delta_dist_x_ff;
-logic [W_INT-1:-W_FRAC]        delta_dist_y_next;
-logic [W_INT-1:-W_FRAC]        delta_dist_y_ff;
+fixp_t                delta_dist_x_next;
+fixp_t                delta_dist_x_ff;
+fixp_t                delta_dist_y_next;
+fixp_t                delta_dist_y_ff;
 
 // Distance from the point to the cell border
-logic [W_INT-1:-W_FRAC]        side_perp_dist_x_next;
-logic [W_INT-1:-W_FRAC]        side_perp_dist_x_ff;
-logic [W_INT-1:-W_FRAC]        side_perp_dist_y_next;
-logic [W_INT-1:-W_FRAC]        side_perp_dist_y_ff;
+fixp_t                side_perp_dist_x_next;
+fixp_t                side_perp_dist_x_ff;
+fixp_t                side_perp_dist_y_next;
+fixp_t                side_perp_dist_y_ff;
 
 // DDA
-logic [W_INT-1:-W_FRAC]        init_side_dist_x;
-logic [W_INT-1:-W_FRAC]        init_side_dist_y;
-logic [W_INT-1:-W_FRAC]        dda_side_dist_x;
-logic [W_INT-1:-W_FRAC]        dda_side_dist_y;
-logic                          dda_start;
-logic                          dda_done;
+fixp_t                init_side_dist_x;
+fixp_t                init_side_dist_y;
+fixp_t                dda_side_dist_x;
+fixp_t                dda_side_dist_y;
+logic                 dda_start;
+logic                 dda_done;
 
 // Ray step direction for DDA
-logic                          step_x_next;
-logic                          step_x_ff;
-logic                          step_y_next;
-logic                          step_y_ff;
+logic                 step_x_next;
+logic                 step_x_ff;
+logic                 step_y_next;
+logic                 step_y_ff;
 
 // Distance from the wall to the camera plane
-logic [W_INT-1:-W_FRAC]        perp_wall_dist_next;
-logic [W_INT-1:-W_FRAC]        perp_wall_dist_ff;
-logic [W_INT-1:-W_FRAC]        inv_perp_wall_dist_next;
-logic [W_INT-1:-W_FRAC]        inv_perp_wall_dist_ff;
+fixp_t                perp_wall_dist_next;
+fixp_t                perp_wall_dist_ff;
+fixp_t                inv_perp_wall_dist_next;
+fixp_t                inv_perp_wall_dist_ff;
 
 // Camera position
-logic [W_INT-1:-W_FRAC]        pos_x;
-logic [W_INT-1:-W_FRAC]        pos_y;
-logic [W_INT-1:0]              init_map_x;
-logic [W_INT-1:0]              init_map_y;
+fixp_t                pos_x;
+fixp_t                pos_y;
+logic [W_INT-1:0]     init_map_x;
+logic [W_INT-1:0]     init_map_y;
 
 // FSM
-state_t                        state;
-state_t                        next_state;
+state_t               state;
+state_t               next_state;
 
 // ----------------------------------------------------------------------------
 // FSM

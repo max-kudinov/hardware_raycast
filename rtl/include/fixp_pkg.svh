@@ -20,6 +20,7 @@ package fixp_pkg;
         // verilator lint_on UNUSEDSIGNAL
         mult_res = num_a * num_b;
         return mult_res[W_INT-1:-W_FRAC];
+
     endfunction
 
     function automatic sfixp_t signed_mult (
@@ -38,9 +39,9 @@ package fixp_pkg;
         input sfixp_t num
     );
         if (num < 0)
-            return unsigned'(-num);
+            return fixp_t'(-num);
         else
-            return unsigned'(num);
+            return fixp_t'(num);
     endfunction
 
     function automatic fixp_t int_to_fixp (

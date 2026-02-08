@@ -4,33 +4,34 @@
 
 module position
     import fixp_pkg::W_INT;
-    import fixp_pkg::W_FRAC;
+    import fixp_pkg::fixp_t;
+    import fixp_pkg::sfixp_t;
 #(
     parameter real MOVEMENT_SPEED = 0.8
-)(
-    input  var logic                          clk,
-    input  var logic                          rst,
+) (
+    input  var logic             clk,
+    input  var logic             rst,
 
     // Key input
-    input  var logic                          key_forward_i,
-    input  var logic                          key_backward_i,
-    input  var logic                          key_left_i,
-    input  var logic                          key_right_i,
+    input  var logic             key_forward_i,
+    input  var logic             key_backward_i,
+    input  var logic             key_left_i,
+    input  var logic             key_right_i,
 
-    input  var logic                          update_start_i,
-    output var logic                          update_done_o,
+    input  var logic             update_start_i,
+    output var logic             update_done_o,
 
     // Map coordinates to check for a wall
-    output var logic        [W_INT-1:0]       lookup_map_x_o,
-    output var logic        [W_INT-1:0]       lookup_map_y_o,
-    input  var logic                          wall_hit_i,
+    output var logic [W_INT-1:0] lookup_map_x_o,
+    output var logic [W_INT-1:0] lookup_map_y_o,
+    input  var logic             wall_hit_i,
 
     // Camera coordinates
-    output var logic        [W_INT-1:-W_FRAC] pos_x_o,
-    output var logic        [W_INT-1:-W_FRAC] pos_y_o,
+    output var fixp_t            pos_x_o,
+    output var fixp_t            pos_y_o,
     // Camera direction
-    input  var logic signed [W_INT-1:-W_FRAC] dir_x_i,
-    input  var logic signed [W_INT-1:-W_FRAC] dir_y_i
+    input  var sfixp_t           dir_x_i,
+    input  var sfixp_t           dir_y_i
 );
 
 // ----------------------------------------------------------------------------
@@ -68,26 +69,26 @@ typedef enum logic [2:0] {
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic        [W_INT-1:-W_FRAC] pos_x_next;
-logic        [W_INT-1:-W_FRAC] pos_y_next;
-logic        [W_INT-1:-W_FRAC] new_pos;
+fixp_t        pos_x_next;
+fixp_t        pos_y_next;
+fixp_t        new_pos;
 
-logic signed [W_INT-1:-W_FRAC] new_dir_next;
-logic signed [W_INT-1:-W_FRAC] new_dir_ff;
+sfixp_t       new_dir_next;
+sfixp_t       new_dir_ff;
 
-logic                          update_done;
-logic                          update_enable;
-logic                          calc_done;
-logic                          axis_done;  // Vector x/y projections, not AXI stream
+logic         update_done;
+logic         update_enable;
+logic         calc_done;
+logic         axis_done;  // Vector x/y projections, not AXI stream
 
-axis_state_t                   axis_state;
-axis_state_t                   axis_next_state;
+axis_state_t  axis_state;
+axis_state_t  axis_next_state;
 
-cntrl_state_t                  cntrl_state;
-cntrl_state_t                  cntrl_next_state;
+cntrl_state_t cntrl_state;
+cntrl_state_t cntrl_next_state;
 
-calc_state_t                   calc_state;
-calc_state_t                   calc_next_state;
+calc_state_t  calc_state;
+calc_state_t  calc_next_state;
 
 // ----------------------------------------------------------------------------
 // Global control
