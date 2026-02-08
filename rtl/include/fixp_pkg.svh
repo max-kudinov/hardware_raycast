@@ -16,10 +16,11 @@ package fixp_pkg;
     );
         // Bits are truncated after multiplication
         // verilator lint_off UNUSEDSIGNAL
-        logic [W_INT*2-1:-W_FRAC*2] mult_res;
-        // verilator lint_on UNUSEDSIGNAL
-        mult_res = num_a * num_b;
-        return mult_res[W_INT-1:-W_FRAC];
+        // logic [W_INT*2-1:-W_FRAC*2] mult_res;
+        // // verilator lint_on UNUSEDSIGNAL
+        // mult_res = num_a * num_b;
+        // return mult_res[W_INT-1:-W_FRAC];
+        return fixp_t'(($size(num_a) + $size(num_b))'(num_a * num_b) >> -$right(num_a));
 
     endfunction
 
