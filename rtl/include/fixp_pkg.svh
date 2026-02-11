@@ -1,6 +1,21 @@
 `ifndef FIXP_PKG_SVH
 `define FIXP_PKG_SVH
 
+`define REAL_TO_FIXP(macro_type, macro_real_num) \
+    macro_type'(macro_real_num * 2 ** (-$right(macro_type)))
+
+`define INT_TO_FIXP(macro_type, macro_int_num)             \
+    macro_type'({ ($left(macro_type) + 1)'(macro_int_num), \
+                  { -$right(macro_type) {1'b0} }           \
+                })
+
+`define FIXP_MULT(macro_type, macro_num1, macro_num2)        \
+        macro_type'(($size(macro_num1) + $size(macro_num2))' \
+        (macro_num1 * macro_num2) >> -$right(macro_num1))
+
+`define FIXP_ABS(macro_num, macro_type) \
+    (macro_num < 0) ? macro_type'(-macro_num) : macro_type'(macro_num)
+
 package fixp_pkg;
 
     localparam int unsigned W_INT  = 8;
@@ -9,59 +24,6 @@ package fixp_pkg;
 
     typedef logic        [W_INT-1:-W_FRAC] fixp_t;
     typedef logic signed [W_INT-1:-W_FRAC] sfixp_t;
-
-    function automatic fixp_t mult (
-        input fixp_t num_a,
-        input fixp_t num_b
-    );
-        // Bits are truncated after multiplication
-        // verilator lint_off UNUSEDSIGNAL
-        // logic [W_INT*2-1:-W_FRAC*2] mult_res;
-        // // verilator lint_on UNUSEDSIGNAL
-        // mult_res = num_a * num_b;
-        // return mult_res[W_INT-1:-W_FRAC];
-        return fixp_t'(($size(num_a) + $size(num_b))'(num_a * num_b) >> -$right(num_a));
-
-    endfunction
-
-    function automatic sfixp_t signed_mult (
-        input sfixp_t num_a,
-        input sfixp_t num_b
-    );
-        // Bits are truncated after multiplication
-        // verilator lint_off UNUSEDSIGNAL
-        logic signed [W_INT*2-1:-W_FRAC*2] mult_res;
-        // verilator lint_on UNUSEDSIGNAL
-        mult_res = num_a * num_b;
-        return sfixp_t'(mult_res[W_INT-1:-W_FRAC]);
-    endfunction
-
-    function automatic fixp_t abs (
-        input sfixp_t num
-    );
-        if (num < 0)
-            return fixp_t'(-num);
-        else
-            return fixp_t'(num);
-    endfunction
-
-    function automatic fixp_t int_to_fixp (
-        input [W_INT-1:0] num
-    );
-        return { num, { W_FRAC {1'b0} } };
-    endfunction
-
-    function automatic fixp_t real_to_fixp (
-        input real num
-    );
-        return fixp_t'(num * 2**W_FRAC);
-    endfunction
-
-    function automatic sfixp_t real_to_sfixp (
-        input real num
-    );
-        return sfixp_t'(num * 2**W_FRAC);
-    endfunction
 
 endpackage
 

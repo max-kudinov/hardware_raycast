@@ -189,9 +189,10 @@ always_comb begin
             { ST_POS_Y, ST_RIGHT    }: new_dir_next = -dir_x_i;
         endcase
     else if (calc_state == ST_SCALE_DIR)
-        new_dir_next = fixp_pkg::signed_mult(
+        new_dir_next = `FIXP_MULT(
+            sfixp_t,
             new_dir_ff,
-            fixp_pkg::real_to_sfixp(MOVEMENT_SPEED)
+            `REAL_TO_FIXP(sfixp_t, MOVEMENT_SPEED)
         );
 end
 
@@ -233,8 +234,8 @@ end
 
 always_ff @(posedge clk)
     if (rst) begin
-        pos_x_o <= fixp_pkg::real_to_fixp(START_POS_X);
-        pos_y_o <= fixp_pkg::real_to_fixp(START_POS_Y);
+        pos_x_o <= `REAL_TO_FIXP(fixp_t, START_POS_X);
+        pos_y_o <= `REAL_TO_FIXP(fixp_t, START_POS_Y);
     end else begin
         pos_x_o <= pos_x_next;
         pos_y_o <= pos_y_next;
