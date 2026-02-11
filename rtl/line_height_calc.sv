@@ -43,8 +43,8 @@ module line_height_calc
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam fixp_t RAY_STEP  = `REAL_TO_FIXP(fixp_t, 2.0 / real'(FRAME_WIDTH));
-localparam fixp_t DELTA_MAX = `INT_TO_FIXP(fixp_t, W_INT'(2**(W_INT-1) - 1));
+localparam fixp_t RAY_STEP  = `REAL_TO_FIXP(2.0 / real'(FRAME_WIDTH), fixp_t);
+localparam fixp_t DELTA_MAX = `INT_TO_FIXP(W_INT'(2**(W_INT-1) - 1), fixp_t);
 
 // ----------------------------------------------------------------------------
 // Elaboration checks
@@ -194,7 +194,7 @@ always_ff @(posedge clk)
     if (state == ST_CALC_RAY_X)
         // (px_x * 2 / FRAME_WIDTH) - 1, gets [-1:1) range
         // 2 / FRAME_WIDTH is precalculated in RAY_STEP
-        ray_x <= sfixp_t'((fixp_t'(px_x) * RAY_STEP) - `INT_TO_FIXP(fixp_t, 1));
+        ray_x <= sfixp_t'((fixp_t'(px_x) * RAY_STEP) - `INT_TO_FIXP(1, fixp_t));
 
 // ----------------------------------------------------------------------------
 // Calculate ray dir x/y components
@@ -202,8 +202,8 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_RAY_DIR) begin
-        ray_dir_x <= dir_x + `FIXP_MULT(sfixp_t, plane_x, ray_x);
-        ray_dir_y <= dir_y + `FIXP_MULT(sfixp_t, plane_y, ray_x);
+        ray_dir_x <= dir_x + `FIXP_MULT(plane_x, ray_x, sfixp_t);
+        ray_dir_y <= dir_y + `FIXP_MULT(plane_y, ray_x, sfixp_t);
     end
 end
 
@@ -285,18 +285,18 @@ always_comb begin
 
         if (ray_dir_x > 0) begin
             step_x_next           = '1;
-            side_perp_dist_x_next = `INT_TO_FIXP(fixp_t, init_map_x + 1'b1) - pos_x;
+            side_perp_dist_x_next = `INT_TO_FIXP(init_map_x + 1'b1, fixp_t) - pos_x;
         end else begin
             step_x_next           = '0;
-            side_perp_dist_x_next = pos_x - `INT_TO_FIXP(fixp_t, init_map_x);
+            side_perp_dist_x_next = pos_x - `INT_TO_FIXP(init_map_x, fixp_t);
         end
 
         if (ray_dir_y > 0) begin
             step_y_next           = '1;
-            side_perp_dist_y_next = `INT_TO_FIXP(fixp_t, init_map_y + 1'b1) - pos_y;
+            side_perp_dist_y_next = `INT_TO_FIXP(init_map_y + 1'b1, fixp_t) - pos_y;
         end else begin
             step_y_next           = '0;
-            side_perp_dist_y_next = pos_y - `INT_TO_FIXP(fixp_t, init_map_y);
+            side_perp_dist_y_next = pos_y - `INT_TO_FIXP(init_map_y, fixp_t);
         end
 
     end
@@ -315,8 +315,8 @@ end
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_SIDE_DIST) begin
-        init_side_dist_x <= `FIXP_MULT(fixp_t, side_perp_dist_x_ff, delta_dist_x_ff);
-        init_side_dist_y <= `FIXP_MULT(fixp_t, side_perp_dist_y_ff, delta_dist_y_ff);
+        init_side_dist_x <= `FIXP_MULT(side_perp_dist_x_ff, delta_dist_x_ff, fixp_t);
+        init_side_dist_y <= `FIXP_MULT(side_perp_dist_y_ff, delta_dist_y_ff, fixp_t);
     end
 end
 
@@ -379,7 +379,7 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
         if (inv_perp_wall_dist_ff[W_INT-1:0] == '0)
-            height_o <= W_Y_POS'(`FIXP_MULT(fixp_t, fixp_t'(FRAME_HEIGHT), inv_perp_wall_dist_ff));
+            height_o <= W_Y_POS'(`FIXP_MULT(fixp_t'(FRAME_HEIGHT), inv_perp_wall_dist_ff, fixp_t));
         else
             height_o <= FRAME_HEIGHT;
 

@@ -190,9 +190,9 @@ always_comb begin
         endcase
     else if (calc_state == ST_SCALE_DIR)
         new_dir_next = `FIXP_MULT(
-            sfixp_t,
             new_dir_ff,
-            `REAL_TO_FIXP(sfixp_t, MOVEMENT_SPEED)
+            `REAL_TO_FIXP(MOVEMENT_SPEED, sfixp_t),
+            sfixp_t
         );
 end
 
@@ -234,8 +234,8 @@ end
 
 always_ff @(posedge clk)
     if (rst) begin
-        pos_x_o <= `REAL_TO_FIXP(fixp_t, START_POS_X);
-        pos_y_o <= `REAL_TO_FIXP(fixp_t, START_POS_Y);
+        pos_x_o <= `REAL_TO_FIXP(START_POS_X, fixp_t);
+        pos_y_o <= `REAL_TO_FIXP(START_POS_Y, fixp_t);
     end else begin
         pos_x_o <= pos_x_next;
         pos_y_o <= pos_y_next;

@@ -121,12 +121,12 @@ always_comb begin
     approx_mid_next = approx_mid_ff;
 
     if (state == ST_SHIFT_INPUT) begin
-        approx_next = `INT_TO_FIXP(fixp_t, 1);
+        approx_next = `INT_TO_FIXP(1, fixp_t);
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = `INT_TO_FIXP(fixp_t, 2) - `FIXP_MULT(fixp_t, num_ff,  approx_ff);
+            approx_mid_next = `INT_TO_FIXP(2, fixp_t) - `FIXP_MULT(num_ff,  approx_ff, fixp_t);
         end else begin
-            approx_next = `FIXP_MULT(fixp_t, approx_ff, approx_mid_ff);
+            approx_next = `FIXP_MULT(approx_ff, approx_mid_ff, fixp_t);
         end
     end
 

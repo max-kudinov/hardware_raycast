@@ -1,15 +1,15 @@
 `ifndef FIXP_PKG_SVH
 `define FIXP_PKG_SVH
 
-`define REAL_TO_FIXP(macro_type, macro_real_num) \
+`define REAL_TO_FIXP(macro_real_num, macro_type) \
     macro_type'(macro_real_num * 2 ** (-$right(macro_type)))
 
-`define INT_TO_FIXP(macro_type, macro_int_num)             \
+`define INT_TO_FIXP(macro_int_num, macro_type)             \
     macro_type'({ ($left(macro_type) + 1)'(macro_int_num), \
                   { -$right(macro_type) {1'b0} }           \
                 })
 
-`define FIXP_MULT(macro_type, macro_num1, macro_num2)        \
+`define FIXP_MULT(macro_num1, macro_num2, macro_type)        \
         macro_type'(($size(macro_num1) + $size(macro_num2))' \
         (macro_num1 * macro_num2) >> -$right(macro_num1))
 
