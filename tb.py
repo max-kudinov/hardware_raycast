@@ -438,7 +438,7 @@ def controls(dut):
         )
 
         plane_x = fixp(dir_y * FIXP_MULT_COEFF)
-        plane_y = fixp(-dir_x * FIXP_MULT_COEFF)
+        plane_y = fixp(-fixp(dir_x * FIXP_MULT_COEFF))
 
     # Cocotb doesn't allow indexing of packed arrays, so yikes
     key_str = f"{rot_right}{rot_left}{right}{left}{backward}{forward}"
