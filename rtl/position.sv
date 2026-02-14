@@ -3,8 +3,8 @@
 `default_nettype none
 
 module position
-    import fixp_pkg::W_INT;
-    import fixp_pkg::fixp_t;
+    // import fixp_pkg::W_INT;
+    // import fixp_pkg::fixp_t;
     import fixp_pkg::sfixp_t;
 #(
     parameter real MOVEMENT_SPEED = 0.8
@@ -22,13 +22,13 @@ module position
     output var logic             update_done_o,
 
     // Map coordinates to check for a wall
-    output var logic [W_INT-1:0] lookup_map_x_o,
-    output var logic [W_INT-1:0] lookup_map_y_o,
+    output var logic [W_INT_POS-1:0] lookup_map_x_o,
+    output var logic [W_INT_POS-1:0] lookup_map_y_o,
     input  var logic             wall_hit_i,
 
     // Camera coordinates
-    output var fixp_t            pos_x_o,
-    output var fixp_t            pos_y_o,
+    output var pos_fixp_t            pos_x_o,
+    output var pos_fixp_t            pos_y_o,
     // Camera direction
     input  var sfixp_t           dir_x_i,
     input  var sfixp_t           dir_y_i
@@ -69,9 +69,9 @@ typedef enum logic [2:0] {
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-fixp_t        pos_x_next;
-fixp_t        pos_y_next;
-fixp_t        new_pos;
+pos_fixp_t        pos_x_next;
+pos_fixp_t        pos_y_next;
+pos_fixp_t        new_pos;
 
 sfixp_t       new_dir_next;
 sfixp_t       new_dir_ff;
@@ -203,17 +203,17 @@ always_ff @(posedge clk)
     if (calc_state == ST_CALC_POS)
         if (axis_state == ST_POS_X)
             // Signed addition, then cast back to unsigned
-            new_pos <= unsigned'(signed'(pos_x_o) + new_dir_ff);
+            new_pos <= pos_fixp_t'(sfixp_t'(pos_x_o) + new_dir_ff);
         else
-            new_pos <= unsigned'(signed'(pos_y_o) + new_dir_ff);
+            new_pos <= pos_fixp_t'(sfixp_t'(pos_y_o) + new_dir_ff);
 
 always_comb begin
     if (axis_state == ST_POS_X) begin
-        lookup_map_x_o = new_pos[W_INT-1:0];
-        lookup_map_y_o = pos_y_o[W_INT-1:0];
+        lookup_map_x_o = new_pos[W_INT_POS-1:0];
+        lookup_map_y_o = pos_y_o[W_INT_POS-1:0];
     end else begin
-        lookup_map_x_o = pos_x_o[W_INT-1:0];
-        lookup_map_y_o = new_pos[W_INT-1:0];
+        lookup_map_x_o = pos_x_o[W_INT_POS-1:0];
+        lookup_map_y_o = new_pos[W_INT_POS-1:0];
     end
 end
 
@@ -234,8 +234,8 @@ end
 
 always_ff @(posedge clk)
     if (rst) begin
-        pos_x_o <= `REAL_TO_FIXP(START_POS_X, fixp_t);
-        pos_y_o <= `REAL_TO_FIXP(START_POS_Y, fixp_t);
+        pos_x_o <= `REAL_TO_FIXP(START_POS_X, pos_fixp_t);
+        pos_y_o <= `REAL_TO_FIXP(START_POS_Y, pos_fixp_t);
     end else begin
         pos_x_o <= pos_x_next;
         pos_y_o <= pos_y_next;

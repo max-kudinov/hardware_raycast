@@ -20,8 +20,8 @@ module line_height_calc
     input  var logic [W_X_POS-1:0] px_x_i,
 
     // Camera coordinates
-    input  var fixp_t              pos_x_i,
-    input  var fixp_t              pos_y_i,
+    input  var pos_fixp_t              pos_x_i,
+    input  var pos_fixp_t              pos_y_i,
     // Camera direction
     input  var sfixp_t             dir_x_i,
     input  var sfixp_t             dir_y_i,
@@ -30,8 +30,8 @@ module line_height_calc
     input  var sfixp_t             plane_y_i,
 
     // Map coordinates to check for a wall
-    output var logic [W_INT-1:0]   lookup_map_x_o,
-    output var logic [W_INT-1:0]   lookup_map_y_o,
+    output var logic [W_INT_POS-1:0]   lookup_map_x_o,
+    output var logic [W_INT_POS-1:0]   lookup_map_y_o,
     input  var logic               wall_hit_i,
 
     output var logic               done_o,
@@ -43,8 +43,8 @@ module line_height_calc
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam fixp_t RAY_STEP  = `REAL_TO_FIXP(2.0 / real'(FRAME_WIDTH), fixp_t);
-localparam fixp_t DELTA_MAX = `INT_TO_FIXP(W_INT'(2**(W_INT-1) - 1), fixp_t);
+localparam fixp_t     RAY_STEP  = `REAL_TO_FIXP(2.0 / real'(FRAME_WIDTH), fixp_t);
+localparam ext_pos_fixp_t DELTA_MAX = `INT_TO_FIXP(W_INT'(2**(W_INT_POS_EXT) - 1), ext_pos_fixp_t);
 
 // ----------------------------------------------------------------------------
 // Elaboration checks
@@ -89,28 +89,28 @@ sfixp_t               ray_dir_y;
 
 // Inversion module
 fixp_t                inv_num_in;
-fixp_t                inv_num_out;
+ext_pos_fixp_t                inv_num_out;
 logic                 inv_start_next;
 logic                 inv_start_ff;
 logic                 inv_done;
 
-// Ray distance in one map cell
-fixp_t                delta_dist_x_next;
-fixp_t                delta_dist_x_ff;
-fixp_t                delta_dist_y_next;
-fixp_t                delta_dist_y_ff;
+// Ray distance between parallel coordinate lines
+ext_pos_fixp_t                delta_dist_x_next;
+ext_pos_fixp_t                delta_dist_x_ff;
+ext_pos_fixp_t                delta_dist_y_next;
+ext_pos_fixp_t                delta_dist_y_ff;
 
 // Distance from the point to the cell border
-fixp_t                side_perp_dist_x_next;
-fixp_t                side_perp_dist_x_ff;
-fixp_t                side_perp_dist_y_next;
-fixp_t                side_perp_dist_y_ff;
+pos_fixp_t                side_perp_dist_x_next;
+pos_fixp_t                side_perp_dist_x_ff;
+pos_fixp_t                side_perp_dist_y_next;
+pos_fixp_t                side_perp_dist_y_ff;
 
 // DDA
-fixp_t                init_side_dist_x;
-fixp_t                init_side_dist_y;
-fixp_t                dda_side_dist_x;
-fixp_t                dda_side_dist_y;
+ext_pos_fixp_t                init_side_dist_x;
+ext_pos_fixp_t                init_side_dist_y;
+ext_pos_fixp_t                dda_side_dist_x;
+ext_pos_fixp_t                dda_side_dist_y;
 logic                 dda_start;
 logic                 dda_done;
 
@@ -121,16 +121,16 @@ logic                 step_y_next;
 logic                 step_y_ff;
 
 // Distance from the wall to the camera plane
-fixp_t                perp_wall_dist_next;
-fixp_t                perp_wall_dist_ff;
-fixp_t                inv_perp_wall_dist_next;
-fixp_t                inv_perp_wall_dist_ff;
+pos_fixp_t                perp_wall_dist_next;
+pos_fixp_t                perp_wall_dist_ff;
+pos_fixp_t                inv_perp_wall_dist_next;
+pos_fixp_t                inv_perp_wall_dist_ff;
 
 // Camera position
-fixp_t                pos_x;
-fixp_t                pos_y;
-logic [W_INT-1:0]     init_map_x;
-logic [W_INT-1:0]     init_map_y;
+pos_fixp_t                pos_x;
+pos_fixp_t                pos_y;
+logic [W_INT_POS-1:0]     init_map_x;
+logic [W_INT_POS-1:0]     init_map_y;
 
 // FSM
 state_t               state;
@@ -175,8 +175,8 @@ always_ff @(posedge clk) begin
         pos_x      <= pos_x_i;
         pos_y      <= pos_y_i;
 
-        init_map_x <= pos_x_i[W_INT-1:0];
-        init_map_y <= pos_y_i[W_INT-1:0];
+        init_map_x <= pos_x_i[W_INT_POS-1:0];
+        init_map_y <= pos_y_i[W_INT_POS-1:0];
 
         dir_x      <= dir_x_i;
         dir_y      <= dir_y_i;
@@ -211,7 +211,10 @@ end
 // Calculate relative ray distance of one cell step
 // ----------------------------------------------------------------------------
 
-newton_inv newton_inv (
+newton_inv #(
+    .input_t  (fixp_t    ),
+    .output_t (ext_pos_fixp_t)
+) newton_inv (
     .clk     (clk         ),
     .rst     (rst         ),
     .start_i (inv_start_ff),
@@ -246,21 +249,21 @@ always_comb begin
         inv_num_in = `FIXP_ABS(ray_dir_x, fixp_t);
 
         if (inv_done)
-            delta_dist_x_next = (ray_dir_x == '0) ? DELTA_MAX : inv_num_out;
+            delta_dist_x_next = (inv_num_in < `REAL_TO_FIXP(1.0/(2**W_INT_POS_EXT-1), fixp_t)) ? DELTA_MAX : inv_num_out;
     end
 
     if (state == ST_CALC_DELTA_DIST_Y) begin
         inv_num_in = `FIXP_ABS(ray_dir_y, fixp_t);
 
         if (inv_done)
-            delta_dist_y_next = (ray_dir_y == '0) ? DELTA_MAX : inv_num_out;
+            delta_dist_y_next = (inv_num_in < `REAL_TO_FIXP(1.0/(2**W_INT_POS_EXT-1), fixp_t)) ? DELTA_MAX : inv_num_out;
     end
 
     if (state == ST_INV_WALL_DIST) begin
-        inv_num_in = perp_wall_dist_ff;
+        inv_num_in = fixp_t'(perp_wall_dist_ff);
 
         if (inv_done)
-            inv_perp_wall_dist_next = (perp_wall_dist_ff == '0) ? '1 : inv_num_out;
+            inv_perp_wall_dist_next = (perp_wall_dist_ff == '0) ? '1 : pos_fixp_t'(inv_num_out);
     end
 
 end
@@ -276,6 +279,7 @@ end
 // ----------------------------------------------------------------------------
 
 always_comb begin
+    // NOTE: always less than 1, W_INT could be 0
     side_perp_dist_x_next = side_perp_dist_x_ff;
     side_perp_dist_y_next = side_perp_dist_y_ff;
     step_x_next           = step_x_ff;
@@ -285,18 +289,18 @@ always_comb begin
 
         if (ray_dir_x > 0) begin
             step_x_next           = '1;
-            side_perp_dist_x_next = `INT_TO_FIXP(init_map_x + 1'b1, fixp_t) - pos_x;
+            side_perp_dist_x_next = `INT_TO_FIXP(init_map_x + 1'b1, pos_fixp_t) - pos_x;
         end else begin
             step_x_next           = '0;
-            side_perp_dist_x_next = pos_x - `INT_TO_FIXP(init_map_x, fixp_t);
+            side_perp_dist_x_next = pos_x - `INT_TO_FIXP(init_map_x, pos_fixp_t);
         end
 
         if (ray_dir_y > 0) begin
             step_y_next           = '1;
-            side_perp_dist_y_next = `INT_TO_FIXP(init_map_y + 1'b1, fixp_t) - pos_y;
+            side_perp_dist_y_next = `INT_TO_FIXP(init_map_y + 1'b1, pos_fixp_t) - pos_y;
         end else begin
             step_y_next           = '0;
-            side_perp_dist_y_next = pos_y - `INT_TO_FIXP(init_map_y, fixp_t);
+            side_perp_dist_y_next = pos_y - `INT_TO_FIXP(init_map_y, pos_fixp_t);
         end
 
     end
@@ -315,8 +319,8 @@ end
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_SIDE_DIST) begin
-        init_side_dist_x <= `FIXP_MULT(side_perp_dist_x_ff, delta_dist_x_ff, fixp_t);
-        init_side_dist_y <= `FIXP_MULT(side_perp_dist_y_ff, delta_dist_y_ff, fixp_t);
+        init_side_dist_x <= `FIXP_MULT(side_perp_dist_x_ff, delta_dist_x_ff, ext_pos_fixp_t);
+        init_side_dist_y <= `FIXP_MULT(side_perp_dist_y_ff, delta_dist_y_ff, ext_pos_fixp_t);
     end
 end
 
@@ -324,7 +328,9 @@ end
 // Calculate ray distance
 // ----------------------------------------------------------------------------
 
-dda dda (
+dda #(
+    .DELTA_MAX (DELTA_MAX)
+) dda (
     .clk                (clk             ),
     .rst                (rst             ),
 
@@ -359,9 +365,9 @@ always_comb begin
 
     if (state == ST_CALC_WALL_DIST) begin
         if (ray_hit_side_o)
-            perp_wall_dist_next = dda_side_dist_y - delta_dist_y_ff;
+            perp_wall_dist_next = pos_fixp_t'(dda_side_dist_y - delta_dist_y_ff);
         else
-            perp_wall_dist_next = dda_side_dist_x - delta_dist_x_ff;
+            perp_wall_dist_next = pos_fixp_t'(dda_side_dist_x - delta_dist_x_ff);
     end
 end
 
@@ -378,7 +384,7 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
-        if (inv_perp_wall_dist_ff[W_INT-1:0] == '0)
+        if (inv_perp_wall_dist_ff[W_INT_POS-1:0] == '0)
             height_o <= W_Y_POS'(`FIXP_MULT(fixp_t'(FRAME_HEIGHT), inv_perp_wall_dist_ff, fixp_t));
         else
             height_o <= FRAME_HEIGHT;

@@ -3,24 +3,31 @@
 `default_nettype none
 
 module newton_inv
-    import fixp_pkg::W_INT;
-    import fixp_pkg::fixp_t;
-(
+    // import fixp_pkg::W_INT;
+    // import fixp_pkg::fixp_t;
+#(
+    parameter type input_t,
+    parameter type output_t
+) (
     input  var logic  clk,
     input  var logic  rst,
 
     input  var logic  start_i,
-    input  var fixp_t num_i,
+    // TODO: remove when change size
+
+    // verilator lint_off UNUSEDSIGNAL
+    input  var input_t num_i,
+    // verilator lint_off UNUSEDSIGNAL
 
     output var logic  done_o,
-    output var fixp_t num_o
+    output var output_t num_o
 );
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned W_SHIFT       = $clog2(W_INT + 1);
+localparam int unsigned W_SHIFT       = $clog2($left(output_t) + 1);
 localparam int unsigned N_ITER_CYCLES = fixp_pkg::N_ITER * 2;
 localparam int unsigned W_CNT         = $clog2(N_ITER_CYCLES);
 
@@ -28,12 +35,12 @@ localparam int unsigned W_CNT         = $clog2(N_ITER_CYCLES);
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-fixp_t              num_next;
-fixp_t              num_ff;
-fixp_t              approx_next;
-fixp_t              approx_ff;
-fixp_t              approx_mid_next;
-fixp_t              approx_mid_ff;
+output_t          num_next;
+output_t          num_ff;
+output_t              approx_next;
+output_t              approx_ff;
+output_t              approx_mid_next;
+output_t              approx_mid_ff;
 logic [W_SHIFT-1:0] shift_amount;
 logic [W_CNT-1:0]   iter_cnt;
 logic               cnt_done;
@@ -81,7 +88,7 @@ always_comb begin
     num_next = num_ff;
 
     unique0 case (state)
-        ST_IDLE:        if (start_i)  num_next = num_i;
+        ST_IDLE:        if (start_i)  num_next = output_t'(num_i);
         ST_SHIFT_INPUT:               num_next = num_ff >> shift_amount;
         ST_ITERATE:     if (cnt_done) num_next = approx_next;
         ST_SHIFT_OUTPUT:              num_next = num_ff >> shift_amount;
@@ -99,7 +106,7 @@ always_ff @(posedge clk)
     if (state == ST_CALC_SHIFT) begin
         shift_amount <= '0;
 
-        for (int unsigned i = 0; i < W_INT; i++) begin
+        for (int unsigned i = 0; i < $left(output_t) + 1; i++) begin
             if (num_ff[i]) shift_amount <= W_SHIFT'(i + 1);
         end
     end
@@ -121,12 +128,12 @@ always_comb begin
     approx_mid_next = approx_mid_ff;
 
     if (state == ST_SHIFT_INPUT) begin
-        approx_next = `INT_TO_FIXP(1, fixp_t);
+        approx_next = `INT_TO_FIXP(1, output_t);
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = `INT_TO_FIXP(2, fixp_t) - `FIXP_MULT(num_ff,  approx_ff, fixp_t);
+            approx_mid_next = `INT_TO_FIXP(2, output_t) - `FIXP_MULT(num_ff,  approx_ff, output_t);
         end else begin
-            approx_next = `FIXP_MULT(approx_ff, approx_mid_ff, fixp_t);
+            approx_next = `FIXP_MULT(approx_ff, approx_mid_ff, output_t);
         end
     end
 

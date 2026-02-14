@@ -4,7 +4,7 @@
 `default_nettype none
 
 module raycast_top
-    import fixp_pkg::W_INT;
+    // import fixp_pkg::W_INT;
 #(
     parameter real         MOVEMENT_SPEED      = 0.8,
     parameter real         ROTATION_SPEED      = 0.4,
@@ -31,7 +31,7 @@ module raycast_top
     output var logic       tmds_clk_n
 );
 
-import fixp_pkg::fixp_t;
+// import fixp_pkg::fixp_t;
 import fixp_pkg::sfixp_t;
 import dvi_pkg::X_POS_W;
 import dvi_pkg::Y_POS_W;
@@ -53,13 +53,13 @@ logic [0:MAP_SIDE-1] map [MAP_SIDE];
 // verilator lint_on ASCRANGE
 
 // verilator lint_off UNUSEDSIGNAL
-logic [W_INT-1:0]    map_x;
-logic [W_INT-1:0]    map_y;
+logic [W_INT_POS-1:0]    map_x;
+logic [W_INT_POS-1:0]    map_y;
 // verilator lint_on UNUSEDSIGNAL
-logic [W_INT-1:0]    render_map_x;
-logic [W_INT-1:0]    render_map_y;
-logic [W_INT-1:0]    controls_map_x;
-logic [W_INT-1:0]    controls_map_y;
+logic [W_INT_POS-1:0]    render_map_x;
+logic [W_INT_POS-1:0]    render_map_y;
+logic [W_INT_POS-1:0]    controls_map_x;
+logic [W_INT_POS-1:0]    controls_map_y;
 
 logic                lookup_render;
 logic                wall_hit;
@@ -75,8 +75,8 @@ logic                in_range;
 logic                frame_start;
 logic                frame_done;
 
-fixp_t               pos_x;
-fixp_t               pos_y;
+pos_fixp_t               pos_x;
+pos_fixp_t               pos_y;
 sfixp_t              dir_x;
 sfixp_t              dir_y;
 sfixp_t              plane_x;
@@ -128,7 +128,7 @@ always_ff @(posedge px_clk)
 assign map_x = lookup_render ? render_map_x : controls_map_x;
 assign map_y = lookup_render ? render_map_y : controls_map_y;
 
-// verilator lint_off WIDTHTRUNC
+// verilator lint_off widthtrunc
 assign wall_hit = map[map_y][map_x];
 // verilator lint_on WIDTHTRUNC
 

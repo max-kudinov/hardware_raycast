@@ -3,8 +3,8 @@
 `default_nettype none
 
 module controls
-    import fixp_pkg::W_INT;
-    import fixp_pkg::fixp_t;
+    // import fixp_pkg::W_INT;
+    // import fixp_pkg::fixp_t;
     import fixp_pkg::sfixp_t;
 #(
     parameter real MOVEMENT_SPEED = 0.8,
@@ -24,13 +24,13 @@ module controls
     input  var logic             update_start_i,
 
     // Map coordinates to check for a wall
-    output var logic [W_INT-1:0] lookup_map_x_o,
-    output var logic [W_INT-1:0] lookup_map_y_o,
+    output var logic [W_INT_POS-1:0] lookup_map_x_o,
+    output var logic [W_INT_POS-1:0] lookup_map_y_o,
     input  var logic             wall_hit_i,
 
     // Camera coordinates
-    output var fixp_t            pos_x_o,
-    output var fixp_t            pos_y_o,
+    output var pos_fixp_t            pos_x_o,
+    output var pos_fixp_t            pos_y_o,
     // Camera direction
     output var sfixp_t           dir_x_o,
     output var sfixp_t           dir_y_o,
