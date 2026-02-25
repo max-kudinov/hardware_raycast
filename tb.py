@@ -25,7 +25,6 @@ fixp_pos = (5, 8)
 fixp_inv = (8, 10)
 fixp_ext_pos = (8, 8)
 fixp_pos_ext_frac = (1, 10)
-fixp_move_speed = (0, 8)
 
 pg.init()
 font = freetype.Font(None, 24)
@@ -111,14 +110,14 @@ PLANE_COEFF = float(
     cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value  # type: ignore
 )
 FIXP_MULT_COEFF = fixp_init(PLANE_COEFF, fixp_ray, True)
-move_speed = fixp_init(MOVEMENT_SPEED, fixp_move_speed, True)
+move_speed = fixp_init(MOVEMENT_SPEED, fixp_ray, True)
 
 cos_angle = fixp_init(math.cos(ROTATION_SPEED), fixp_ray, True)
 sin_angle = fixp_init(math.sin(ROTATION_SPEED), fixp_ray, True)
 cos_neg_angle = fixp_init(math.cos(-ROTATION_SPEED), fixp_ray, True)
 sin_neg_angle = fixp_init(math.sin(-ROTATION_SPEED), fixp_ray, True)
 
-ext_pos_max = fixp_init(2 ** fixp_ext_pos[0] - 1, fixp_ext_pos)
+max_dist = fixp_init(2 ** fixp_ext_pos[0] - 1, fixp_ext_pos)
 pos_max = fixp_init(2 ** fixp_pos[0] - 1, fixp_pos)
 
 step = 2.0 / FRAME_WIDTH * 2**fixp_ray[1]
@@ -218,8 +217,8 @@ def line_height_calc_model(x):
     ray_dir_y = fixp_init(dir_y + plane_y * ray_x, fixp_ray, True)
 
     # from 0 to ext_pos_max
-    if abs(ray_dir_x) <= 1 / ext_pos_max:
-        delta_dist_x = ext_pos_max
+    if abs(ray_dir_x) <= 1 / max_dist:
+        delta_dist_x = max_dist
     else:
         if ray_dir_x > 0:
             delta_dist_x = fixp_init(inv_model(ray_dir_x), fixp_ext_pos)
@@ -227,8 +226,8 @@ def line_height_calc_model(x):
             delta_dist_x = fixp_init(inv_model(-ray_dir_x), fixp_ext_pos)
 
     # from 0 to ext_pos_max
-    if abs(ray_dir_y) <= 1 / ext_pos_max:
-        delta_dist_y = ext_pos_max
+    if abs(ray_dir_y) <= 1 / max_dist:
+        delta_dist_y = max_dist
     else:
         if ray_dir_y > 0:
             delta_dist_y = fixp_init(inv_model(ray_dir_y), fixp_ext_pos)
@@ -272,8 +271,8 @@ def line_height_calc_model(x):
             break
 
         if (side_dist_x < side_dist_y):
-            if (side_dist_x + delta_dist_x) >= ext_pos_max:
-                side_dist_x = ext_pos_max
+            if (side_dist_x + delta_dist_x) >= max_dist:
+                side_dist_x = max_dist
             else:
                 side_dist_x = fixp_expr(
                     side_dist_x + delta_dist_x, side_dist_x
@@ -281,8 +280,8 @@ def line_height_calc_model(x):
                 hit_side = 0
                 map_x += step_x
         else:
-            if (side_dist_y + delta_dist_y) >= ext_pos_max:
-                side_dist_y = ext_pos_max
+            if (side_dist_y + delta_dist_y) >= max_dist:
+                side_dist_y = max_dist
             else:
                 side_dist_y = fixp_expr(
                     side_dist_y + delta_dist_y, side_dist_y
@@ -305,15 +304,12 @@ def line_height_calc_model(x):
 
     gte_one = False
 
-    if perp_wall_dist == 0:
-        inv_perp_wall_dist = pos_max
+    if perp_wall_dist <= 1:
+        gte_one = True
     else:
-        if (perp_wall_dist <= 1):
-            gte_one = True
-        else:
-            inv_perp_wall_dist = fixp_expr(
-                inv_model(perp_wall_dist), inv_perp_wall_dist
-            )
+        inv_perp_wall_dist = fixp_expr(
+            inv_model(perp_wall_dist), inv_perp_wall_dist
+        )
 
     if gte_one:
         return (FRAME_HEIGHT, line_color)
