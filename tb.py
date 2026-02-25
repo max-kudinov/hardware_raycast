@@ -1,10 +1,10 @@
 import math
-from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
+from fpbinary import FpBinary, FpBinarySwitchable
 import pygame as pg
 from pygame import freetype
 import cocotb
 from cocotb.types import LogicArray
-from cocotb.triggers import FallingEdge, RisingEdge, Timer
+from cocotb.triggers import RisingEdge, Timer
 
 
 FRAME_WIDTH = 640
@@ -13,18 +13,19 @@ FRAME_HEIGHT = 480
 MAP_WIDTH = 20
 MAP_HEIGHT = 20
 
-W_INT = int(cocotb.packages.fixp_pkg.W_INT.value)
-W_FRAC = int(cocotb.packages.fixp_pkg.W_FRAC.value)
 N_ITER = int(cocotb.packages.fixp_pkg.N_ITER.value)
+W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
 MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 
 FP_MODE = True
 
-W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
-PLANE_COEFF = float(
-    cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value
-)
+fixp_ray = (2, 10)
+fixp_pos = (5, 8)
+fixp_inv = (8, 10)
+fixp_ext_pos = (8, 8)
+fixp_pos_ext_frac = (1, 10)
+fixp_move_speed = (0, 8)
 
 pg.init()
 font = freetype.Font(None, 24)
@@ -54,29 +55,42 @@ game_map = [
 ]
 
 
-def fixp(val, int_bits=W_INT, frac_bits=W_FRAC, signed=False):
+def fixp_init(val, type, signed=False):
 
-    if type(val) is FpBinarySwitchable:
-        return val.resize(
-            format=(int_bits, frac_bits),
-            round_mode=RoundingEnum.direct_neg_inf,
-        )
+    int_bits, frac_bits = type
+
+    fp_value = FpBinary(
+        int_bits=int_bits, frac_bits=frac_bits, signed=signed, value=val
+    )
+
+    return FpBinarySwitchable(
+        fp_mode=FP_MODE, fp_value=fp_value, float_value=val
+    )
+
+
+def fixp_expr(expr, num):
+    int_bits, frac_bits = num.format
+
+    if FP_MODE:
+        signed = num.value.is_signed
     else:
-        fp_value = FpBinary(
-            int_bits=int_bits,
-            frac_bits=frac_bits,
-            signed=signed,
-            value=val
-        )
+        signed = True
 
-        return FpBinarySwitchable(
-            fp_mode=FP_MODE,
-            fp_value=fp_value,
-            float_value=val
-        )
+    fp_value = FpBinary(
+        int_bits=int_bits,
+        frac_bits=frac_bits,
+        signed=signed,
+        value=expr,
+    )
+
+    return FpBinarySwitchable(
+        fp_mode=FP_MODE, fp_value=fp_value, float_value=expr
+    )
 
 
-def fixp_unsigned(val, int_bits=W_INT, frac_bits=W_FRAC):
+def fixp_unsigned(val, type):
+    int_bits, frac_bits = type
+
     fp_value = FpBinary(
         int_bits=int_bits,
         frac_bits=frac_bits,
@@ -91,120 +105,162 @@ def fixp_unsigned(val, int_bits=W_INT, frac_bits=W_FRAC):
     )
 
 
-FIXP_MULT_COEFF = fixp(PLANE_COEFF, signed=True)
-move_speed = fixp(MOVEMENT_SPEED, signed=True)
-cos_angle = fixp(math.cos(ROTATION_SPEED), signed=True)
-sin_angle = fixp(math.sin(ROTATION_SPEED), signed=True)
-cos_neg_angle = fixp(math.cos(-ROTATION_SPEED), signed=True)
-sin_neg_angle = fixp(math.sin(-ROTATION_SPEED), signed=True)
+time = 0
 
-# Player position
-pos_x = fixp(int(cocotb.top.raycast_top.controls.position.START_POS_X.value))
-pos_y = fixp(int(cocotb.top.raycast_top.controls.position.START_POS_Y.value))
+PLANE_COEFF = float(
+    cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value  # type: ignore
+)
+FIXP_MULT_COEFF = fixp_init(PLANE_COEFF, fixp_ray, True)
+move_speed = fixp_init(MOVEMENT_SPEED, fixp_move_speed, True)
 
-# Camera direction
-dir_x = fixp(
-    float(cocotb.top.raycast_top.controls.rotation.START_DIR_X.value),
-    signed=True,
-)
-dir_y = fixp(
-    float(cocotb.top.raycast_top.controls.rotation.START_DIR_Y.value),
-    signed=True,
-)
+cos_angle = fixp_init(math.cos(ROTATION_SPEED), fixp_ray, True)
+sin_angle = fixp_init(math.sin(ROTATION_SPEED), fixp_ray, True)
+cos_neg_angle = fixp_init(math.cos(-ROTATION_SPEED), fixp_ray, True)
+sin_neg_angle = fixp_init(math.sin(-ROTATION_SPEED), fixp_ray, True)
 
-# Camera plane vector
-plane_x = fixp(
-    float(cocotb.top.raycast_top.controls.rotation.START_PLANE_X.value),
-    signed=True,
-)
-plane_y = fixp(
-    float(cocotb.top.raycast_top.controls.rotation.START_PLANE_Y.value),
-    signed=True,
-)
+ext_pos_max = fixp_init(2 ** fixp_ext_pos[0] - 1, fixp_ext_pos)
+pos_max = fixp_init(2 ** fixp_pos[0] - 1, fixp_pos)
 
-step = 2.0 / FRAME_WIDTH * 2**(W_FRAC)
+step = 2.0 / FRAME_WIDTH * 2**fixp_ray[1]
 
 # Mimic rounding of int cast in SystemVerilog
 if step < 0.5:
-    ray_step = 0
+    ray_step = fixp_init(0, fixp_ray)
 else:
-    ray_step = round(step)
+    ray_step = fixp_init(round(step), fixp_ray)
 
-time = 0
+controls = cocotb.top.raycast_top.controls  # type: ignore
+
+# Player position
+pos_x = fixp_init(
+    controls.position.START_POS_X.value,  # type: ignore
+    fixp_pos,
+)
+pos_y = fixp_init(
+    controls.position.START_POS_X.value,  # type: ignore
+    fixp_pos,
+)
 
 
-def float_to_fixp(num_float):
-    return int(num_float * (2 ** W_FRAC))
+# Camera direction
+dir_x = fixp_init(
+    controls.rotation.START_DIR_X.value,  # type: ignore
+    fixp_ray,
+    True,
+)
+dir_y = fixp_init(
+    controls.rotation.START_DIR_Y.value,  # type: ignore
+    fixp_ray,
+    True,
+)
 
-
-def fixp_to_float(num_fixp):
-    return float(num_fixp) / (2 ** W_FRAC)
+# Camera plane vector
+plane_x = fixp_init(
+    controls.rotation.START_PLANE_X.value,  # type: ignore
+    fixp_ray,
+    True,
+)
+plane_y = fixp_init(
+    controls.rotation.START_PLANE_Y.value,  # type: ignore
+    fixp_ray,
+    True,
+)
 
 
 def inv_model(num_in):
-    num = fixp_unsigned(num_in)
+    num = fixp_unsigned(num_in, fixp_inv)
     cnt = 0
-    approx = fixp(1)
-    product = fixp(0)
-    sub = fixp(0)
-    fixp_2 = fixp(2)
+    approx = fixp_init(1, fixp_inv)
+    product = fixp_init(0, fixp_inv)
+    sub = fixp_init(0, fixp_inv)
 
     while num > 1:
-        num = fixp(num >> 1)
+        num = fixp_expr(num >> 1, num)
         cnt += 1
 
     for _ in range(N_ITER):
-        product = fixp(num * approx)
-        sub = fixp(fixp_2 - product)
-        approx = fixp(approx * sub)
+        product = fixp_expr(num * approx, product)
+        sub = fixp_expr(2 - product, sub)
+        approx = fixp_expr(approx * sub, approx)
 
-    approx = fixp(approx >> cnt)
+    approx = fixp_expr(approx >> cnt, approx)
     return approx
 
 
-fixp_frame_height = fixp(FRAME_HEIGHT, int_bits=W_HEIGHT)
+ray_x = 0
+ray_dir_x = 0
+ray_dir_y = 0
+delta_dist_x = 0
+delta_dist_y = 0
+side_dist_x = 0
+side_dist_y = 0
+hit_side = 0
+map_x = 0
+map_y = 0
+perp_wall_dist = 0
+inv_perp_wall_dist = 0
+scaled_height = 0
+init_side_dist_x = 0
+init_side_dist_y = 0
 
 
 def line_height_calc_model(x):
-    ray_x = fixp((x * ray_step / 2**W_FRAC - 1), signed=True)
+    global ray_x, ray_dir_x, ray_dir_y
+    global delta_dist_x, delta_dist_y, side_dist_x, side_dist_y
+    global hit_side, map_x, map_y
+    global perp_wall_dist, inv_perp_wall_dist, scaled_height
 
-    ray_dir_x = fixp(dir_x + plane_x * ray_x, signed=True)
-    ray_dir_y = fixp(dir_y + plane_y * ray_x, signed=True)
+    # from -1 to 1
+    ray_x = fixp_init((x * ray_step / 2**fixp_ray[1] - 1), fixp_ray, True)
 
-    if ray_dir_x == 0:
-        delta_dist_x = fixp(2**(W_INT-1)-1)
+    # from -2 to 2
+    ray_dir_x = fixp_init(dir_x + plane_x * ray_x, fixp_ray, True)
+    ray_dir_y = fixp_init(dir_y + plane_y * ray_x, fixp_ray, True)
+
+    # from 0 to ext_pos_max
+    if abs(ray_dir_x) <= 1 / ext_pos_max:
+        delta_dist_x = ext_pos_max
     else:
         if ray_dir_x > 0:
-            delta_dist_x = inv_model(ray_dir_x)
+            delta_dist_x = fixp_init(inv_model(ray_dir_x), fixp_ext_pos)
         else:
-            delta_dist_x = inv_model(-ray_dir_x)
+            delta_dist_x = fixp_init(inv_model(-ray_dir_x), fixp_ext_pos)
 
-    if ray_dir_y == 0:
-        delta_dist_y = fixp(2**(W_INT-1)-1)
+    # from 0 to ext_pos_max
+    if abs(ray_dir_y) <= 1 / ext_pos_max:
+        delta_dist_y = ext_pos_max
     else:
         if ray_dir_y > 0:
-            delta_dist_y = inv_model(ray_dir_y)
+            delta_dist_y = fixp_init(inv_model(ray_dir_y), fixp_ext_pos)
         else:
-            delta_dist_y = inv_model(-ray_dir_y)
+            delta_dist_y = fixp_init(inv_model(-ray_dir_y), fixp_ext_pos)
 
     # Integer numbers, workaround to make side_dist_* unsigned
-    map_x = fixp(int(pos_x))
-    map_y = fixp(int(pos_y))
-    one = fixp(1)
+    # from 0 to 31
+    map_x = fixp_init(int(pos_x), fixp_pos)
+    map_y = fixp_init(int(pos_y), fixp_pos)
+
+    # from 0 to ext_pos_max
+    side_dist_x = fixp_init(0, fixp_ext_pos)
+    side_dist_y = fixp_init(0, fixp_ext_pos)
 
     if ray_dir_x > 0:
         step_x = 1
-        side_dist_x = fixp((map_x + one - pos_x) * delta_dist_x)
+        side_dist_x = fixp_expr(
+            (map_x + 1 - pos_x) * delta_dist_x, side_dist_x
+        )
     else:
         step_x = -1
-        side_dist_x = fixp((pos_x - map_x) * delta_dist_x)
+        side_dist_x = fixp_expr((pos_x - map_x) * delta_dist_x, side_dist_x)
 
     if ray_dir_y > 0:
         step_y = 1
-        side_dist_y = fixp((map_y + one - pos_y) * delta_dist_y)
+        side_dist_y = fixp_expr(
+            (map_y + 1 - pos_y) * delta_dist_y, side_dist_y
+        )
     else:
         step_y = -1
-        side_dist_y = fixp((pos_y - map_y) * delta_dist_y)
+        side_dist_y = fixp_expr((pos_y - map_y) * delta_dist_y, side_dist_y)
 
     hit_side = 0
 
@@ -216,33 +272,57 @@ def line_height_calc_model(x):
             break
 
         if (side_dist_x < side_dist_y):
-            side_dist_x = fixp(side_dist_x + delta_dist_x)
-            map_x += step_x
-            hit_side = 0
+            if (side_dist_x + delta_dist_x) >= ext_pos_max:
+                side_dist_x = ext_pos_max
+            else:
+                side_dist_x = fixp_expr(
+                    side_dist_x + delta_dist_x, side_dist_x
+                )
+                hit_side = 0
+                map_x += step_x
         else:
-            side_dist_y = fixp(side_dist_y + delta_dist_y)
-            map_y += step_y
-            hit_side = 1
+            if (side_dist_y + delta_dist_y) >= ext_pos_max:
+                side_dist_y = ext_pos_max
+            else:
+                side_dist_y = fixp_expr(
+                    side_dist_y + delta_dist_y, side_dist_y
+                )
+                hit_side = 1
+                map_y += step_y
+
+    # from 0 to 31
+    perp_wall_dist = fixp_init(0, fixp_pos)
+
+    # from 0 to 1
+    inv_perp_wall_dist = fixp_init(0, fixp_pos_ext_frac)
 
     if hit_side == 0:
-        perp_wall_dist = fixp(side_dist_x - delta_dist_x)
+        perp_wall_dist = fixp_expr(side_dist_x - delta_dist_x, perp_wall_dist)
         line_color = 0
     else:
-        perp_wall_dist = fixp(side_dist_y - delta_dist_y)
+        perp_wall_dist = fixp_expr(side_dist_y - delta_dist_y, perp_wall_dist)
         line_color = 1
 
-    if perp_wall_dist == 0:
-        inv_perp_wall_dist = 2**W_INT
-    else:
-        inv_perp_wall_dist = inv_model(perp_wall_dist)
+    gte_one = False
 
-    if int(inv_perp_wall_dist) == 0:
-        scaled_height = fixp(
-            fixp_frame_height * inv_perp_wall_dist, int_bits=W_HEIGHT+1
-        )
-        return (int(scaled_height), line_color)
+    if perp_wall_dist == 0:
+        inv_perp_wall_dist = pos_max
     else:
-        return (int(fixp_frame_height), line_color)
+        if (perp_wall_dist <= 1):
+            gte_one = True
+        else:
+            inv_perp_wall_dist = fixp_expr(
+                inv_model(perp_wall_dist), inv_perp_wall_dist
+            )
+
+    if gte_one:
+        return (FRAME_HEIGHT, line_color)
+    else:
+        scaled_height = fixp_init(
+            FRAME_HEIGHT * inv_perp_wall_dist, (W_HEIGHT, 0)
+        )
+        # breakpoint()
+        return (int(scaled_height), line_color)
 
 
 async def render(dut):
@@ -250,7 +330,7 @@ async def render(dut):
     surface.fill((0, 0, 0))
 
     await RisingEdge(dut.px_clk)
-    # cocotb.start_soon(timeout())
+    cocotb.start_soon(timeout())
 
     await RisingEdge(dut.raycast_top.frame_done)
     mem = dut.raycast_top.render.frame_buffer.value
@@ -266,24 +346,54 @@ async def render(dut):
         try:
             assert dut_height == height_div2
         except AssertionError as e:
+            top = dut.raycast_top
             print("=" * 80)
             print(f"Pixel {x}")
             print(f"Expected height: {height_div2}, got {dut_height}")
 
             print(f"Expected dir_x: {dir_x}")
-            print(f"Got dir_x: {dut.raycast_top.dir_x.value.to_signed() / 2**W_FRAC}")
+            print(
+                f"Got dir_x: {top.dir_x.value.to_signed() / 2**fixp_ray[1]}"
+            )
             print(f"Expected dir_y: {dir_y}")
-            print(f"Got dir_y: {dut.raycast_top.dir_y.value.to_signed() / 2**W_FRAC}\n")
+            print(
+                f"Got dir_y: {top.dir_y.value.to_signed() / 2**fixp_ray[1]}\n"
+            )
 
             print(f"Expected plane_x: {plane_x}")
-            print(f"Got plane_x: {dut.raycast_top.plane_x.value.to_signed() / 2**W_FRAC}")
+            print(
+                f"Got plane_x: {top.plane_x.value.to_signed()/2**fixp_ray[1]}"
+            )
             print(f"Expected plane_y: {plane_y}")
-            print(f"Got plane_y: {dut.raycast_top.plane_y.value.to_signed() / 2**W_FRAC}\n")
+            print(
+                f"Got plane_y: {top.plane_y.value.to_signed()/2**fixp_ray[1]}"
+            )
 
             print(f"Expected pos_x: {pos_x}")
-            print(f"Got pos_x: {dut.raycast_top.pos_x.value.to_unsigned() / 2**W_FRAC}")
+            print(
+                f"Got pos_x: {top.pos_x.value.to_unsigned() / 2**fixp_pos[1]}"
+            )
             print(f"Expected pos_y: {pos_y}")
-            print(f"Got pos_y: {dut.raycast_top.pos_y.value.to_unsigned() / 2**W_FRAC}")
+            print(
+                f"Got pos_y: {top.pos_y.value.to_unsigned() / 2**fixp_pos[1]}"
+            )
+
+            print(f"ray_x {ray_x}")
+            print(f"ray_dir_x {ray_dir_x}")
+            print(f"ray_dir_y {ray_dir_y}")
+            print(f"delta_dist_x {delta_dist_x}")
+            print(f"delta_dist_y {delta_dist_y}")
+            print(f"side_dist_x {side_dist_x}")
+            print(f"side_dist_y {side_dist_y}")
+            print(f"hit_side {hit_side}")
+            print(f"perp_wall_dist {perp_wall_dist}")
+            print(f"inv_perp_wall_dist {inv_perp_wall_dist}")
+            print(f"scaled_height {scaled_height}")
+            print(f"map_x {map_x}")
+            print(f"map_y {map_y}")
+            print(f"init_side_dist_x {init_side_dist_x}")
+            print(f"init_side_dist_y {init_side_dist_y}")
+            print(f"line_height {line_height}")
             print("=" * 80)
             raise e
 
@@ -296,16 +406,22 @@ async def render(dut):
             print("=" * 80)
             raise e
 
-        start_pos = FRAME_HEIGHT // 2 - dut_height
+        start_pos = FRAME_HEIGHT // 2 - line_height // 2
 
         if start_pos < 0:
             start_pos = 0
-        end_pos = FRAME_HEIGHT // 2 + dut_height
+        end_pos = FRAME_HEIGHT // 2 + line_height // 2
 
         if end_pos > FRAME_HEIGHT - 1:
             end_pos = FRAME_HEIGHT - 1
 
-        pg_color = (127, 127, 127) if dut_color else (255, 255, 255)
+        if (x == 300):
+            white = (255, 0, 0)
+            grey = (0, 0, 255)
+        else:
+            white = (255, 255, 255)
+            grey = (127, 127, 127)
+        pg_color = grey if line_color else white
         pg.draw.line(surface, pg_color, (x, start_pos), (x, end_pos))
 
     print_info()
@@ -356,57 +472,75 @@ def controls(dut):
     rot_left = 0
     rot_right = 0
 
+    new_pos = fixp_init(0, fixp_pos)
+
     # Update x axis
     # Forward
     if keys[pg.K_w]:
         forward = 1
-        new_pos = fixp_unsigned(pos_x + fixp(dir_x * move_speed))
+        new_pos = fixp_expr(
+            pos_x + fixp_expr(dir_x * move_speed, dir_x), new_pos
+        )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Backward
     if keys[pg.K_s]:
         backward = 1
-        new_pos = fixp_unsigned(pos_x + fixp(-dir_x * move_speed))
+        new_pos = fixp_expr(
+            pos_x + fixp_expr(-dir_x * move_speed, dir_x), new_pos
+        )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Left
     if keys[pg.K_a]:
         left = 1
-        new_pos = fixp_unsigned(pos_x + fixp(-dir_y * move_speed))
+        new_pos = fixp_expr(
+            pos_x + fixp_expr(-dir_y * move_speed, dir_y), new_pos
+        )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Right
     if keys[pg.K_d]:
         right = 1
-        new_pos = fixp_unsigned(pos_x + fixp(dir_y * move_speed))
+        new_pos = fixp_expr(
+            pos_x + fixp_expr(dir_y * move_speed, dir_y), new_pos
+        )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Update y axis
     # Forward
     if keys[pg.K_w]:
-        new_pos = fixp_unsigned(pos_y + fixp(dir_y * move_speed))
+        new_pos = fixp_expr(
+            pos_y + fixp_expr(dir_y * move_speed, dir_y), new_pos
+        )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Backward
     if keys[pg.K_s]:
-        new_pos = fixp_unsigned(pos_y + fixp(-dir_y * move_speed))
+        new_pos = fixp_expr(
+            pos_y + fixp_expr(-dir_y * move_speed, dir_y), new_pos
+        )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Left
     if keys[pg.K_a]:
-        new_pos = fixp_unsigned(pos_y + fixp(dir_x * move_speed))
+        new_pos = fixp_expr(
+            pos_y + fixp_expr(dir_x * move_speed, dir_x), new_pos
+        )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Right
     if keys[pg.K_d]:
-        new_pos = fixp_unsigned(pos_y + fixp(-dir_x * move_speed))
+        new_pos = fixp_expr(
+            pos_y + fixp_expr(-dir_x * move_speed, dir_x), new_pos
+        )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
@@ -414,31 +548,43 @@ def controls(dut):
     if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:
         rot_right = 1
 
-        old_dir_x = fixp(dir_x)
-        dir_x = fixp(
-            fixp(dir_x * cos_neg_angle) - fixp(dir_y * sin_neg_angle),
+        old_dir_x = fixp_init(dir_x, fixp_ray, True)
+        dir_x = fixp_expr(
+            fixp_expr(dir_x * cos_neg_angle, dir_x)
+            - fixp_expr(dir_y * sin_neg_angle, dir_x),
+            dir_y,
         )
-        dir_y = fixp(
-            fixp(old_dir_x * sin_neg_angle) + fixp(dir_y * cos_neg_angle),
+        dir_y = fixp_expr(
+            fixp_expr(old_dir_x * sin_neg_angle, dir_y)
+            + fixp_expr(dir_y * cos_neg_angle, dir_y),
+            dir_y,
         )
 
-        plane_x = fixp(dir_y * FIXP_MULT_COEFF)
-        plane_y = fixp(-dir_x * FIXP_MULT_COEFF)
+        plane_x = fixp_expr(dir_y * FIXP_MULT_COEFF, plane_x)
+        plane_y = fixp_expr(
+            -fixp_expr(dir_x * FIXP_MULT_COEFF, dir_x), plane_y
+        )
 
     # Rotate left
     if keys[pg.K_LEFT] and not keys[pg.K_RIGHT]:
         rot_left = 1
 
-        old_dir_x = fixp(dir_x)
-        dir_x = fixp(
-            fixp(dir_x * cos_angle) - fixp(dir_y * sin_angle),
+        old_dir_x = fixp_init(dir_x, fixp_ray, True)
+        dir_x = fixp_expr(
+            fixp_expr(dir_x * cos_angle, dir_x)
+            - fixp_expr(dir_y * sin_angle, dir_x),
+            dir_x,
         )
-        dir_y = fixp(
-            fixp(old_dir_x * sin_angle) + fixp(dir_y * cos_angle),
+        dir_y = fixp_expr(
+            fixp_expr(old_dir_x * sin_angle, dir_y)
+            + fixp_expr(dir_y * cos_angle, dir_y),
+            dir_y,
         )
 
-        plane_x = fixp(dir_y * FIXP_MULT_COEFF)
-        plane_y = fixp(-fixp(dir_x * FIXP_MULT_COEFF))
+        plane_x = fixp_expr(dir_y * FIXP_MULT_COEFF, plane_x)
+        plane_y = fixp_expr(
+            -fixp_expr(dir_x * FIXP_MULT_COEFF, dir_x), plane_y
+        )
 
     # Cocotb doesn't allow indexing of packed arrays, so yikes
     key_str = f"{rot_right}{rot_left}{right}{left}{backward}{forward}"
