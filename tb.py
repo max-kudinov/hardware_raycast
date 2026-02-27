@@ -485,13 +485,15 @@ def controls(dut):
     rot_right = 0
 
     new_pos = fixp_init(0, fixp_pos)
+    step_next = fixp_init(0, fixp_ray, True)
 
     # Update x axis
     # Forward
     if keys[pg.K_w]:
         forward = 1
+        step_next = fixp_expr(dir_x * move_speed, dir_x)
         new_pos = fixp_expr(
-            pos_x + fixp_expr(dir_x * move_speed, dir_x), new_pos
+            pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
@@ -499,8 +501,9 @@ def controls(dut):
     # Backward
     if keys[pg.K_s]:
         backward = 1
+        step_next = fixp_expr(-dir_x * move_speed, dir_x)
         new_pos = fixp_expr(
-            pos_x + fixp_expr(-dir_x * move_speed, dir_x), new_pos
+            pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
@@ -508,8 +511,9 @@ def controls(dut):
     # Left
     if keys[pg.K_a]:
         left = 1
+        step_next = fixp_expr(-dir_y * move_speed, dir_y)
         new_pos = fixp_expr(
-            pos_x + fixp_expr(-dir_y * move_speed, dir_y), new_pos
+            pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
@@ -517,8 +521,9 @@ def controls(dut):
     # Right
     if keys[pg.K_d]:
         right = 1
+        step_next = fixp_expr(dir_y * move_speed, dir_y)
         new_pos = fixp_expr(
-            pos_x + fixp_expr(dir_y * move_speed, dir_y), new_pos
+            pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
@@ -526,32 +531,36 @@ def controls(dut):
     # Update y axis
     # Forward
     if keys[pg.K_w]:
+        step_next = fixp_expr(dir_y * move_speed, dir_y)
         new_pos = fixp_expr(
-            pos_y + fixp_expr(dir_y * move_speed, dir_y), new_pos
+            pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Backward
     if keys[pg.K_s]:
+        step_next = fixp_expr(-dir_y * move_speed, dir_y)
         new_pos = fixp_expr(
-            pos_y + fixp_expr(-dir_y * move_speed, dir_y), new_pos
+            pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Left
     if keys[pg.K_a]:
+        step_next = fixp_expr(dir_x * move_speed, dir_x)
         new_pos = fixp_expr(
-            pos_y + fixp_expr(dir_x * move_speed, dir_x), new_pos
+            pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Right
     if keys[pg.K_d]:
+        step_next = fixp_expr(-dir_x * move_speed, dir_x)
         new_pos = fixp_expr(
-            pos_y + fixp_expr(-dir_x * move_speed, dir_x), new_pos
+            pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
         if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
