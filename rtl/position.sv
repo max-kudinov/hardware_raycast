@@ -2,11 +2,7 @@
 
 `default_nettype none
 
-module position
-    // import fixp_pkg::W_INT;
-    // import fixp_pkg::fixp_t;
-    import fixp_pkg::sfixp_t;
-#(
+module position #(
     parameter real MOVEMENT_SPEED = 0.8
 ) (
     input  var logic             clk,
@@ -22,16 +18,16 @@ module position
     output var logic             update_done_o,
 
     // Map coordinates to check for a wall
-    output var logic [W_INT_POS-1:0] lookup_map_x_o,
-    output var logic [W_INT_POS-1:0] lookup_map_y_o,
+    output var logic [POS_W_INT-1:0] lookup_map_x_o,
+    output var logic [POS_W_INT-1:0] lookup_map_y_o,
     input  var logic             wall_hit_i,
 
     // Camera coordinates
     output var pos_fixp_t            pos_x_o,
     output var pos_fixp_t            pos_y_o,
     // Camera direction
-    input  var sfixp_t           dir_x_i,
-    input  var sfixp_t           dir_y_i
+    input  var ray_fixp_t           dir_x_i,
+    input  var ray_fixp_t           dir_y_i
 );
 
 // ----------------------------------------------------------------------------
@@ -73,8 +69,8 @@ pos_fixp_t        pos_x_next;
 pos_fixp_t        pos_y_next;
 pos_fixp_t        new_pos;
 
-sfixp_t       new_dir_next;
-sfixp_t       new_dir_ff;
+ray_fixp_t       step_next;
+ray_fixp_t       step_ff;
 
 logic         update_done;
 logic         update_enable;
@@ -172,48 +168,47 @@ end
 // ----------------------------------------------------------------------------
 
 always_comb begin
-    new_dir_next = new_dir_ff;
+    step_next = step_ff;
 
     if (calc_state == ST_CALC_DIR)
         unique case ({ axis_state, cntrl_state })
             // X-axis
-            { ST_POS_X, ST_FORWARD  }: new_dir_next =  dir_x_i;
-            { ST_POS_X, ST_BACKWARD }: new_dir_next = -dir_x_i;
-            { ST_POS_X, ST_LEFT     }: new_dir_next = -dir_y_i;
-            { ST_POS_X, ST_RIGHT    }: new_dir_next =  dir_y_i;
+            { ST_POS_X, ST_FORWARD  }: step_next =  dir_x_i;
+            { ST_POS_X, ST_BACKWARD }: step_next = -dir_x_i;
+            { ST_POS_X, ST_LEFT     }: step_next = -dir_y_i;
+            { ST_POS_X, ST_RIGHT    }: step_next =  dir_y_i;
 
             // Y-axis
-            { ST_POS_Y, ST_FORWARD  }: new_dir_next =  dir_y_i;
-            { ST_POS_Y, ST_BACKWARD }: new_dir_next = -dir_y_i;
-            { ST_POS_Y, ST_LEFT     }: new_dir_next =  dir_x_i;
-            { ST_POS_Y, ST_RIGHT    }: new_dir_next = -dir_x_i;
+            { ST_POS_Y, ST_FORWARD  }: step_next =  dir_y_i;
+            { ST_POS_Y, ST_BACKWARD }: step_next = -dir_y_i;
+            { ST_POS_Y, ST_LEFT     }: step_next =  dir_x_i;
+            { ST_POS_Y, ST_RIGHT    }: step_next = -dir_x_i;
         endcase
     else if (calc_state == ST_SCALE_DIR)
-        new_dir_next = `FIXP_MULT(
-            new_dir_ff,
-            `REAL_TO_FIXP(MOVEMENT_SPEED, sfixp_t),
-            sfixp_t
+        step_next = `FIXP_MULT(
+            step_ff,
+            `REAL_TO_FIXP(MOVEMENT_SPEED, ray_fixp_t),
+            ray_fixp_t
         );
 end
 
 always_ff @(posedge clk)
-    new_dir_ff <= new_dir_next;
+    step_ff <= step_next;
 
 always_ff @(posedge clk)
     if (calc_state == ST_CALC_POS)
         if (axis_state == ST_POS_X)
-            // Signed addition, then cast back to unsigned
-            new_pos <= pos_fixp_t'(sfixp_t'(pos_x_o) + new_dir_ff);
+            new_pos <= pos_x_o + `FIXP_CAST(step_ff, ray_fixp_t, pos_fixp_t);
         else
-            new_pos <= pos_fixp_t'(sfixp_t'(pos_y_o) + new_dir_ff);
+            new_pos <= pos_y_o + `FIXP_CAST(step_ff, ray_fixp_t, pos_fixp_t);
 
 always_comb begin
     if (axis_state == ST_POS_X) begin
-        lookup_map_x_o = new_pos[W_INT_POS-1:0];
-        lookup_map_y_o = pos_y_o[W_INT_POS-1:0];
+        lookup_map_x_o = new_pos[POS_W_INT-1:0];
+        lookup_map_y_o = pos_y_o[POS_W_INT-1:0];
     end else begin
-        lookup_map_x_o = pos_x_o[W_INT_POS-1:0];
-        lookup_map_y_o = new_pos[W_INT_POS-1:0];
+        lookup_map_x_o = pos_x_o[POS_W_INT-1:0];
+        lookup_map_y_o = new_pos[POS_W_INT-1:0];
     end
 end
 

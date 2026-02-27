@@ -4,9 +4,6 @@
 `default_nettype none
 
 module render
-    // import fixp_pkg::W_INT;
-    // import fixp_pkg::fixp_t;
-    import fixp_pkg::sfixp_t;
     import dvi_pkg::COLOR_W;
 #(
     parameter int unsigned        W_X_POS      = 10,
@@ -27,19 +24,19 @@ module render
     output var logic [COLOR_W-1:0] blue_o,
 
     // Map coordinates to check for a wall
-    output var logic [W_INT_POS-1:0]   lookup_map_x_o,
-    output var logic [W_INT_POS-1:0]   lookup_map_y_o,
+    output var logic [POS_W_INT-1:0]   lookup_map_x_o,
+    output var logic [POS_W_INT-1:0]   lookup_map_y_o,
     input  var logic               wall_hit_i,
 
     // Camera coordinates
     input  var pos_fixp_t              pos_x_i,
     input  var pos_fixp_t              pos_y_i,
     // Camera direction
-    input  var sfixp_t             dir_x_i,
-    input  var sfixp_t             dir_y_i,
+    input  var ray_fixp_t             dir_x_i,
+    input  var ray_fixp_t             dir_y_i,
     // Camera plane
-    input  var sfixp_t             plane_x_i,
-    input  var sfixp_t             plane_y_i
+    input  var ray_fixp_t             plane_x_i,
+    input  var ray_fixp_t             plane_y_i
 );
 
 // ----------------------------------------------------------------------------

@@ -3,17 +3,17 @@
 `default_nettype none
 
 module dda #(
-    parameter ext_pos_fixp_t DELTA_MAX
+    parameter ext_pos_fixp_t FIXP_MAX_DIST
 ) (
     input  var logic             clk,
     input  var logic             rst,
 
     input  var logic             start_i,
 
-    input  var logic [W_INT_POS-1:0] init_map_x_i,
-    input  var logic [W_INT_POS-1:0] init_map_y_i,
-    output var logic [W_INT_POS-1:0] map_x_o,
-    output var logic [W_INT_POS-1:0] map_y_o,
+    input  var logic [POS_W_INT-1:0] init_map_x_i,
+    input  var logic [POS_W_INT-1:0] init_map_y_i,
+    output var logic [POS_W_INT-1:0] map_x_o,
+    output var logic [POS_W_INT-1:0] map_y_o,
     input  var logic             step_x_i,
     input  var logic             step_y_i,
     input  var logic             wall_hit_i,
@@ -40,8 +40,8 @@ ext_pos_fixp_t            side_dist_x_next;
 ext_pos_fixp_t            side_dist_y_next;
 ext_pos_fixp_t            side_dist_inc;
 logic overflow;
-logic [W_INT_POS-1:0] map_x_next;
-logic [W_INT_POS-1:0] map_y_next;
+logic [POS_W_INT-1:0] map_x_next;
+logic [POS_W_INT-1:0] map_y_next;
 
 logic             hit_side_next;
 
@@ -92,7 +92,7 @@ always_comb begin
             { overflow, side_dist_inc } = side_dist_x_o + delta_dist_x_i;
             // Check for overflow, if occurred, set max value
             if (overflow) begin
-                side_dist_x_next = DELTA_MAX;
+                side_dist_x_next = FIXP_MAX_DIST;
             end else begin
                 side_dist_x_next = side_dist_inc;
                 map_x_next       = step_x_i ? (map_x_o + 1'b1) : (map_x_o - 1'b1);
@@ -102,7 +102,7 @@ always_comb begin
             { overflow, side_dist_inc } = side_dist_y_o + delta_dist_y_i;
             // Check for overflow, if occurred, set max value
             if (overflow) begin
-                side_dist_y_next = DELTA_MAX;
+                side_dist_y_next = FIXP_MAX_DIST;
             end else begin
                 side_dist_y_next = side_dist_inc;
                 map_y_next       = step_y_i ? (map_y_o + 1'b1) : (map_y_o - 1'b1);

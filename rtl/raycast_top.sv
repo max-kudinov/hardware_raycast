@@ -31,8 +31,6 @@ module raycast_top
     output var logic       tmds_clk_n
 );
 
-// import fixp_pkg::fixp_t;
-import fixp_pkg::sfixp_t;
 import dvi_pkg::X_POS_W;
 import dvi_pkg::Y_POS_W;
 import dvi_pkg::COLOR_W;
@@ -53,13 +51,13 @@ logic [0:MAP_SIDE-1] map [MAP_SIDE];
 // verilator lint_on ASCRANGE
 
 // verilator lint_off UNUSEDSIGNAL
-logic [W_INT_POS-1:0]    map_x;
-logic [W_INT_POS-1:0]    map_y;
+logic [POS_W_INT-1:0]    map_x;
+logic [POS_W_INT-1:0]    map_y;
 // verilator lint_on UNUSEDSIGNAL
-logic [W_INT_POS-1:0]    render_map_x;
-logic [W_INT_POS-1:0]    render_map_y;
-logic [W_INT_POS-1:0]    controls_map_x;
-logic [W_INT_POS-1:0]    controls_map_y;
+logic [POS_W_INT-1:0]    render_map_x;
+logic [POS_W_INT-1:0]    render_map_y;
+logic [POS_W_INT-1:0]    controls_map_x;
+logic [POS_W_INT-1:0]    controls_map_y;
 
 logic                lookup_render;
 logic                wall_hit;
@@ -77,10 +75,10 @@ logic                frame_done;
 
 pos_fixp_t               pos_x;
 pos_fixp_t               pos_y;
-sfixp_t              dir_x;
-sfixp_t              dir_y;
-sfixp_t              plane_x;
-sfixp_t              plane_y;
+ray_fixp_t              dir_x;
+ray_fixp_t              dir_y;
+ray_fixp_t              plane_x;
+ray_fixp_t              plane_y;
 
 // ----------------------------------------------------------------------------
 // Map ROM init

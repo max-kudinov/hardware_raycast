@@ -2,9 +2,7 @@
 
 `default_nettype none
 
-module rotation
-    import fixp_pkg::sfixp_t;
-#(
+module rotation #(
     parameter real ROTATION_SPEED = 0.4
 ) (
     input  var logic   clk,
@@ -16,11 +14,11 @@ module rotation
     input  var logic   update_start_i,
 
     // Camera direction
-    output var sfixp_t dir_x_o,
-    output var sfixp_t dir_y_o,
+    output var ray_fixp_t dir_x_o,
+    output var ray_fixp_t dir_y_o,
     // Camera plane
-    output var sfixp_t plane_x_o,
-    output var sfixp_t plane_y_o
+    output var ray_fixp_t plane_x_o,
+    output var ray_fixp_t plane_y_o
 );
 
 // ----------------------------------------------------------------------------
@@ -34,11 +32,11 @@ localparam real    START_PLANE_X    = START_DIR_Y * PLANE_COEFF;
 localparam real    START_PLANE_Y    = -START_DIR_X * PLANE_COEFF;
 
 // Precalculated trig constants for rotation matrix
-localparam sfixp_t FIXP_PLANE_COEFF = `REAL_TO_FIXP(PLANE_COEFF, sfixp_t);
-localparam sfixp_t COS_ANGLE        = `REAL_TO_FIXP($cos( ROTATION_SPEED), sfixp_t);
-localparam sfixp_t SIN_ANGLE        = `REAL_TO_FIXP($sin( ROTATION_SPEED), sfixp_t);
-localparam sfixp_t COS_NEG_ANGLE    = `REAL_TO_FIXP($cos(-ROTATION_SPEED), sfixp_t);
-localparam sfixp_t SIN_NEG_ANGLE    = `REAL_TO_FIXP($sin(-ROTATION_SPEED), sfixp_t);
+localparam ray_fixp_t FIXP_PLANE_COEFF = `REAL_TO_FIXP(PLANE_COEFF, ray_fixp_t);
+localparam ray_fixp_t COS_ANGLE        = `REAL_TO_FIXP($cos( ROTATION_SPEED), ray_fixp_t);
+localparam ray_fixp_t SIN_ANGLE        = `REAL_TO_FIXP($sin( ROTATION_SPEED), ray_fixp_t);
+localparam ray_fixp_t COS_NEG_ANGLE    = `REAL_TO_FIXP($cos(-ROTATION_SPEED), ray_fixp_t);
+localparam ray_fixp_t SIN_NEG_ANGLE    = `REAL_TO_FIXP($sin(-ROTATION_SPEED), ray_fixp_t);
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -60,23 +58,23 @@ typedef enum logic [3:0] {
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-sfixp_t      dir_x_next;
-sfixp_t      dir_y_next;
+ray_fixp_t      dir_x_next;
+ray_fixp_t      dir_y_next;
 
-sfixp_t      plane_x_next;
-sfixp_t      plane_y_next;
+ray_fixp_t      plane_x_next;
+ray_fixp_t      plane_y_next;
 
-sfixp_t      cur_cos;
-sfixp_t      cur_sin;
+ray_fixp_t      cur_cos;
+ray_fixp_t      cur_sin;
 
-sfixp_t      cos_mult_next;
-sfixp_t      sin_mult_next;
-sfixp_t      cos_mult_ff;
-sfixp_t      sin_mult_ff;
+ray_fixp_t      cos_mult_next;
+ray_fixp_t      sin_mult_next;
+ray_fixp_t      cos_mult_ff;
+ray_fixp_t      sin_mult_ff;
 
-sfixp_t      x_prev;
-sfixp_t      y_prev;
-sfixp_t      comp_new;
+ray_fixp_t      x_prev;
+ray_fixp_t      y_prev;
+ray_fixp_t      comp_new;
 
 logic        update_enable;
 
@@ -144,17 +142,17 @@ always_comb begin
 
     unique0 case (calc_state)
         // Direction vector intermediate values
-        ST_X_MULT_COS:   cos_mult_next = `FIXP_MULT(x_prev, cur_cos, sfixp_t);
-        ST_X_MULT_SIN:   sin_mult_next = `FIXP_MULT(y_prev, cur_sin, sfixp_t);
-        ST_Y_MULT_SIN:   sin_mult_next = `FIXP_MULT(x_prev, cur_sin, sfixp_t);
-        ST_Y_MULT_COS:   cos_mult_next = `FIXP_MULT(y_prev, cur_cos, sfixp_t);
+        ST_X_MULT_COS:   cos_mult_next = `FIXP_MULT(x_prev, cur_cos, ray_fixp_t);
+        ST_X_MULT_SIN:   sin_mult_next = `FIXP_MULT(y_prev, cur_sin, ray_fixp_t);
+        ST_Y_MULT_SIN:   sin_mult_next = `FIXP_MULT(x_prev, cur_sin, ray_fixp_t);
+        ST_Y_MULT_COS:   cos_mult_next = `FIXP_MULT(y_prev, cur_cos, ray_fixp_t);
 
         // Direction vector results
         ST_X_SUB:        comp_new      = cos_mult_ff - sin_mult_ff;
         ST_Y_ADD:        comp_new      = sin_mult_ff + cos_mult_ff;
         // Plane vector results
-        ST_X_MULT_COEFF: comp_new      =  `FIXP_MULT(dir_y_o, FIXP_PLANE_COEFF, sfixp_t);
-        ST_Y_MULT_COEFF: comp_new      = -`FIXP_MULT(dir_x_o, FIXP_PLANE_COEFF, sfixp_t);
+        ST_X_MULT_COEFF: comp_new      =  `FIXP_MULT(dir_y_o, FIXP_PLANE_COEFF, ray_fixp_t);
+        ST_Y_MULT_COEFF: comp_new      = -`FIXP_MULT(dir_x_o, FIXP_PLANE_COEFF, ray_fixp_t);
     endcase
 end
 
@@ -186,11 +184,11 @@ end
 
 always_ff @(posedge clk)
     if (rst) begin
-        dir_x_o   <= `REAL_TO_FIXP(START_DIR_X, sfixp_t);
-        dir_y_o   <= `REAL_TO_FIXP(START_DIR_Y, sfixp_t);
+        dir_x_o   <= `REAL_TO_FIXP(START_DIR_X, ray_fixp_t);
+        dir_y_o   <= `REAL_TO_FIXP(START_DIR_Y, ray_fixp_t);
 
-        plane_x_o <= `REAL_TO_FIXP(START_PLANE_X, sfixp_t);
-        plane_y_o <= `REAL_TO_FIXP(START_PLANE_Y, sfixp_t);
+        plane_x_o <= `REAL_TO_FIXP(START_PLANE_X, ray_fixp_t);
+        plane_y_o <= `REAL_TO_FIXP(START_PLANE_Y, ray_fixp_t);
     end else begin
         dir_x_o   <= dir_x_next;
         dir_y_o   <= dir_y_next;
