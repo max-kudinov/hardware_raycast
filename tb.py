@@ -1,5 +1,5 @@
 import math
-from fpbinary import FpBinary, FpBinarySwitchable
+from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
 from pygame import freetype
 import cocotb
@@ -70,15 +70,10 @@ def fixp_init(val, type, signed=False):
 def fixp_expr(expr, num):
     int_bits, frac_bits = num.format
 
-    if FP_MODE:
-        signed = num.value.is_signed
-    else:
-        signed = True
-
     fp_value = FpBinary(
         int_bits=int_bits,
         frac_bits=frac_bits,
-        signed=signed,
+        signed=num.value.is_signed,
         value=expr,
     )
 
@@ -101,6 +96,14 @@ def fixp_unsigned(val, type):
         fp_mode=FP_MODE,
         fp_value=fp_value,
         float_value=val
+    )
+
+
+def fixp_cast(num, fixp_type):
+    int_bits, frac_bits = fixp_type
+    return num.resize(
+        format=(int_bits, frac_bits),
+        round_mode=RoundingEnum.direct_neg_inf,
     )
 
 
@@ -191,8 +194,8 @@ ray_dir_x = 0
 ray_dir_y = 0
 delta_dist_x = 0
 delta_dist_y = 0
-side_dist_x = 0
-side_dist_y = 0
+init_side_dist_x = 0
+init_side_dist_y = 0
 hit_side = 0
 map_x = 0
 map_y = 0
@@ -201,38 +204,45 @@ inv_perp_wall_dist = 0
 scaled_height = 0
 init_side_dist_x = 0
 init_side_dist_y = 0
+dda_dist_x = 0
+dda_dist_y = 0
 
 
 def line_height_calc_model(x):
     global ray_x, ray_dir_x, ray_dir_y
-    global delta_dist_x, delta_dist_y, side_dist_x, side_dist_y
+    global delta_dist_x, delta_dist_y, init_side_dist_x, init_side_dist_y
     global hit_side, map_x, map_y
     global perp_wall_dist, inv_perp_wall_dist, scaled_height
+    global dda_dist_x, dda_dist_y
+
+    ray_x = fixp_init(0, fixp_ray, True)
+    ray_dir_x = fixp_init(0, fixp_ray, True)
+    ray_dir_y = fixp_init(0, fixp_ray, True)
 
     # from -1 to 1
-    ray_x = fixp_init((x * ray_step / 2**fixp_ray[1] - 1), fixp_ray, True)
+    ray_x = fixp_expr((x * ray_step / 2**fixp_ray[1] - 1), ray_x)
 
     # from -2 to 2
-    ray_dir_x = fixp_init(dir_x + plane_x * ray_x, fixp_ray, True)
-    ray_dir_y = fixp_init(dir_y + plane_y * ray_x, fixp_ray, True)
+    ray_dir_x = fixp_expr(dir_x + plane_x * ray_x, ray_dir_x)
+    ray_dir_y = fixp_expr(dir_y + plane_y * ray_x, ray_dir_y)
 
     # from 0 to ext_pos_max
     if abs(ray_dir_x) <= 1 / max_dist:
         delta_dist_x = max_dist
     else:
         if ray_dir_x > 0:
-            delta_dist_x = fixp_init(inv_model(ray_dir_x), fixp_ext_pos)
+            delta_dist_x = fixp_cast(inv_model(ray_dir_x), fixp_ext_pos)
         else:
-            delta_dist_x = fixp_init(inv_model(-ray_dir_x), fixp_ext_pos)
+            delta_dist_x = fixp_cast(inv_model(-ray_dir_x), fixp_ext_pos)
 
     # from 0 to ext_pos_max
     if abs(ray_dir_y) <= 1 / max_dist:
         delta_dist_y = max_dist
     else:
         if ray_dir_y > 0:
-            delta_dist_y = fixp_init(inv_model(ray_dir_y), fixp_ext_pos)
+            delta_dist_y = fixp_cast(inv_model(ray_dir_y), fixp_ext_pos)
         else:
-            delta_dist_y = fixp_init(inv_model(-ray_dir_y), fixp_ext_pos)
+            delta_dist_y = fixp_cast(inv_model(-ray_dir_y), fixp_ext_pos)
 
     # Integer numbers, workaround to make side_dist_* unsigned
     # from 0 to 31
@@ -240,51 +250,55 @@ def line_height_calc_model(x):
     map_y = fixp_init(int(pos_y), fixp_pos)
 
     # from 0 to ext_pos_max
-    side_dist_x = fixp_init(0, fixp_ext_pos)
-    side_dist_y = fixp_init(0, fixp_ext_pos)
+    init_side_dist_x = fixp_init(0, fixp_ext_pos)
+    init_side_dist_y = fixp_init(0, fixp_ext_pos)
 
     if ray_dir_x > 0:
         step_x = 1
-        side_dist_x = fixp_expr(
-            (map_x + 1 - pos_x) * delta_dist_x, side_dist_x
+        init_side_dist_x = fixp_expr(
+            (map_x + 1 - pos_x) * delta_dist_x, init_side_dist_x
         )
     else:
         step_x = -1
-        side_dist_x = fixp_expr((pos_x - map_x) * delta_dist_x, side_dist_x)
+        init_side_dist_x = fixp_expr((pos_x - map_x) * delta_dist_x, init_side_dist_x)
 
     if ray_dir_y > 0:
         step_y = 1
-        side_dist_y = fixp_expr(
-            (map_y + 1 - pos_y) * delta_dist_y, side_dist_y
+        init_side_dist_y = fixp_expr(
+            (map_y + 1 - pos_y) * delta_dist_y, init_side_dist_y
         )
     else:
         step_y = -1
-        side_dist_y = fixp_expr((pos_y - map_y) * delta_dist_y, side_dist_y)
+        init_side_dist_y = fixp_expr((pos_y - map_y) * delta_dist_y, init_side_dist_y)
 
     hit_side = 0
 
     map_x = int(pos_x)
     map_y = int(pos_y)
 
+    # from 0 to ext_pos_max
+    dda_dist_x = fixp_init(init_side_dist_x, fixp_ext_pos)
+    dda_dist_y = fixp_init(init_side_dist_y, fixp_ext_pos)
+
     while True:
         if game_map[map_y][map_x] == 1:
             break
 
-        if (side_dist_x < side_dist_y):
-            if (side_dist_x + delta_dist_x) >= max_dist:
-                side_dist_x = max_dist
+        if (dda_dist_x < dda_dist_y):
+            if (dda_dist_x + delta_dist_x) >= max_dist + 1:
+                dda_dist_x = max_dist
             else:
-                side_dist_x = fixp_expr(
-                    side_dist_x + delta_dist_x, side_dist_x
+                dda_dist_x = fixp_expr(
+                    dda_dist_x + delta_dist_x, dda_dist_x
                 )
                 hit_side = 0
                 map_x += step_x
         else:
-            if (side_dist_y + delta_dist_y) >= max_dist:
-                side_dist_y = max_dist
+            if (dda_dist_y + delta_dist_y) >= max_dist + 1:
+                dda_dist_y = max_dist
             else:
-                side_dist_y = fixp_expr(
-                    side_dist_y + delta_dist_y, side_dist_y
+                dda_dist_y = fixp_expr(
+                    dda_dist_y + delta_dist_y, dda_dist_y
                 )
                 hit_side = 1
                 map_y += step_y
@@ -296,10 +310,10 @@ def line_height_calc_model(x):
     inv_perp_wall_dist = fixp_init(0, fixp_pos_ext_frac)
 
     if hit_side == 0:
-        perp_wall_dist = fixp_expr(side_dist_x - delta_dist_x, perp_wall_dist)
+        perp_wall_dist = fixp_expr(dda_dist_x - delta_dist_x, perp_wall_dist)
         line_color = 0
     else:
-        perp_wall_dist = fixp_expr(side_dist_y - delta_dist_y, perp_wall_dist)
+        perp_wall_dist = fixp_expr(dda_dist_y - delta_dist_y, perp_wall_dist)
         line_color = 1
 
     gte_one = False
@@ -307,8 +321,8 @@ def line_height_calc_model(x):
     if perp_wall_dist <= 1:
         gte_one = True
     else:
-        inv_perp_wall_dist = fixp_expr(
-            inv_model(perp_wall_dist), inv_perp_wall_dist
+        inv_perp_wall_dist = fixp_cast(
+            inv_model(perp_wall_dist), fixp_pos_ext_frac
         )
 
     if gte_one:
@@ -326,7 +340,7 @@ async def render(dut):
     surface.fill((0, 0, 0))
 
     await RisingEdge(dut.px_clk)
-    cocotb.start_soon(timeout())
+    # cocotb.start_soon(timeout())
 
     await RisingEdge(dut.raycast_top.frame_done)
     mem = dut.raycast_top.render.frame_buffer.value
@@ -379,8 +393,10 @@ async def render(dut):
             print(f"ray_dir_y {ray_dir_y}")
             print(f"delta_dist_x {delta_dist_x}")
             print(f"delta_dist_y {delta_dist_y}")
-            print(f"side_dist_x {side_dist_x}")
-            print(f"side_dist_y {side_dist_y}")
+            print(f"init_side_dist_x {init_side_dist_x}")
+            print(f"init_side_dist_y {init_side_dist_y}")
+            print(f"dda_side_dist_x {dda_dist_x}")
+            print(f"dda_side_dist_y {dda_dist_y}")
             print(f"hit_side {hit_side}")
             print(f"perp_wall_dist {perp_wall_dist}")
             print(f"inv_perp_wall_dist {inv_perp_wall_dist}")
