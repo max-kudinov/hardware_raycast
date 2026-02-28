@@ -139,7 +139,7 @@ pos_x = fixp_init(
     fixp_pos,
 )
 pos_y = fixp_init(
-    controls.position.START_POS_X.value,  # type: ignore
+    controls.position.START_POS_Y.value,  # type: ignore
     fixp_pos,
 )
 
@@ -340,7 +340,6 @@ async def render(dut):
     surface.fill((0, 0, 0))
 
     await RisingEdge(dut.px_clk)
-    # cocotb.start_soon(timeout())
 
     await RisingEdge(dut.raycast_top.frame_done)
     mem = dut.raycast_top.render.frame_buffer.value
@@ -439,11 +438,6 @@ async def render(dut):
     print_info()
     pg.display.update()
     # cocotb.pass_test("Quit action")
-
-
-async def timeout():
-    await Timer(10_000, "ns")
-    assert False
 
 
 def print_info():
@@ -570,20 +564,20 @@ def controls(dut):
         rot_right = 1
 
         old_dir_x = fixp_init(dir_x, fixp_ray, True)
-        dir_x = fixp_expr(
-            fixp_expr(dir_x * cos_neg_angle, dir_x)
-            - fixp_expr(dir_y * sin_neg_angle, dir_x),
-            dir_y,
+        dir_x = fixp_cast(
+            fixp_cast(dir_x * cos_neg_angle, fixp_ray)
+            - fixp_cast(dir_y * sin_neg_angle, fixp_ray),
+            fixp_ray,
         )
-        dir_y = fixp_expr(
-            fixp_expr(old_dir_x * sin_neg_angle, dir_y)
-            + fixp_expr(dir_y * cos_neg_angle, dir_y),
-            dir_y,
+        dir_y = fixp_cast(
+            fixp_cast(old_dir_x * sin_neg_angle, fixp_ray)
+            + fixp_cast(dir_y * cos_neg_angle, fixp_ray),
+            fixp_ray,
         )
 
-        plane_x = fixp_expr(dir_y * FIXP_MULT_COEFF, plane_x)
-        plane_y = fixp_expr(
-            -fixp_expr(dir_x * FIXP_MULT_COEFF, dir_x), plane_y
+        plane_x = fixp_cast(dir_y * FIXP_MULT_COEFF, fixp_ray)
+        plane_y = fixp_cast(
+            -fixp_cast(dir_x * FIXP_MULT_COEFF, fixp_ray), fixp_ray
         )
 
     # Rotate left
@@ -591,20 +585,20 @@ def controls(dut):
         rot_left = 1
 
         old_dir_x = fixp_init(dir_x, fixp_ray, True)
-        dir_x = fixp_expr(
-            fixp_expr(dir_x * cos_angle, dir_x)
-            - fixp_expr(dir_y * sin_angle, dir_x),
-            dir_x,
+        dir_x = fixp_cast(
+            fixp_cast(dir_x * cos_angle, fixp_ray)
+            - fixp_cast(dir_y * sin_angle, fixp_ray),
+            fixp_ray,
         )
-        dir_y = fixp_expr(
-            fixp_expr(old_dir_x * sin_angle, dir_y)
-            + fixp_expr(dir_y * cos_angle, dir_y),
-            dir_y,
+        dir_y = fixp_cast(
+            fixp_cast(old_dir_x * sin_angle, fixp_ray)
+            + fixp_cast(dir_y * cos_angle, fixp_ray),
+            fixp_ray,
         )
 
-        plane_x = fixp_expr(dir_y * FIXP_MULT_COEFF, plane_x)
-        plane_y = fixp_expr(
-            -fixp_expr(dir_x * FIXP_MULT_COEFF, dir_x), plane_y
+        plane_x = fixp_cast(dir_y * FIXP_MULT_COEFF, fixp_ray)
+        plane_y = fixp_cast(
+            -fixp_cast(dir_x * FIXP_MULT_COEFF, fixp_ray), fixp_ray
         )
 
     # Cocotb doesn't allow indexing of packed arrays, so yikes

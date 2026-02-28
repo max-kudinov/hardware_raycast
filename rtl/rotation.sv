@@ -142,17 +142,17 @@ always_comb begin
 
     unique0 case (calc_state)
         // Direction vector intermediate values
-        ST_X_MULT_COS:   cos_mult_next = `FIXP_MULT(x_prev, cur_cos, ray_fixp_t);
-        ST_X_MULT_SIN:   sin_mult_next = `FIXP_MULT(y_prev, cur_sin, ray_fixp_t);
-        ST_Y_MULT_SIN:   sin_mult_next = `FIXP_MULT(x_prev, cur_sin, ray_fixp_t);
-        ST_Y_MULT_COS:   cos_mult_next = `FIXP_MULT(y_prev, cur_cos, ray_fixp_t);
+        ST_X_MULT_COS:   cos_mult_next = `FIXP_MULT_TRUNC(x_prev, cur_cos, ray_fixp_t);
+        ST_X_MULT_SIN:   sin_mult_next = `FIXP_MULT_TRUNC(y_prev, cur_sin, ray_fixp_t);
+        ST_Y_MULT_SIN:   sin_mult_next = `FIXP_MULT_TRUNC(x_prev, cur_sin, ray_fixp_t);
+        ST_Y_MULT_COS:   cos_mult_next = `FIXP_MULT_TRUNC(y_prev, cur_cos, ray_fixp_t);
 
         // Direction vector results
         ST_X_SUB:        comp_new      = cos_mult_ff - sin_mult_ff;
         ST_Y_ADD:        comp_new      = sin_mult_ff + cos_mult_ff;
         // Plane vector results
-        ST_X_MULT_COEFF: comp_new      =  `FIXP_MULT(dir_y_o, FIXP_PLANE_COEFF, ray_fixp_t);
-        ST_Y_MULT_COEFF: comp_new      = -`FIXP_MULT(dir_x_o, FIXP_PLANE_COEFF, ray_fixp_t);
+        ST_X_MULT_COEFF: comp_new      =  `FIXP_MULT_TRUNC(dir_y_o, FIXP_PLANE_COEFF, ray_fixp_t);
+        ST_Y_MULT_COEFF: comp_new      = -`FIXP_MULT_TRUNC(dir_x_o, FIXP_PLANE_COEFF, ray_fixp_t);
     endcase
 end
 

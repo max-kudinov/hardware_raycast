@@ -20,6 +20,14 @@
             >> -$right(macro_num1))                                       \
         )
 
+`define FIXP_MULT_TRUNC(macro_num1, macro_num2, macro_type)                     \
+        macro_type'(                                                      \
+            ($size(macro_num1) + $size(macro_num2))'                      \
+            ((macro_num1 * macro_num2) \
+            >> -$right(macro_num1))                                       \
+        )
+
+
 `define FIXP_ABS(macro_num, macro_type)          \
     macro_type'(                                 \
         (macro_num < 0) ? -macro_num : macro_num \
