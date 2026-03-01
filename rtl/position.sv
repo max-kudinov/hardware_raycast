@@ -2,32 +2,34 @@
 
 `default_nettype none
 
-module position #(
+module position
+    import fixp_pkg::*;
+#(
     parameter real MOVEMENT_SPEED = 0.8
 ) (
-    input  var logic             clk,
-    input  var logic             rst,
+    input  var logic                 clk,
+    input  var logic                 rst,
 
     // Key input
-    input  var logic             key_forward_i,
-    input  var logic             key_backward_i,
-    input  var logic             key_left_i,
-    input  var logic             key_right_i,
+    input  var logic                 key_forward_i,
+    input  var logic                 key_backward_i,
+    input  var logic                 key_left_i,
+    input  var logic                 key_right_i,
 
-    input  var logic             update_start_i,
-    output var logic             update_done_o,
+    input  var logic                 update_start_i,
+    output var logic                 update_done_o,
 
     // Map coordinates to check for a wall
     output var logic [POS_W_INT-1:0] lookup_map_x_o,
     output var logic [POS_W_INT-1:0] lookup_map_y_o,
-    input  var logic             wall_hit_i,
+    input  var logic                 wall_hit_i,
 
     // Camera coordinates
     output var pos_fixp_t            pos_x_o,
     output var pos_fixp_t            pos_y_o,
     // Camera direction
-    input  var ray_fixp_t           dir_x_i,
-    input  var ray_fixp_t           dir_y_i
+    input  var ray_fixp_t            dir_x_i,
+    input  var ray_fixp_t            dir_y_i
 );
 
 // ----------------------------------------------------------------------------
@@ -65,12 +67,12 @@ typedef enum logic [2:0] {
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-pos_fixp_t        pos_x_next;
-pos_fixp_t        pos_y_next;
-pos_fixp_t        new_pos;
+pos_fixp_t    pos_x_next;
+pos_fixp_t    pos_y_next;
+pos_fixp_t    new_pos;
 
-ray_fixp_t       step_next;
-ray_fixp_t       step_ff;
+ray_fixp_t    step_next;
+ray_fixp_t    step_ff;
 
 logic         update_done;
 logic         update_enable;

@@ -13,7 +13,7 @@ FRAME_HEIGHT = 480
 MAP_WIDTH = 20
 MAP_HEIGHT = 20
 
-N_ITER = int(cocotb.packages.fixp_pkg.N_ITER.value)
+INV_ITER_NUM = int(cocotb.packages.fixp_pkg.INV_ITER_NUM.value)  # type: ignore
 W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
 MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
@@ -180,7 +180,7 @@ def inv_model(num_in):
         num = fixp_expr(num >> 1, num)
         cnt += 1
 
-    for _ in range(N_ITER):
+    for _ in range(INV_ITER_NUM):
         product = fixp_expr(num * approx, product)
         sub = fixp_expr(2 - product, sub)
         approx = fixp_expr(approx * sub, approx)
@@ -199,8 +199,8 @@ init_side_dist_y = 0
 hit_side = 0
 map_x = 0
 map_y = 0
-perp_wall_dist = 0
-inv_perp_wall_dist = 0
+wall_dist = 0
+inv_wall_dist = 0
 scaled_height = 0
 init_side_dist_x = 0
 init_side_dist_y = 0
@@ -212,7 +212,7 @@ def line_height_calc_model(x):
     global ray_x, ray_dir_x, ray_dir_y
     global delta_dist_x, delta_dist_y, init_side_dist_x, init_side_dist_y
     global hit_side, map_x, map_y
-    global perp_wall_dist, inv_perp_wall_dist, scaled_height
+    global wall_dist, inv_wall_dist, scaled_height
     global dda_dist_x, dda_dist_y
 
     ray_x = fixp_init(0, fixp_ray, True)
@@ -304,32 +304,32 @@ def line_height_calc_model(x):
                 map_y += step_y
 
     # from 0 to 31
-    perp_wall_dist = fixp_init(0, fixp_pos)
+    wall_dist = fixp_init(0, fixp_pos)
 
     # from 0 to 1
-    inv_perp_wall_dist = fixp_init(0, fixp_pos_ext_frac)
+    inv_wall_dist = fixp_init(0, fixp_pos_ext_frac)
 
     if hit_side == 0:
-        perp_wall_dist = fixp_expr(dda_dist_x - delta_dist_x, perp_wall_dist)
+        wall_dist = fixp_expr(dda_dist_x - delta_dist_x, wall_dist)
         line_color = 0
     else:
-        perp_wall_dist = fixp_expr(dda_dist_y - delta_dist_y, perp_wall_dist)
+        wall_dist = fixp_expr(dda_dist_y - delta_dist_y, wall_dist)
         line_color = 1
 
     gte_one = False
 
-    if perp_wall_dist <= 1:
+    if wall_dist <= 1:
         gte_one = True
     else:
-        inv_perp_wall_dist = fixp_cast(
-            inv_model(perp_wall_dist), fixp_pos_ext_frac
+        inv_wall_dist = fixp_cast(
+            inv_model(wall_dist), fixp_pos_ext_frac
         )
 
     if gte_one:
         return (FRAME_HEIGHT, line_color)
     else:
         scaled_height = fixp_init(
-            FRAME_HEIGHT * inv_perp_wall_dist, (W_HEIGHT, 0)
+            FRAME_HEIGHT * inv_wall_dist, (W_HEIGHT, 0)
         )
         # breakpoint()
         return (int(scaled_height), line_color)
@@ -397,8 +397,8 @@ async def render(dut):
             print(f"dda_side_dist_x {dda_dist_x}")
             print(f"dda_side_dist_y {dda_dist_y}")
             print(f"hit_side {hit_side}")
-            print(f"perp_wall_dist {perp_wall_dist}")
-            print(f"inv_perp_wall_dist {inv_perp_wall_dist}")
+            print(f"wall_dist {wall_dist}")
+            print(f"inv_wall_dist {inv_wall_dist}")
             print(f"scaled_height {scaled_height}")
             print(f"map_x {map_x}")
             print(f"map_y {map_y}")

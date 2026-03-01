@@ -2,41 +2,31 @@
 
 `default_nettype none
 
-module newton_inv #(
-    parameter type type_t
-) (
-    input  var logic  clk,
-    input  var logic  rst,
+module newton_inv
+    import fixp_pkg::*;
+(
+    input  var logic      clk,
+    input  var logic      rst,
 
-    input  var logic  start_i,
-    input  var type_t num_i,
+    input  var logic      start_i,
+    input  var inv_fixp_t num_i,
 
-    output var logic  done_o,
-    output var type_t num_o
+    output var logic      done_o,
+    output var inv_fixp_t num_o
 );
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned W_INT         = $left(type_t) + 1;
+localparam int unsigned W_INT         = $left(inv_fixp_t) + 1;
 localparam int unsigned W_SHIFT       = $clog2(W_INT);
-localparam int unsigned N_ITER_CYCLES = fixp_pkg::N_ITER * 2;
+localparam int unsigned N_ITER_CYCLES = INV_ITER_NUM * 2;
 localparam int unsigned W_CNT         = $clog2(N_ITER_CYCLES);
 
 // ----------------------------------------------------------------------------
-// Local signals declaration
+// Local types declaration
 // ----------------------------------------------------------------------------
-
-type_t          num_next;
-type_t          num_ff;
-type_t              approx_next;
-type_t              approx_ff;
-type_t              approx_mid_next;
-type_t              approx_mid_ff;
-logic [W_SHIFT-1:0] shift_amount;
-logic [W_CNT-1:0]   iter_cnt;
-logic               cnt_done;
 
 typedef enum logic [2:0] {
     ST_IDLE,
@@ -47,7 +37,23 @@ typedef enum logic [2:0] {
     ST_RES_OUT
 } state_t;
 
-state_t state, next_state;
+// ----------------------------------------------------------------------------
+// Local signals declaration
+// ----------------------------------------------------------------------------
+
+inv_fixp_t          num_next;
+inv_fixp_t          num_ff;
+inv_fixp_t          approx_next;
+inv_fixp_t          approx_ff;
+inv_fixp_t          approx_mid_next;
+inv_fixp_t          approx_mid_ff;
+
+logic [W_SHIFT-1:0] shift_amount;
+logic [W_CNT-1:0]   iter_cnt;
+logic               cnt_done;
+
+state_t             state;
+state_t             next_state;
 
 // ----------------------------------------------------------------------------
 // FSM
@@ -121,15 +127,18 @@ always_comb begin
     approx_mid_next = approx_mid_ff;
 
     if (state == ST_SHIFT_INPUT) begin
-        approx_next = `INT_TO_FIXP(1, type_t);
-    end else if (state == ST_ITERATE) begin
-        if (!iter_cnt[0]) begin
-            approx_mid_next = `INT_TO_FIXP(2, type_t) - `FIXP_MULT(num_ff,  approx_ff);
-        end else begin
-            approx_next = `FIXP_MULT(approx_ff, approx_mid_ff);
-        end
-    end
 
+        approx_next = `INT_TO_FIXP(1, inv_fixp_t);
+
+    end else if (state == ST_ITERATE) begin
+
+        if (!iter_cnt[0]) begin
+            approx_mid_next = `INT_TO_FIXP(2, inv_fixp_t) - `FIXP_MULT(num_ff,  approx_ff);
+        end else begin
+            approx_next     = `FIXP_MULT(approx_ff, approx_mid_ff);
+        end
+
+    end
 end
 
 always_ff @(posedge clk) begin

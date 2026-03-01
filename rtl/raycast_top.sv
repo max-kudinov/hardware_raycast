@@ -3,9 +3,7 @@
 
 `default_nettype none
 
-module raycast_top
-    // import fixp_pkg::W_INT;
-#(
+module raycast_top #(
     parameter real         MOVEMENT_SPEED      = 0.8,
     parameter real         ROTATION_SPEED      = 0.4,
     parameter int unsigned        W_X_POS      = 10,
@@ -31,6 +29,7 @@ module raycast_top
     output var logic       tmds_clk_n
 );
 
+import fixp_pkg::*;
 import dvi_pkg::X_POS_W;
 import dvi_pkg::Y_POS_W;
 import dvi_pkg::COLOR_W;
@@ -47,38 +46,36 @@ localparam int unsigned MAP_SIDE = 20;
 
 // Big-endian to match Python list order
 // verilator lint_off ASCRANGE
-logic [0:MAP_SIDE-1] map [MAP_SIDE];
+logic [0:MAP_SIDE-1]  map [MAP_SIDE];
 // verilator lint_on ASCRANGE
 
-// verilator lint_off UNUSEDSIGNAL
-logic [POS_W_INT-1:0]    map_x;
-logic [POS_W_INT-1:0]    map_y;
-// verilator lint_on UNUSEDSIGNAL
-logic [POS_W_INT-1:0]    render_map_x;
-logic [POS_W_INT-1:0]    render_map_y;
-logic [POS_W_INT-1:0]    controls_map_x;
-logic [POS_W_INT-1:0]    controls_map_y;
+logic [POS_W_INT-1:0] map_x;
+logic [POS_W_INT-1:0] map_y;
+logic [POS_W_INT-1:0] render_map_x;
+logic [POS_W_INT-1:0] render_map_y;
+logic [POS_W_INT-1:0] controls_map_x;
+logic [POS_W_INT-1:0] controls_map_y;
 
-logic                lookup_render;
-logic                wall_hit;
+logic                 lookup_render;
+logic                 wall_hit;
 
-logic [COLOR_W-1:0]  red;
-logic [COLOR_W-1:0]  green;
-logic [COLOR_W-1:0]  blue;
+logic [COLOR_W-1:0]   red;
+logic [COLOR_W-1:0]   green;
+logic [COLOR_W-1:0]   blue;
 
-logic [X_POS_W-1:0]  px_x;
-logic [Y_POS_W-1:0]  px_y;
-logic                in_range;
+logic [X_POS_W-1:0]   px_x;
+logic [Y_POS_W-1:0]   px_y;
+logic                 in_range;
 
-logic                frame_start;
-logic                frame_done;
+logic                 frame_start;
+logic                 frame_done;
 
-pos_fixp_t               pos_x;
-pos_fixp_t               pos_y;
-ray_fixp_t              dir_x;
-ray_fixp_t              dir_y;
-ray_fixp_t              plane_x;
-ray_fixp_t              plane_y;
+pos_fixp_t            pos_x;
+pos_fixp_t            pos_y;
+ray_fixp_t            dir_x;
+ray_fixp_t            dir_y;
+ray_fixp_t            plane_x;
+ray_fixp_t            plane_y;
 
 // ----------------------------------------------------------------------------
 // Map ROM init
@@ -126,9 +123,7 @@ always_ff @(posedge px_clk)
 assign map_x = lookup_render ? render_map_x : controls_map_x;
 assign map_y = lookup_render ? render_map_y : controls_map_y;
 
-// verilator lint_off widthtrunc
 assign wall_hit = map[map_y][map_x];
-// verilator lint_on WIDTHTRUNC
 
 // ----------------------------------------------------------------------------
 // Main raycast components

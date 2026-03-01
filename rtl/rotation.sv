@@ -2,16 +2,18 @@
 
 `default_nettype none
 
-module rotation #(
+module rotation
+    import fixp_pkg::*;
+#(
     parameter real ROTATION_SPEED = 0.4
 ) (
-    input  var logic   clk,
-    input  var logic   rst,
+    input  var logic      clk,
+    input  var logic      rst,
 
-    input  var logic   key_rotate_left_i,
-    input  var logic   key_rotate_right_i,
+    input  var logic      key_rotate_left_i,
+    input  var logic      key_rotate_right_i,
 
-    input  var logic   update_start_i,
+    input  var logic      update_start_i,
 
     // Camera direction
     output var ray_fixp_t dir_x_o,
@@ -25,11 +27,11 @@ module rotation #(
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam real    PLANE_COEFF      = 0.66;
-localparam real    START_DIR_X      = -1;
-localparam real    START_DIR_Y      = 0;
-localparam real    START_PLANE_X    = START_DIR_Y * PLANE_COEFF;
-localparam real    START_PLANE_Y    = -START_DIR_X * PLANE_COEFF;
+localparam real       PLANE_COEFF      = 0.66;
+localparam real       START_DIR_X      = -1;
+localparam real       START_DIR_Y      = 0;
+localparam real       START_PLANE_X    = START_DIR_Y * PLANE_COEFF;
+localparam real       START_PLANE_Y    = -START_DIR_X * PLANE_COEFF;
 
 // Precalculated trig constants for rotation matrix
 localparam ray_fixp_t FIXP_PLANE_COEFF = `REAL_TO_FIXP(PLANE_COEFF, ray_fixp_t);
@@ -58,23 +60,23 @@ typedef enum logic [3:0] {
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-ray_fixp_t      dir_x_next;
-ray_fixp_t      dir_y_next;
+ray_fixp_t   dir_x_next;
+ray_fixp_t   dir_y_next;
 
-ray_fixp_t      plane_x_next;
-ray_fixp_t      plane_y_next;
+ray_fixp_t   plane_x_next;
+ray_fixp_t   plane_y_next;
 
-ray_fixp_t      cur_cos;
-ray_fixp_t      cur_sin;
+ray_fixp_t   cur_cos;
+ray_fixp_t   cur_sin;
 
-ray_fixp_t      cos_mult_next;
-ray_fixp_t      sin_mult_next;
-ray_fixp_t      cos_mult_ff;
-ray_fixp_t      sin_mult_ff;
+ray_fixp_t   cos_mult_next;
+ray_fixp_t   sin_mult_next;
+ray_fixp_t   cos_mult_ff;
+ray_fixp_t   sin_mult_ff;
 
-ray_fixp_t      x_prev;
-ray_fixp_t      y_prev;
-ray_fixp_t      comp_new;
+ray_fixp_t   x_prev;
+ray_fixp_t   y_prev;
+ray_fixp_t   comp_new;
 
 logic        update_enable;
 
