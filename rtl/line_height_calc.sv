@@ -105,6 +105,7 @@ side_fixp_t                side_dist_x_next;
 side_fixp_t                side_dist_x_ff;
 side_fixp_t                side_dist_y_next;
 side_fixp_t                side_dist_y_ff;
+pos_fixp_t                 cell_dist;
 
 // DDA
 ext_pos_fixp_t                init_side_dist_x;
@@ -202,8 +203,8 @@ always_ff @(posedge clk)
 
 always_ff @(posedge clk) begin
     if (state == ST_CALC_RAY_DIR) begin
-        ray_dir_x <= dir_x + `FIXP_MULT(plane_x, ray_x, ray_fixp_t);
-        ray_dir_y <= dir_y + `FIXP_MULT(plane_y, ray_x, ray_fixp_t);
+        ray_dir_x <= dir_x + `FIXP_MULT(plane_x, ray_x);
+        ray_dir_y <= dir_y + `FIXP_MULT(plane_y, ray_x);
     end
 end
 
@@ -245,28 +246,28 @@ always_comb begin
     inv_perp_wall_dist_next = inv_perp_wall_dist_ff;
 
     if (state == ST_CALC_DELTA_DIST_X) begin
-        inv_num_in = `FIXP_CAST(`FIXP_ABS(ray_dir_x, ray_fixp_t), ray_fixp_t, inv_fixp_t);
+        inv_num_in = `FIXP_CAST(`FIXP_ABS(ray_dir_x), inv_fixp_t);
 
         if (inv_done)
             delta_dist_x_next = (inv_num_in < FIXP_INV_MIN) ?
                                  FIXP_MAX_DIST :
-                                `FIXP_CAST(inv_num_out, inv_fixp_t, ext_pos_fixp_t);
+                                `FIXP_CAST(inv_num_out, ext_pos_fixp_t);
     end
 
     if (state == ST_CALC_DELTA_DIST_Y) begin
-        inv_num_in = `FIXP_CAST(`FIXP_ABS(ray_dir_y, ray_fixp_t), ray_fixp_t, inv_fixp_t);
+        inv_num_in = `FIXP_CAST(`FIXP_ABS(ray_dir_y), inv_fixp_t);
 
         if (inv_done)
             delta_dist_y_next = (inv_num_in < FIXP_INV_MIN) ?
                                   FIXP_MAX_DIST :
-                                 `FIXP_CAST(inv_num_out, inv_fixp_t, ext_pos_fixp_t);
+                                 `FIXP_CAST(inv_num_out, ext_pos_fixp_t);
     end
 
     if (state == ST_INV_WALL_DIST) begin
-        inv_num_in = `FIXP_CAST(perp_wall_dist_ff, pos_fixp_t, inv_fixp_t);
+        inv_num_in = `FIXP_CAST(perp_wall_dist_ff, inv_fixp_t);
 
         if (inv_done)
-            inv_perp_wall_dist_next = `FIXP_CAST(inv_num_out, inv_fixp_t, inv_dist_fixp_t);
+            inv_perp_wall_dist_next = `FIXP_CAST(inv_num_out, inv_dist_fixp_t);
     end
 
 end
@@ -286,39 +287,28 @@ always_comb begin
     side_dist_y_next = side_dist_y_ff;
     step_x_next           = step_x_ff;
     step_y_next           = step_y_ff;
+    cell_dist             = '0;
 
     if (state == ST_CALC_PERP_DIST) begin
 
         if (ray_dir_x > 0) begin
             step_x_next      = '1;
-            side_dist_x_next = `FIXP_CAST(
-                `INT_TO_FIXP(init_map_x + 1'b1, pos_fixp_t) - pos_x,
-                pos_fixp_t,
-                side_fixp_t
-            );
+            cell_dist        = `INT_TO_FIXP(init_map_x + 1'b1, pos_fixp_t) - pos_x;
+            side_dist_x_next = `FIXP_CAST(cell_dist, side_fixp_t);
         end else begin
             step_x_next      = '0;
-            side_dist_x_next = `FIXP_CAST(
-                pos_x - `INT_TO_FIXP(init_map_x, pos_fixp_t),
-                pos_fixp_t,
-                side_fixp_t
-            );
+            cell_dist        = pos_x - `INT_TO_FIXP(init_map_x, pos_fixp_t);
+            side_dist_x_next = `FIXP_CAST(cell_dist, side_fixp_t);
         end
 
         if (ray_dir_y > 0) begin
             step_y_next      = '1;
-            side_dist_y_next = `FIXP_CAST(
-                `INT_TO_FIXP(init_map_y + 1'b1, pos_fixp_t) - pos_y,
-                pos_fixp_t,
-                side_fixp_t
-            );
+            cell_dist        = `INT_TO_FIXP(init_map_y + 1'b1, pos_fixp_t) - pos_y;
+            side_dist_y_next = `FIXP_CAST(cell_dist, side_fixp_t);
         end else begin
             step_y_next      = '0;
-            side_dist_y_next = `FIXP_CAST(
-                pos_y - `INT_TO_FIXP(init_map_y, pos_fixp_t),
-                pos_fixp_t,
-                side_fixp_t
-            );
+            cell_dist        = pos_y - `INT_TO_FIXP(init_map_y, pos_fixp_t);
+            side_dist_y_next = `FIXP_CAST(cell_dist, side_fixp_t);
         end
 
     end
@@ -338,15 +328,13 @@ end
 always_ff @(posedge clk) begin
     if (state == ST_CALC_SIDE_DIST) begin
         init_side_dist_x <= `FIXP_MULT(
-            `FIXP_CAST(side_dist_x_ff, side_fixp_t, ext_pos_fixp_t),
-            delta_dist_x_ff,
-            ext_pos_fixp_t
+            `FIXP_CAST(side_dist_x_ff, ext_pos_fixp_t),
+            delta_dist_x_ff
         );
 
         init_side_dist_y <= `FIXP_MULT(
-            `FIXP_CAST(side_dist_y_ff, side_fixp_t, ext_pos_fixp_t),
-            delta_dist_y_ff,
-            ext_pos_fixp_t
+            `FIXP_CAST(side_dist_y_ff, ext_pos_fixp_t),
+            delta_dist_y_ff
         );
     end
 end
@@ -415,8 +403,7 @@ always_ff @(posedge clk)
             height_o <= W_Y_POS'(
                 `FIXP_MULT(
                     inv_dist_fixp_t'(FRAME_HEIGHT),
-                    inv_perp_wall_dist_ff,
-                    inv_dist_fixp_t
+                    inv_perp_wall_dist_ff
                 )
             );
         else

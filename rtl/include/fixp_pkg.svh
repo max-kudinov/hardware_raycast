@@ -1,46 +1,33 @@
 `ifndef FIXP_PKG_SVH
 `define FIXP_PKG_SVH
 
-`define REAL_TO_FIXP(macro_real_num, macro_type)    \
-    macro_type'(                                    \
-        macro_real_num * 2 ** (-$right(macro_type)) \
+`define REAL_TO_FIXP(real_num, T) \
+    T'(real_num * 2 ** (-$right(T)))
+
+`define INT_TO_FIXP(int_num, T) \
+    T'({ ($left(T) + 1)'(int_num), { -$right(T) {1'b0} } })
+
+`define FIXP_MULT(a, b)                    \
+    type(a)'(                              \
+        (2 * $size(a))'                    \
+        ((a * b + (1 << (-$right(a) - 1))) \
+        >> -$right(a))                     \
     )
 
-`define INT_TO_FIXP(macro_int_num, macro_type)     \
-    macro_type'(                                   \
-        { ($left(macro_type) + 1)'(macro_int_num), \
-          { -$right(macro_type) {1'b0} }           \
-        }                                          \
-    )
+`define FIXP_MULT_TRUNC(a, b) \
+    type(a)'((2 * $size(a))'((a * b) >> -$right(a)))
 
-`define FIXP_MULT(macro_num1, macro_num2, macro_type)                     \
-        macro_type'(                                                      \
-            ($size(macro_num1) + $size(macro_num2))'                      \
-            ((macro_num1 * macro_num2 + (1 << (-$right(macro_type) - 1))) \
-            >> -$right(macro_num1))                                       \
-        )
+`define FIXP_ABS(num) \
+    type(num)'((num < 0) ? -num : num )
 
-`define FIXP_MULT_TRUNC(macro_num1, macro_num2, macro_type)                     \
-        macro_type'(                                                      \
-            ($size(macro_num1) + $size(macro_num2))'                      \
-            ((macro_num1 * macro_num2) \
-            >> -$right(macro_num1))                                       \
-        )
-
-
-`define FIXP_ABS(macro_num, macro_type)          \
-    macro_type'(                                 \
-        (macro_num < 0) ? -macro_num : macro_num \
-    )
-
-`define FIXP_CAST(macro_num, macro_type_current, macro_type_target)                       \
-    /* verilator lint_off WIDTHEXPAND */                                                  \
-    macro_type_target'(                                                                   \
-        (-$right(macro_type_current) - -$right(macro_type_target) > 0) ?                  \
-            ((macro_num) >>> (-$right(macro_type_current) - -$right(macro_type_target))) : \
-            ((macro_num) << (-$right(macro_type_target) - -$right(macro_type_current)))   \
-    )                                                                                     \
-    /* verilator lint_on WIDTHEXPAND */
+`define FIXP_CAST(num, T)                                                      \
+    T'({                                                                       \
+        (-$right(num) - -$right(T) > 0) ?                                      \
+            (type(num)'('1) < 0) ?  /* Checks that type is signed */           \
+                T'(signed'({signed'(num) >>> (-$right(num) - -$right(T)) })) : \
+                T'(        {       (num) >>  (-$right(num) - -$right(T)) })  : \
+            (T'(num) << (-$right(T) - -$right(num)))                           \
+    })
 
 
 localparam int unsigned RAY_W_INT       = 2;

@@ -187,8 +187,7 @@ always_comb begin
     else if (calc_state == ST_SCALE_DIR)
         step_next = `FIXP_MULT(
             step_ff,
-            `REAL_TO_FIXP(MOVEMENT_SPEED, ray_fixp_t),
-            ray_fixp_t
+            `REAL_TO_FIXP(MOVEMENT_SPEED, ray_fixp_t)
         );
 end
 
@@ -198,9 +197,9 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (calc_state == ST_CALC_POS)
         if (axis_state == ST_POS_X)
-            new_pos <= pos_x_o + `FIXP_CAST(step_ff, ray_fixp_t, pos_fixp_t);
+            new_pos <= pos_x_o + `FIXP_CAST(step_ff, pos_fixp_t);
         else
-            new_pos <= pos_y_o + `FIXP_CAST(step_ff, ray_fixp_t, pos_fixp_t);
+            new_pos <= pos_y_o + `FIXP_CAST(step_ff, pos_fixp_t);
 
 always_comb begin
     if (axis_state == ST_POS_X) begin

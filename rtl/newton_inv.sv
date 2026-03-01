@@ -124,9 +124,9 @@ always_comb begin
         approx_next = `INT_TO_FIXP(1, type_t);
     end else if (state == ST_ITERATE) begin
         if (!iter_cnt[0]) begin
-            approx_mid_next = `INT_TO_FIXP(2, type_t) - `FIXP_MULT(num_ff,  approx_ff, type_t);
+            approx_mid_next = `INT_TO_FIXP(2, type_t) - `FIXP_MULT(num_ff,  approx_ff);
         end else begin
-            approx_next = `FIXP_MULT(approx_ff, approx_mid_ff, type_t);
+            approx_next = `FIXP_MULT(approx_ff, approx_mid_ff);
         end
     end
 
