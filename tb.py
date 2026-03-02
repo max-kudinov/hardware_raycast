@@ -7,54 +7,38 @@ from cocotb.types import LogicArray
 from cocotb.triggers import RisingEdge
 
 
-FRAME_WIDTH = 640
-FRAME_HEIGHT = 480
-
-MAP_WIDTH = 20
-MAP_HEIGHT = 20
+FP_MODE = True
 
 dvi_pkg = cocotb.packages.dvi_pkg
 fixp_pkg = cocotb.packages.fixp_pkg
 
-INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)  # type: ignore
+FRAME_WIDTH = int(dvi_pkg.FRAME_WIDTH.value)
+FRAME_HEIGHT = int(dvi_pkg.FRAME_HEIGHT.value)
 W_HEIGHT = int(dvi_pkg.W_V_RES.value)  # type: ignore
+
 MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 
-FP_MODE = True
+INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)  # type: ignore
 
-fixp_ray = (2, 10)
-fixp_pos = (5, 8)
-fixp_inv = (8, 10)
-fixp_ext_pos = (8, 8)
-fixp_pos_ext_frac = (1, 10)
+
+fixp_ray = (int(fixp_pkg.RAY_W_INT.value), int(fixp_pkg.RAY_W_FRAC.value))
+fixp_pos = (int(fixp_pkg.POS_W_INT.value), int(fixp_pkg.POS_W_FRAC.value))
+fixp_ext_pos = (
+    int(fixp_pkg.EXT_POS_W_INT.value),
+    int(fixp_pkg.EXT_POS_W_FRAC.value),
+)
+fixp_inv_dist = (
+    int(fixp_pkg.INV_DIST_W_INT.value),
+    int(fixp_pkg.INV_DIST_W_FRAC.value),
+)
+fixp_inv = (int(fixp_pkg.INV_W_INT.value), int(fixp_pkg.INV_W_FRAC.value))
 
 pg.init()
 font = freetype.Font(None, 24)
 surface = pg.display.set_mode((FRAME_WIDTH, FRAME_HEIGHT))
 
-game_map = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-]
+game_map = list()
 
 
 def fixp_init(val, type, signed=False):
@@ -73,12 +57,15 @@ def fixp_init(val, type, signed=False):
 def fixp_expr(expr, num):
     int_bits, frac_bits = num.format
 
-    fp_value = FpBinary(
-        int_bits=int_bits,
-        frac_bits=frac_bits,
-        signed=num.value.is_signed,
-        value=expr,
-    )
+    if type(num.value) is FpBinary:
+        fp_value = FpBinary(
+            int_bits=int_bits,
+            frac_bits=frac_bits,
+            signed=num.value.is_signed,
+            value=expr,
+        )
+    else:
+        fp_value = expr
 
     return FpBinarySwitchable(
         fp_mode=FP_MODE, fp_value=fp_value, float_value=expr
@@ -288,7 +275,7 @@ def line_height_calc_model(x):
     dda_dist_y = fixp_init(init_side_dist_y, fixp_ext_pos)
 
     while True:
-        if game_map[map_y][map_x] == 1:
+        if game_map[map_y][len(game_map)-1-map_x]:
             break
 
         if (dda_dist_x < dda_dist_y):
@@ -314,7 +301,7 @@ def line_height_calc_model(x):
     wall_dist = fixp_init(0, fixp_pos)
 
     # from 0 to 1
-    inv_wall_dist = fixp_init(0, fixp_pos_ext_frac)
+    inv_wall_dist = fixp_init(0, fixp_inv_dist)
 
     if hit_side == 0:
         wall_dist = fixp_expr(dda_dist_x - delta_dist_x, wall_dist)
@@ -329,7 +316,7 @@ def line_height_calc_model(x):
         gte_one = True
     else:
         inv_wall_dist = fixp_cast(
-            inv_model(wall_dist), fixp_pos_ext_frac
+            inv_model(wall_dist), fixp_inv_dist
         )
 
     if gte_one:
@@ -487,6 +474,7 @@ def controls(dut):
 
     new_pos = fixp_init(0, fixp_pos)
     step_next = fixp_init(0, fixp_ray, True)
+    side = len(game_map)
 
     # Update x axis
     # Forward
@@ -496,7 +484,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
             pos_x = new_pos
 
     # Backward
@@ -506,7 +494,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
             pos_x = new_pos
 
     # Left
@@ -516,7 +504,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
             pos_x = new_pos
 
     # Right
@@ -526,7 +514,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
             pos_x = new_pos
 
     # Update y axis
@@ -536,7 +524,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
             pos_y = new_pos
 
     # Backward
@@ -545,7 +533,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
             pos_y = new_pos
 
     # Left
@@ -554,7 +542,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
             pos_y = new_pos
 
     # Right
@@ -563,7 +551,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
             pos_y = new_pos
 
     # Rotate right
@@ -626,7 +614,11 @@ async def dut_reset(dut):
 
 @cocotb.test()
 async def run_raycast(dut):
+    global game_map
     cocotb.start_soon(dut_reset(dut))
+
+    await RisingEdge(dut.px_clk)
+    game_map = cocotb.top.raycast_top.map.value  # type: ignore
 
     while True:
         controls(dut)
