@@ -30,7 +30,7 @@ package fixp_pkg;
     typedef logic        [EXT_POS_W_INT-1:-EXT_POS_W_FRAC]   ext_pos_fixp_t;
     typedef logic        [INV_DIST_W_INT-1:-INV_DIST_W_FRAC] inv_dist_fixp_t;
 
-endpackage
+endpackage : fixp_pkg
 
 
 `define REAL_TO_FIXP(real_num, T) \

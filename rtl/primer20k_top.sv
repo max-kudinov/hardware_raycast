@@ -1,12 +1,8 @@
 `default_nettype none
 
 module primer20k_top #(
-    parameter real         MOVEMENT_SPEED      = 0.08,
-    parameter real         ROTATION_SPEED      = 0.04,
-    parameter int unsigned        W_X_POS      = 10,
-    parameter int unsigned        W_Y_POS      = 9,
-    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
-    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
+    parameter real MOVEMENT_SPEED = 0.08,
+    parameter real ROTATION_SPEED = 0.04
 ) (
 `ifndef SIMULATION
     input  var logic       clk,
@@ -90,11 +86,7 @@ assign rst = !rst_n || !power_on_rst_n;
 
 raycast_top #(
     .MOVEMENT_SPEED (MOVEMENT_SPEED),
-    .ROTATION_SPEED (ROTATION_SPEED),
-    .W_X_POS        (W_X_POS       ),
-    .W_Y_POS        (W_Y_POS       ),
-    .FRAME_WIDTH    (FRAME_WIDTH   ),
-    .FRAME_HEIGHT   (FRAME_HEIGHT  )
+    .ROTATION_SPEED (ROTATION_SPEED)
 ) raycast_top (
     .serial_clk         (serial_clk ),
     .px_clk             (px_clk     ),

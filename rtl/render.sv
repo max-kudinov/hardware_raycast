@@ -5,24 +5,23 @@
 
 module render
     import fixp_pkg::*;
-    import dvi_pkg::COLOR_W;
-#(
-    parameter int unsigned        W_X_POS      = 10,
-    parameter int unsigned        W_Y_POS      = 9,
-    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
-    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
-) (
+    import dvi_pkg::W_H_RES;
+    import dvi_pkg::W_V_RES;
+    import dvi_pkg::FRAME_WIDTH;
+    import dvi_pkg::FRAME_HEIGHT;
+    import dvi_pkg::W_COLOR;
+(
     input  var logic                 clk,
     input  var logic                 rst,
 
     // DVI
-    input  var logic [W_X_POS-1:0]   px_x_i,
-    input  var logic [W_Y_POS-1:0]   px_y_i,
+    input  var logic [W_H_RES-1:0]   px_x_i,
+    input  var logic [W_V_RES-1:0]   px_y_i,
     input  var logic                 in_range_i,
     input  var logic                 new_frame_i,
-    output var logic [COLOR_W-1:0]   red_o,
-    output var logic [COLOR_W-1:0]   green_o,
-    output var logic [COLOR_W-1:0]   blue_o,
+    output var logic [W_COLOR-1:0]   red_o,
+    output var logic [W_COLOR-1:0]   green_o,
+    output var logic [W_COLOR-1:0]   blue_o,
 
     // Map coordinates to check for a wall
     output var logic [POS_W_INT-1:0] lookup_map_x_o,
@@ -44,7 +43,7 @@ module render
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned W_BUF_DATA = W_Y_POS; // Height without LSB + 1 bit for color
+localparam int unsigned W_BUF_DATA = W_V_RES; // Height without LSB + 1 bit for color
 localparam int unsigned W_BUF_ADDR = $clog2(FRAME_WIDTH);
 
 // ----------------------------------------------------------------------------
@@ -58,21 +57,21 @@ logic [W_BUF_ADDR-1:0] buf_rd_addr;
 logic [W_BUF_ADDR-1:0] buf_wr_addr;
 logic [W_BUF_DATA-1:0] buf_wr_data;
 logic [W_BUF_DATA-1:0] buf_rd_data;
-logic [W_Y_POS-2:0]    buf_height;
+logic [W_V_RES-2:0]    buf_height;
 logic                  buf_color;
 
 // LSB is not used
 // verilator lint_off UNUSEDSIGNAL
-logic [W_Y_POS-1:0]    calc_height;
+logic [W_V_RES-1:0]    calc_height;
 // verilator lint_on UNUSEDSIGNAL
 logic                  calc_color;
 logic                  calc_start;
 logic                  calc_done;
-logic [W_X_POS-1:0]    calc_px_x;
+logic [W_H_RES-1:0]    calc_px_x;
 logic                  calc_active;
 
 logic                  in_range_prev;
-logic [W_Y_POS-1:0]    px_y;
+logic [W_V_RES-1:0]    px_y;
 
 // Simple dual-port block RAM with read-first behavior
 always_ff @(posedge clk) begin
@@ -83,12 +82,7 @@ always_ff @(posedge clk) begin
         buf_rd_data <= frame_buffer[buf_rd_addr];
 end
 
-line_height_calc #(
-    .W_X_POS      (W_X_POS     ),
-    .W_Y_POS      (W_Y_POS     ),
-    .FRAME_WIDTH  (FRAME_WIDTH ),
-    .FRAME_HEIGHT (FRAME_HEIGHT)
-) line_height_calc (
+line_height_calc line_height_calc (
     .clk            (clk           ),
     .rst            (rst           ),
 
@@ -151,7 +145,7 @@ always_ff @(posedge clk)
         calc_start <= calc_active && calc_done;
 
 // Height divided in half is used for calculations, so we don't need LSB
-assign buf_wr_data = { calc_color, calc_height[W_Y_POS-1:1] };
+assign buf_wr_data = { calc_color, calc_height[W_V_RES-1:1] };
 assign buf_write   = calc_done;
 assign buf_wr_addr = calc_px_x;
 assign buf_read    = in_range_i;
@@ -165,8 +159,8 @@ assign { buf_color, buf_height } = buf_rd_data;
 
 always_ff @(posedge clk) begin
     if (in_range_prev) begin
-        if ((px_y >= ((FRAME_HEIGHT >> 1) - W_Y_POS'(buf_height))) &&
-            (px_y <= ((FRAME_HEIGHT >> 1) + W_Y_POS'(buf_height)))) begin
+        if ((px_y >= ((FRAME_HEIGHT >> 1) - W_V_RES'(buf_height))) &&
+            (px_y <= ((FRAME_HEIGHT >> 1) + W_V_RES'(buf_height)))) begin
             { red_o, green_o, blue_o } <= buf_color ? { 8'd127, 8'd127, 8'd127 } :
                                                       { 8'd255, 8'd255, 8'd255 };
         end else begin

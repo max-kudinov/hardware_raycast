@@ -4,12 +4,8 @@
 `default_nettype none
 
 module raycast_top #(
-    parameter real         MOVEMENT_SPEED      = 0.8,
-    parameter real         ROTATION_SPEED      = 0.4,
-    parameter int unsigned        W_X_POS      = 10,
-    parameter int unsigned        W_Y_POS      = 9,
-    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
-    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
+    parameter real MOVEMENT_SPEED = 0.8,
+    parameter real ROTATION_SPEED = 0.4
 ) (
     input  var logic       serial_clk,
     input  var logic       px_clk,
@@ -30,9 +26,11 @@ module raycast_top #(
 );
 
 import fixp_pkg::*;
-import dvi_pkg::X_POS_W;
-import dvi_pkg::Y_POS_W;
-import dvi_pkg::COLOR_W;
+import dvi_pkg::FRAME_WIDTH;
+import dvi_pkg::FRAME_HEIGHT;
+import dvi_pkg::W_H_RES;
+import dvi_pkg::W_V_RES;
+import dvi_pkg::W_COLOR;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -59,12 +57,12 @@ logic [POS_W_INT-1:0] controls_map_y;
 logic                 lookup_render;
 logic                 wall_hit;
 
-logic [COLOR_W-1:0]   red;
-logic [COLOR_W-1:0]   green;
-logic [COLOR_W-1:0]   blue;
+logic [W_COLOR-1:0]   red;
+logic [W_COLOR-1:0]   green;
+logic [W_COLOR-1:0]   blue;
 
-logic [X_POS_W-1:0]   px_x;
-logic [Y_POS_W-1:0]   px_y;
+logic [W_H_RES-1:0]   px_x;
+logic [W_V_RES-1:0]   px_y;
 logic                 in_range;
 
 logic                 frame_start;
@@ -129,28 +127,7 @@ assign wall_hit = map[map_y][map_x];
 // Main raycast components
 // ----------------------------------------------------------------------------
 
-dvi_top dvi_top (
-    .serial_clk_i (serial_clk ),
-    .pixel_clk_i  (px_clk     ),
-    .rst_i        (rst        ),
-    .red_i        (red        ),
-    .green_i      (green      ),
-    .blue_i       (blue       ),
-    .x_o          (px_x       ),
-    .y_o          (px_y       ),
-    .in_range_o   (in_range   ),
-    .tmds_data_p  (tmds_data_p),
-    .tmds_data_n  (tmds_data_n),
-    .tmds_clk_p   (tmds_clk_p ),
-    .tmds_clk_n   (tmds_clk_n )
-);
-
-render #(
-    .FRAME_WIDTH  (FRAME_WIDTH ),
-    .FRAME_HEIGHT (FRAME_HEIGHT),
-    .W_X_POS      (W_X_POS     ),
-    .W_Y_POS      (W_Y_POS     )
-) render (
+render render (
     .clk            (px_clk      ),
     .rst            (rst         ),
 
@@ -204,6 +181,25 @@ controls #(
 
     .plane_x_o          (plane_x           ),
     .plane_y_o          (plane_y           )
+);
+
+dvi_top dvi_top (
+    .serial_clk  (serial_clk ),
+    .pixel_clk   (px_clk     ),
+    .rst         (rst        ),
+
+    .red_i       (red        ),
+    .green_i     (green      ),
+    .blue_i      (blue       ),
+
+    .x_o         (px_x       ),
+    .y_o         (px_y       ),
+    .in_range_o  (in_range   ),
+
+    .tmds_data_p (tmds_data_p),
+    .tmds_data_n (tmds_data_n),
+    .tmds_clk_p  (tmds_clk_p ),
+    .tmds_clk_n  (tmds_clk_n )
 );
 
 endmodule

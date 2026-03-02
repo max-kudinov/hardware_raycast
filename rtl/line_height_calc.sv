@@ -1,21 +1,21 @@
 `include "fixp_pkg.svh"
+`include "dvi_pkg.svh"
 
 `default_nettype none
 
 module line_height_calc
     import fixp_pkg::*;
-#(
-    parameter int unsigned        W_X_POS      = 10,
-    parameter int unsigned        W_Y_POS      = 9,
-    parameter logic [W_X_POS-1:0] FRAME_WIDTH  = 640,
-    parameter logic [W_Y_POS-1:0] FRAME_HEIGHT = 480
-) (
+    import dvi_pkg::W_H_RES;
+    import dvi_pkg::W_V_RES;
+    import dvi_pkg::FRAME_WIDTH;
+    import dvi_pkg::FRAME_HEIGHT;
+(
     input  var logic                 clk,
     input  var logic                 rst,
 
     input  var logic                 start_i,
     // Horizontal position of input pixel on the screen
-    input  var logic [W_X_POS-1:0]   px_x_i,
+    input  var logic [W_H_RES-1:0]   px_x_i,
 
     // Camera coordinates
     input  var pos_fixp_t            pos_x_i,
@@ -33,7 +33,7 @@ module line_height_calc
     input  var logic                 wall_hit_i,
 
     output var logic                 done_o,
-    output var logic [W_Y_POS-1:0]   height_o,
+    output var logic [W_V_RES-1:0]   height_o,
     output var logic                 ray_hit_side_o
 );
 
@@ -78,7 +78,7 @@ typedef enum logic [3:0] {
 // ----------------------------------------------------------------------------
 
 // Ray direction for current screen pixel
-logic   [W_X_POS-1:0] px_x;
+logic   [W_H_RES-1:0] px_x;
 ray_fixp_t            ray_x;
 ray_fixp_t            dir_x;
 ray_fixp_t            dir_y;
@@ -401,7 +401,7 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (state == ST_CALC_LINE_HEIGHT)
         if (wall_dist_ff[POS_W_INT-1:0] != '0)
-            height_o <= W_Y_POS'(`FIXP_MULT(inv_dist_fixp_t'(FRAME_HEIGHT), inv_wall_dist_ff));
+            height_o <= W_V_RES'(`FIXP_MULT(inv_dist_fixp_t'(FRAME_HEIGHT), inv_wall_dist_ff));
         else
             height_o <= FRAME_HEIGHT;
 

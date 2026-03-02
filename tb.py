@@ -4,7 +4,7 @@ import pygame as pg
 from pygame import freetype
 import cocotb
 from cocotb.types import LogicArray
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 
 
 FRAME_WIDTH = 640
@@ -13,8 +13,11 @@ FRAME_HEIGHT = 480
 MAP_WIDTH = 20
 MAP_HEIGHT = 20
 
-INV_ITER_NUM = int(cocotb.packages.fixp_pkg.INV_ITER_NUM.value)  # type: ignore
-W_HEIGHT = int(cocotb.top.W_Y_POS.value)  # type: ignore
+dvi_pkg = cocotb.packages.dvi_pkg
+fixp_pkg = cocotb.packages.fixp_pkg
+
+INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)  # type: ignore
+W_HEIGHT = int(dvi_pkg.W_V_RES.value)  # type: ignore
 MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 
@@ -260,7 +263,9 @@ def line_height_calc_model(x):
         )
     else:
         step_x = -1
-        init_side_dist_x = fixp_expr((pos_x - map_x) * delta_dist_x, init_side_dist_x)
+        init_side_dist_x = fixp_expr(
+            (pos_x - map_x) * delta_dist_x, init_side_dist_x
+        )
 
     if ray_dir_y > 0:
         step_y = 1
@@ -269,7 +274,9 @@ def line_height_calc_model(x):
         )
     else:
         step_y = -1
-        init_side_dist_y = fixp_expr((pos_y - map_y) * delta_dist_y, init_side_dist_y)
+        init_side_dist_y = fixp_expr(
+            (pos_y - map_y) * delta_dist_y, init_side_dist_y
+        )
 
     hit_side = 0
 
