@@ -329,7 +329,7 @@ def line_height_calc_model(x):
         return (int(scaled_height), line_color)
 
 
-async def render(dut):
+async def render(dut, buf_toggle):
     # Clear screen
     surface.fill((0, 0, 0))
 
@@ -341,8 +341,8 @@ async def render(dut):
     for x in range(FRAME_WIDTH):
         line_height, line_color = line_height_calc_model(x)
 
-        dut_color = int(mem[x][8])
-        dut_height = int(mem[x][7:0])
+        dut_color = int(mem[(FRAME_WIDTH * buf_toggle) + x][8])
+        dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
 
         height_div2 = line_height // 2
 
@@ -620,6 +620,9 @@ async def run_raycast(dut):
     await RisingEdge(dut.px_clk)
     game_map = cocotb.top.raycast_top.map.value  # type: ignore
 
+    buf_toggle = 1
+
     while True:
         controls(dut)
-        await render(dut)
+        await render(dut, buf_toggle)
+        buf_toggle = buf_toggle ^ 1

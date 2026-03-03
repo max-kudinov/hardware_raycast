@@ -44,15 +44,17 @@ module render
 // ----------------------------------------------------------------------------
 
 localparam int unsigned W_BUF_DATA = W_V_RES; // Height without LSB + 1 bit for color
-localparam int unsigned W_BUF_ADDR = $clog2(FRAME_WIDTH);
+localparam int unsigned BUF_DEPTH  = FRAME_WIDTH * 2;
+localparam int unsigned W_BUF_ADDR = $clog2(BUF_DEPTH);
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic [W_BUF_DATA-1:0] frame_buffer [FRAME_WIDTH];
+logic [W_BUF_DATA-1:0] frame_buffer [BUF_DEPTH];
 logic                  buf_write;
 logic                  buf_read;
+logic                  buf_toggle;
 logic [W_BUF_ADDR-1:0] buf_rd_addr;
 logic [W_BUF_ADDR-1:0] buf_wr_addr;
 logic [W_BUF_DATA-1:0] buf_wr_data;
@@ -72,6 +74,13 @@ logic                  calc_active;
 
 logic                  in_range_prev;
 logic [W_V_RES-1:0]    px_y;
+
+
+always_ff @(posedge clk)
+    if (rst)
+        buf_toggle <= '0;
+    else if (new_frame_i)
+        buf_toggle <= !buf_toggle;
 
 // Simple dual-port block RAM with read-first behavior
 always_ff @(posedge clk) begin
@@ -147,9 +156,9 @@ always_ff @(posedge clk)
 // Height divided in half is used for calculations, so we don't need LSB
 assign buf_wr_data = { calc_color, calc_height[W_V_RES-1:1] };
 assign buf_write   = calc_done;
-assign buf_wr_addr = calc_px_x;
+assign buf_wr_addr = W_BUF_ADDR'(calc_px_x) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { buf_toggle } });
 assign buf_read    = in_range_i;
-assign buf_rd_addr = px_x_i;
+assign buf_rd_addr = W_BUF_ADDR'(px_x_i) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { !buf_toggle } });
 
 // ----------------------------------------------------------------------------
 // Calc current color based on buffer data
