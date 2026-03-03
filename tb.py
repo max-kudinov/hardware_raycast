@@ -211,8 +211,6 @@ def line_height_calc_model(x):
 
     # from -1 to 1
     ray_x = fixp_expr((x * ray_step / 2**fixp_ray[1] - 1), ray_x)
-
-    # from -2 to 2
     ray_dir_x = fixp_expr(dir_x + plane_x * ray_x, ray_dir_x)
     ray_dir_y = fixp_expr(dir_y + plane_y * ray_x, ray_dir_y)
 
