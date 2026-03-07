@@ -12,34 +12,70 @@ FP_MODE = True
 
 dvi_pkg = cocotb.packages.dvi_pkg
 fixp_pkg = cocotb.packages.fixp_pkg
+tex_pkg = cocotb.packages.tex_pkg
 
 FRAME_WIDTH = int(dvi_pkg.FRAME_WIDTH.value)
 FRAME_HEIGHT = int(dvi_pkg.FRAME_HEIGHT.value)
 W_HEIGHT = int(dvi_pkg.W_V_RES.value)  # type: ignore
-TEX_SIDE = 32
+TEX_SIDE = int(tex_pkg.TEX_SIDE.value)
 
 MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 
 INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)  # type: ignore
 
+# ----------------------------------------------------------------------------
+# fixp_pkg types
+# ----------------------------------------------------------------------------
 
-fixp_ray = (int(fixp_pkg.RAY_W_INT.value), int(fixp_pkg.RAY_W_FRAC.value))
-fixp_pos = (int(fixp_pkg.POS_W_INT.value), int(fixp_pkg.POS_W_FRAC.value))
+fixp_ray = (
+    int(fixp_pkg.RAY_W_INT.value),
+    int(fixp_pkg.RAY_W_FRAC.value)
+)
+
+fixp_pos = (
+    int(fixp_pkg.POS_W_INT.value),
+    int(fixp_pkg.POS_W_FRAC.value)
+)
+
 fixp_ext_pos = (
     int(fixp_pkg.EXT_POS_W_INT.value),
     int(fixp_pkg.EXT_POS_W_FRAC.value),
 )
+
 fixp_inv_dist = (
     int(fixp_pkg.INV_DIST_W_INT.value),
     int(fixp_pkg.INV_DIST_W_FRAC.value),
 )
-fixp_inv = (int(fixp_pkg.INV_W_INT.value), int(fixp_pkg.INV_W_FRAC.value))
 
-fixp_coord = (5, 4)
-fixp_tex_offset = (4, 4)
-fixp_tex_step = (3, 12)
-fixp_tex_scale = (0, 12)
+fixp_inv = (
+    int(fixp_pkg.INV_W_INT.value),
+    int(fixp_pkg.INV_W_FRAC.value)
+)
+
+# ----------------------------------------------------------------------------
+# tex_pkg types
+# ----------------------------------------------------------------------------
+
+fixp_tex_pos = (
+    int(tex_pkg.TEX_POS_W_INT.value),
+    int(tex_pkg.TEX_POS_W_FRAC.value)
+)
+
+fixp_tex_start = (
+    int(tex_pkg.TEX_START_W_INT.value),
+    int(tex_pkg.TEX_START_W_FRAC.value)
+)
+
+fixp_tex_step = (
+    int(tex_pkg.TEX_STEP_W_INT.value),
+    int(tex_pkg.TEX_STEP_W_FRAC.value)
+)
+
+fixp_tex_scale = (
+    int(tex_pkg.TEX_SCALE_W_INT.value),
+    int(tex_pkg.TEX_SCALE_W_FRAC.value)
+)
 
 pg.init()
 font = freetype.Font(None, 24)
@@ -187,12 +223,12 @@ def inv_model(num_in):
     return approx
 
 
-# texture = [
-#     [255 * (j != i and j != TEX_SIDE - i) for j in range(TEX_SIDE)]
-#     for i in range(TEX_SIDE)
-# ]
+texture = [
+    [255 * (j != i and j != TEX_SIDE - i) for j in range(TEX_SIDE)]
+    for i in range(TEX_SIDE)
+]
 
-texture = Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
+# texture = Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
 
 ray_x = 0
 ray_dir_x = 0
@@ -213,8 +249,11 @@ dda_dist_x = 0
 dda_dist_y = 0
 tex_step = 0
 tex_x = 0
-y_offset = 0
-fixp_y = 0
+y_start = 0
+y_pos = 0
+wall_x = 0
+proj_dist = 0
+coord_x = 0
 
 
 def line_height_calc_model(x):
@@ -222,7 +261,7 @@ def line_height_calc_model(x):
     global delta_dist_x, delta_dist_y, init_side_dist_x, init_side_dist_y
     global hit_side, map_x, map_y
     global wall_dist, inv_wall_dist, scaled_height
-    global dda_dist_x, dda_dist_y, tex_step, tex_x
+    global dda_dist_x, dda_dist_y, tex_step, tex_x, wall_x, proj_dist, coord_x
 
     ray_x = fixp_init(0, fixp_ray, True)
     ray_dir_x = fixp_init(0, fixp_ray, True)
@@ -339,20 +378,21 @@ def line_height_calc_model(x):
 
     tex_step = fixp_expr(wall_dist * tex_step_scale, tex_step)
 
-    wall_x = fixp_init(0, fixp_ext_pos, True)
+    coord_x = fixp_init(0, fixp_pos)
+    proj_dist = fixp_init(0, (5, 10), True)
 
     if hit_side == 0:
-        wall_x = fixp_expr(
-            pos_y + fixp_expr(wall_dist * ray_dir_y, wall_x), wall_x
-        )
+        proj_dist = fixp_expr(wall_dist * ray_dir_y, proj_dist)
+        fixp_cast(proj_dist, fixp_pos)
+        coord_x = fixp_expr(pos_y + proj_dist, coord_x)
     else:
-        wall_x = fixp_expr(
-            pos_x + fixp_expr(wall_dist * ray_dir_x, wall_x), wall_x
-        )
+        proj_dist = fixp_expr(wall_dist * ray_dir_x, proj_dist)
+        fixp_cast(proj_dist, fixp_pos)
+        coord_x = fixp_expr(pos_x + proj_dist, coord_x)
 
-    wall_x = fixp_expr(wall_x - math.floor(wall_x), wall_x)
+    coord_x = fixp_expr(coord_x - math.floor(coord_x), coord_x)
 
-    tex_x = int(wall_x << math.ceil(math.log2(TEX_SIDE)))
+    tex_x = int(coord_x << math.ceil(math.log2(TEX_SIDE)))
 
     if hit_side == 0 and ray_dir_x > 0:
         tex_x = TEX_SIDE - 1 - tex_x
@@ -371,87 +411,109 @@ def line_height_calc_model(x):
 
 
 async def render(dut, buf_toggle):
-    global y_offset, fixp_y
+    global y_start, y_pos
     # Clear screen
     surface.fill((0, 0, 0))
 
-    # await RisingEdge(dut.px_clk)
-    #
-    # await RisingEdge(dut.raycast_top.frame_done)
-    # mem = dut.raycast_top.render.frame_buffer.value
+    await RisingEdge(dut.px_clk)
+
+    await RisingEdge(dut.raycast_top.frame_done)
+    mem = dut.raycast_top.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
         tex_shade, tex_x, tex_step, tex_height = line_height_calc_model(x)
 
-        # dut_color = int(mem[(FRAME_WIDTH * buf_toggle) + x][8])
-        # dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
-        #
-        # height_div2 = line_height // 2
-        #
-        # try:
-        #     assert dut_height == height_div2
-        # except AssertionError as e:
-        #     top = dut.raycast_top
-        #     print("=" * 80)
-        #     print(f"Pixel {x}")
-        #     print(f"Expected height: {height_div2}, got {dut_height}")
-        #
-        #     print(f"Expected dir_x: {dir_x}")
-        #     print(
-        #         f"Got dir_x: {top.dir_x.value.to_signed() / 2**fixp_ray[1]}"
-        #     )
-        #     print(f"Expected dir_y: {dir_y}")
-        #     print(
-        #         f"Got dir_y: {top.dir_y.value.to_signed() / 2**fixp_ray[1]}\n"
-        #     )
-        #
-        #     print(f"Expected plane_x: {plane_x}")
-        #     print(
-        #         f"Got plane_x: {top.plane_x.value.to_signed()/2**fixp_ray[1]}"
-        #     )
-        #     print(f"Expected plane_y: {plane_y}")
-        #     print(
-        #         f"Got plane_y: {top.plane_y.value.to_signed()/2**fixp_ray[1]}"
-        #     )
-        #
-        #     print(f"Expected pos_x: {pos_x}")
-        #     print(
-        #         f"Got pos_x: {top.pos_x.value.to_unsigned() / 2**fixp_pos[1]}"
-        #     )
-        #     print(f"Expected pos_y: {pos_y}")
-        #     print(
-        #         f"Got pos_y: {top.pos_y.value.to_unsigned() / 2**fixp_pos[1]}"
-        #     )
-        #
-        #     print(f"ray_x {ray_x}")
-        #     print(f"ray_dir_x {ray_dir_x}")
-        #     print(f"ray_dir_y {ray_dir_y}")
-        #     print(f"delta_dist_x {delta_dist_x}")
-        #     print(f"delta_dist_y {delta_dist_y}")
-        #     print(f"init_side_dist_x {init_side_dist_x}")
-        #     print(f"init_side_dist_y {init_side_dist_y}")
-        #     print(f"dda_side_dist_x {dda_dist_x}")
-        #     print(f"dda_side_dist_y {dda_dist_y}")
-        #     print(f"hit_side {hit_side}")
-        #     print(f"wall_dist {wall_dist}")
-        #     print(f"inv_wall_dist {inv_wall_dist}")
-        #     print(f"scaled_height {scaled_height}")
-        #     print(f"map_x {map_x}")
-        #     print(f"map_y {map_y}")
-        #     print(f"init_side_dist_x {init_side_dist_x}")
-        #     print(f"init_side_dist_y {init_side_dist_y}")
-        #     print(f"line_height {line_height}")
-        #     print("=" * 80)
-        #     raise e
-        #
-        # try:
-        #     assert dut_color == line_color
-        # except AssertionError as e:
-        #     print("=" * 80)
-        #     print(f"Pixel {x}")
-        #     print(f"Expected color: {line_color}, got {dut_color}")
-        #     print("=" * 80)
-        #     raise e
+        dut_shade = int(mem[(FRAME_WIDTH * buf_toggle) + x][28])
+        dut_tex_x = int(mem[(FRAME_WIDTH * buf_toggle) + x][27:23])
+        dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
+        dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
+
+        height_div2 = tex_height // 2
+
+        try:
+            assert dut_height == height_div2
+        except AssertionError as e:
+            top = dut.raycast_top
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected height: {height_div2}, got {dut_height}")
+
+            print(f"Expected dir_x: {dir_x}")
+            print(
+                f"Got dir_x: {top.dir_x.value.to_signed() / 2**fixp_ray[1]}"
+            )
+            print(f"Expected dir_y: {dir_y}")
+            print(
+                f"Got dir_y: {top.dir_y.value.to_signed() / 2**fixp_ray[1]}\n"
+            )
+
+            print(f"Expected plane_x: {plane_x}")
+            print(
+                f"Got plane_x: {top.plane_x.value.to_signed()/2**fixp_ray[1]}"
+            )
+            print(f"Expected plane_y: {plane_y}")
+            print(
+                f"Got plane_y: {top.plane_y.value.to_signed()/2**fixp_ray[1]}"
+            )
+
+            print(f"Expected pos_x: {pos_x}")
+            print(
+                f"Got pos_x: {top.pos_x.value.to_unsigned() / 2**fixp_pos[1]}"
+            )
+            print(f"Expected pos_y: {pos_y}")
+            print(
+                f"Got pos_y: {top.pos_y.value.to_unsigned() / 2**fixp_pos[1]}"
+            )
+
+            print(f"ray_x {ray_x}")
+            print(f"ray_dir_x {ray_dir_x}")
+            print(f"ray_dir_y {ray_dir_y}")
+            print(f"delta_dist_x {delta_dist_x}")
+            print(f"delta_dist_y {delta_dist_y}")
+            print(f"init_side_dist_x {init_side_dist_x}")
+            print(f"init_side_dist_y {init_side_dist_y}")
+            print(f"dda_side_dist_x {dda_dist_x}")
+            print(f"dda_side_dist_y {dda_dist_y}")
+            print(f"hit_side {hit_side}")
+            print(f"wall_dist {wall_dist}")
+            print(f"inv_wall_dist {inv_wall_dist}")
+            print(f"scaled_height {scaled_height}")
+            print(f"map_x {map_x}")
+            print(f"map_y {map_y}")
+            print(f"init_side_dist_x {init_side_dist_x}")
+            print(f"init_side_dist_y {init_side_dist_y}")
+            print(f"line_height {tex_height}")
+            print("=" * 80)
+            raise e
+
+        try:
+            assert dut_shade == tex_shade
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected color: {tex_shade}, got {dut_shade}")
+            print("=" * 80)
+            raise e
+
+        try:
+            assert dut_tex_x == tex_x
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected tex_x: {tex_x}, got {dut_tex_x}")
+            print("=" * 80)
+            breakpoint()
+            raise e
+
+        try:
+            assert dut_tex_step == tex_step
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected tex_step: {tex_step}, got {dut_tex_step}")
+            print("=" * 80)
+            breakpoint()
+            raise e
 
         start_pos = FRAME_HEIGHT // 2 - tex_height // 2
 
@@ -462,37 +524,37 @@ async def render(dut, buf_toggle):
         if end_pos > FRAME_HEIGHT - 1:
             end_pos = FRAME_HEIGHT - 1
 
-        y_offset = fixp_init(0, fixp_tex_offset)
+        y_start = fixp_init(0, fixp_tex_start)
         if tex_step < tex_step_scale:
-            y_offset = fixp_expr(
+            y_start = fixp_expr(
                 TEX_SIDE // 2
-                - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_offset),
-                y_offset,
+                - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_start),
+                y_start,
             )
         else:
-            y_offset = 0
+            y_start = 0
 
         for y in range(FRAME_HEIGHT):
             if y >= start_pos and y <= end_pos:
 
-                fixp_y = fixp_init(0, fixp_coord)
-                fixp_y = fixp_expr(
-                    y_offset + fixp_expr((y - start_pos) * tex_step, fixp_y),
-                    fixp_y,
+                y_pos = fixp_init(0, fixp_tex_pos)
+                y_pos = fixp_expr(
+                    y_start + fixp_expr((y - start_pos) * tex_step, y_pos),
+                    y_pos,
                 )
 
-                tex_y = int(fixp_y)
+                tex_y = int(y_pos)
 
-                px_pos = (tex_x, tex_y)
-                px_color = texture.getpixel(px_pos)
-                if tex_shade:
-                    r, g, b = px_color  # type: ignore
-                    px_color = (r >> 1, g >> 1, b >> 1)
-
+                # px_pos = (tex_x, tex_y)
+                # px_color = texture.getpixel(px_pos)
                 # if tex_shade:
-                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
-                # else:
-                #     px_color = (texture[tex_y][tex_x], 0, 0)
+                #     r, g, b = px_color  # type: ignore
+                #     px_color = (r >> 1, g >> 1, b >> 1)
+
+                if tex_shade:
+                    px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                else:
+                    px_color = (texture[tex_y][tex_x], 0, 0)
 
                 surface.set_at((x, y), px_color)
 
@@ -518,8 +580,8 @@ def print_info():
     font.render_to(surface, (20, 230), f"tex_step: {tex_step}", (0, 255, 0))
     font.render_to(surface, (20, 260), f"tex_x: {tex_x}", (0, 255, 0))
     font.render_to(surface, (20, 290), f"wall_dist: {wall_dist}", (0, 255, 0))
-    font.render_to(surface, (20, 320), f"y_offset: {y_offset}", (0, 255, 0))
-    font.render_to(surface, (20, 350), f"fixp_y: {fixp_y}", (0, 255, 0))
+    font.render_to(surface, (20, 320), f"y_offset: {y_start}", (0, 255, 0))
+    font.render_to(surface, (20, 350), f"fixp_y: {y_pos}", (0, 255, 0))
 
 
 def controls(dut):
