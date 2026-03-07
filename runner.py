@@ -16,7 +16,7 @@ def run_tb():
     proj_path = Path(__file__).resolve().parent
     sources = [proj_path / "rtl/newton_inv.sv"]
     sources += [proj_path / "rtl/dda.sv"]
-    sources += [proj_path / "rtl/line_height_calc.sv"]
+    sources += [proj_path / "rtl/column_calc.sv"]
     sources += [proj_path / "rtl/raycast_top.sv"]
     sources += [proj_path / "rtl/render.sv"]
     sources += [proj_path / "rtl/dvi/dvi_top.sv"]
