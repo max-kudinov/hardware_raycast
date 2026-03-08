@@ -6,6 +6,7 @@ from PIL import Image
 import cocotb
 from cocotb.types import LogicArray
 from cocotb.triggers import RisingEdge
+from cocotb.queue import Queue
 
 
 FP_MODE = True
@@ -23,6 +24,8 @@ MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
 ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
 
 INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)  # type: ignore
+
+mon_queue = Queue()
 
 # ----------------------------------------------------------------------------
 # fixp_pkg types
@@ -410,6 +413,122 @@ def line_height_calc_model(x):
         return (tex_shade, tex_x, tex_step, int(scaled_height))
 
 
+async def monitor(dut):
+    render = dut.raycast_top.render
+
+    while True:
+        await RisingEdge(dut.px_clk)
+
+        if render.rd_buf_valid.value:
+            px_x = int(render.px_x_i.value) - 1
+            px_y = int(render.px_y.value)
+            tex_shade = int(render.rd_tex_shade.value)
+            tex_x = int(render.rd_tex_x.value)
+            tex_step = int(render.rd_tex_step.value)
+            tex_height = int(render.rd_tex_height.value)
+
+            mon_queue.put_nowait(
+                (px_x, px_y, tex_shade, tex_x, tex_step, tex_height)
+            )
+
+
+async def scoreboard(dut):
+    while True:
+        await RisingEdge(dut.px_clk)
+
+        if dut.raycast_top.dvi_top.visible_range_del.value:
+            px_color = (0, 0, 0)
+
+            px_x, px_y, tex_shade, tex_x, tex_step, tex_height = (
+                await mon_queue.get()
+            )
+
+            start_pos = FRAME_HEIGHT // 2 - tex_height
+            if start_pos < 0:
+                start_pos = 0
+
+            end_pos = FRAME_HEIGHT // 2 + tex_height
+            if end_pos > FRAME_HEIGHT - 1:
+                end_pos = FRAME_HEIGHT - 1
+
+            if px_y >= start_pos and px_y <= end_pos:
+
+                y_start = fixp_init(0, fixp_tex_start)
+                if tex_step < tex_step_scale:
+                    y_start = fixp_expr(
+                        TEX_SIDE // 2
+                        - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_start),
+                        y_start,
+                    )
+                else:
+                    y_start = 0
+
+                y_pos = fixp_init(0, fixp_tex_pos)
+                y_pos = fixp_expr(
+                    y_start + fixp_expr((px_y - start_pos) * tex_step, y_pos),
+                    y_pos,
+                )
+
+                tex_y = int(y_pos)
+
+                if tex_shade:
+                    px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                else:
+                    px_color = (texture[tex_y][tex_x], 0, 0)
+
+            red, green, blue = px_color
+
+            render = dut.raycast_top.render
+            dut_red = int(render.red_o.value)
+            dut_green = int(render.green_o.value)
+            dut_blue = int(render.blue_o.value)
+
+            try:
+                assert dut_red == red
+            except AssertionError as e:
+                print("=" * 80)
+                print(f"Pixel {px_x}")
+                print(f"Expected red: {red}, got {dut_red}")
+                print("=" * 80)
+                breakpoint()
+                for _ in range(50):
+                    await RisingEdge(dut.px_clk)
+                raise e
+
+            try:
+                assert dut_green == green
+            except AssertionError as e:
+                print("=" * 80)
+                print(f"Pixel {px_x}")
+                print(f"Expected red: {green}, got {dut_green}")
+                print("=" * 80)
+                breakpoint()
+                for _ in range(50):
+                    await RisingEdge(dut.px_clk)
+                raise e
+
+            try:
+                assert dut_blue == blue
+            except AssertionError as e:
+                print("=" * 80)
+                print(f"Pixel {px_x}")
+                print(f"Expected red: {blue}, got {dut_blue}")
+                print("=" * 80)
+                breakpoint()
+                for _ in range(50):
+                    await RisingEdge(dut.px_clk)
+                raise e
+
+            surface.set_at((px_x, px_y), px_color)
+            pg.display.update()
+
+
+async def pixel_calc(dut):
+    pass
+    cocotb.start_soon(monitor(dut))
+    cocotb.start_soon(scoreboard(dut))
+
+
 async def render(dut, buf_toggle):
     global y_start, y_pos
     # Clear screen
@@ -516,11 +635,10 @@ async def render(dut, buf_toggle):
             raise e
 
         start_pos = FRAME_HEIGHT // 2 - tex_height // 2
-
         if start_pos < 0:
             start_pos = 0
-        end_pos = FRAME_HEIGHT // 2 + tex_height // 2
 
+        end_pos = FRAME_HEIGHT // 2 + tex_height // 2
         if end_pos > FRAME_HEIGHT - 1:
             end_pos = FRAME_HEIGHT - 1
 
@@ -551,10 +669,15 @@ async def render(dut, buf_toggle):
                 #     r, g, b = px_color  # type: ignore
                 #     px_color = (r >> 1, g >> 1, b >> 1)
 
+                # if tex_shade:
+                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                # else:
+                #     px_color = (texture[tex_y][tex_x], 0, 0)
+
                 if tex_shade:
-                    px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                    px_color = (127, 127, 127)
                 else:
-                    px_color = (texture[tex_y][tex_x], 0, 0)
+                    px_color = (255, 255, 255)
 
                 surface.set_at((x, y), px_color)
 
@@ -584,7 +707,7 @@ def print_info():
     font.render_to(surface, (20, 350), f"fixp_y: {y_pos}", (0, 255, 0))
 
 
-def controls(dut):
+async def controls(dut):
     global pos_x
     global pos_y
     global dir_x
@@ -746,6 +869,15 @@ async def dut_reset(dut):
     dut.rst_n.value = 1
 
 
+async def coro_quit(dut):
+    while True:
+        await RisingEdge(dut.px_clk)
+        for event in pg.event.get():
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_q:
+                    quit()
+
+
 @cocotb.test()
 async def run_raycast(dut):
     global game_map
@@ -756,7 +888,12 @@ async def run_raycast(dut):
 
     buf_toggle = 1
 
-    while True:
-        controls(dut)
-        await render(dut, buf_toggle)
-        buf_toggle = buf_toggle ^ 1
+    # while True:
+
+    cocotb.start_soon(coro_quit(dut))
+    # await render(dut, buf_toggle)
+    cocotb.start_soon(pixel_calc(dut))
+    await RisingEdge(dut.raycast_top.frame_done)
+    surface.fill((0, 0, 0))
+    await RisingEdge(dut.raycast_top.frame_done)
+    buf_toggle = buf_toggle ^ 1
