@@ -443,29 +443,29 @@ async def scoreboard(dut):
                 await mon_queue.get()
             )
 
-            start_pos = FRAME_HEIGHT // 2 - tex_height
-            if start_pos < 0:
-                start_pos = 0
+            tex_start = FRAME_HEIGHT // 2 - tex_height
+            if tex_start < 0:
+                tex_start = 0
 
-            end_pos = FRAME_HEIGHT // 2 + tex_height
-            if end_pos > FRAME_HEIGHT - 1:
-                end_pos = FRAME_HEIGHT - 1
+            tex_end = FRAME_HEIGHT // 2 + tex_height
+            if tex_end > FRAME_HEIGHT - 1:
+                tex_end = FRAME_HEIGHT - 1
 
-            if px_y >= start_pos and px_y <= end_pos:
+            if px_y >= tex_start and px_y <= tex_end:
 
-                y_start = fixp_init(0, fixp_tex_start)
+                y_zoom_offset = fixp_init(0, fixp_tex_start)
                 if tex_step < tex_step_scale:
-                    y_start = fixp_expr(
+                    y_zoom_offset = fixp_expr(
                         TEX_SIDE // 2
-                        - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_start),
-                        y_start,
+                        - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_zoom_offset),
+                        y_zoom_offset,
                     )
                 else:
-                    y_start = 0
+                    y_zoom_offset = 0
 
                 y_pos = fixp_init(0, fixp_tex_pos)
                 y_pos = fixp_expr(
-                    y_start + fixp_expr((px_y - start_pos) * tex_step, y_pos),
+                    y_zoom_offset + fixp_expr((px_y - tex_start) * tex_step, y_pos),
                     y_pos,
                 )
 
