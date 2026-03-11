@@ -382,15 +382,15 @@ def line_height_calc_model(x):
     tex_step = fixp_expr(wall_dist * tex_step_scale, tex_step)
 
     coord_x = fixp_init(0, fixp_pos)
-    proj_dist = fixp_init(0, (5, 10), True)
+    proj_dist = fixp_init(0, (6, 10), True)
 
     if hit_side == 0:
         proj_dist = fixp_expr(wall_dist * ray_dir_y, proj_dist)
-        fixp_cast(proj_dist, fixp_pos)
+        fixp_cast(proj_dist, (6, 8))
         coord_x = fixp_expr(pos_y + proj_dist, coord_x)
     else:
         proj_dist = fixp_expr(wall_dist * ray_dir_x, proj_dist)
-        fixp_cast(proj_dist, fixp_pos)
+        fixp_cast(proj_dist, (6, 8))
         coord_x = fixp_expr(pos_x + proj_dist, coord_x)
 
     coord_x = fixp_expr(coord_x - math.floor(coord_x), coord_x)
@@ -661,7 +661,7 @@ async def render(dut, buf_toggle):
                     y_pos,
                 )
 
-                tex_y = int(y_pos)
+                tex_y = min(31, int(y_pos))
 
                 # px_pos = (tex_x, tex_y)
                 # px_color = texture.getpixel(px_pos)
@@ -707,7 +707,7 @@ def print_info():
     font.render_to(surface, (20, 350), f"fixp_y: {y_pos}", (0, 255, 0))
 
 
-async def controls(dut):
+def controls(dut):
     global pos_x
     global pos_y
     global dir_x
@@ -891,6 +891,7 @@ async def run_raycast(dut):
     # while True:
 
     cocotb.start_soon(coro_quit(dut))
+    controls(dut)
     # await render(dut, buf_toggle)
     cocotb.start_soon(pixel_calc(dut))
     await RisingEdge(dut.raycast_top.frame_done)

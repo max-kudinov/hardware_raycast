@@ -67,8 +67,9 @@ typedef enum logic [2:0] {
     ST_TEX_MIRROR
 } tex_state_t;
 
-typedef logic signed [POS_W_INT-1:-RAY_W_FRAC]      proj_fixp_t;
+typedef logic signed [POS_W_INT:-RAY_W_FRAC]        proj_fixp_t;  // POS_W_INT + 1 to account sign
 typedef logic        [POS_W_INT-1:-TEX_STEP_W_FRAC] ext_step_fixp_t;
+typedef logic        [-1:$right(pos_fixp_t)]        pos_frac_fixp_t;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -94,85 +95,85 @@ end
 // ----------------------------------------------------------------------------
 
 // Ray direction for current screen pixel
-logic [W_H_RES-1:0]        px_x;
-ray_fixp_t                 ray_x;
-ray_fixp_t                 dir_x;
-ray_fixp_t                 dir_y;
-ray_fixp_t                 plane_x;
-ray_fixp_t                 plane_y;
-ray_fixp_t                 ray_dir_x;
-ray_fixp_t                 ray_dir_y;
+logic [W_H_RES-1:0]    px_x;
+ray_fixp_t             ray_x;
+ray_fixp_t             dir_x;
+ray_fixp_t             dir_y;
+ray_fixp_t             plane_x;
+ray_fixp_t             plane_y;
+ray_fixp_t             ray_dir_x;
+ray_fixp_t             ray_dir_y;
 
 // Inversion module
-inv_fixp_t                 inv_num_in;
+inv_fixp_t             inv_num_in;
 // Not all bits are used
 // verilator lint_off UNUSEDSIGNAL
-inv_fixp_t                 inv_num_out;
+inv_fixp_t             inv_num_out;
 // verilator lint_on UNUSEDSIGNAL
-logic                      inv_start_next;
-logic                      inv_start_ff;
-logic                      inv_done;
+logic                  inv_start_next;
+logic                  inv_start_ff;
+logic                  inv_done;
 
 // Ray distance between parallel coordinate lines
-ext_pos_fixp_t             delta_dist_x_next;
-ext_pos_fixp_t             delta_dist_x_ff;
-ext_pos_fixp_t             delta_dist_y_next;
-ext_pos_fixp_t             delta_dist_y_ff;
+ext_pos_fixp_t         delta_dist_x_next;
+ext_pos_fixp_t         delta_dist_x_ff;
+ext_pos_fixp_t         delta_dist_y_next;
+ext_pos_fixp_t         delta_dist_y_ff;
 
 // Distance from the point to the cell border
-side_fixp_t                side_dist_x_next;
-side_fixp_t                side_dist_x_ff;
-side_fixp_t                side_dist_y_next;
-side_fixp_t                side_dist_y_ff;
-pos_fixp_t                 cell_dist;
+side_fixp_t            side_dist_x_next;
+side_fixp_t            side_dist_x_ff;
+side_fixp_t            side_dist_y_next;
+side_fixp_t            side_dist_y_ff;
+pos_fixp_t             cell_dist;
 
 // DDA
-ext_pos_fixp_t             init_side_dist_x;
-ext_pos_fixp_t             init_side_dist_y;
-ext_pos_fixp_t             dda_side_dist_x;
-ext_pos_fixp_t             dda_side_dist_y;
-logic                      dda_start;
-logic                      dda_done;
+ext_pos_fixp_t         init_side_dist_x;
+ext_pos_fixp_t         init_side_dist_y;
+ext_pos_fixp_t         dda_side_dist_x;
+ext_pos_fixp_t         dda_side_dist_y;
+logic                  dda_start;
+logic                  dda_done;
 
 // Ray step direction for DDA
-logic                      step_x_next;
-logic                      step_x_ff;
-logic                      step_y_next;
-logic                      step_y_ff;
+logic                  step_x_next;
+logic                  step_x_ff;
+logic                  step_y_next;
+logic                  step_y_ff;
 
 // Distance from the wall to the camera plane
-pos_fixp_t                 wall_dist_next;
-pos_fixp_t                 wall_dist_ff;
-inv_dist_fixp_t            inv_wall_dist_next;
-inv_dist_fixp_t            inv_wall_dist_ff;
+pos_fixp_t             wall_dist_next;
+pos_fixp_t             wall_dist_ff;
+inv_dist_fixp_t        inv_wall_dist_next;
+inv_dist_fixp_t        inv_wall_dist_ff;
 
 // Camera position
-pos_fixp_t                 pos_x;
-pos_fixp_t                 pos_y;
-logic [POS_W_INT-1:0]      init_map_x;
-logic [POS_W_INT-1:0]      init_map_y;
+pos_fixp_t             pos_x;
+pos_fixp_t             pos_y;
+logic [POS_W_INT-1:0]  init_map_x;
+logic [POS_W_INT-1:0]  init_map_y;
 
 // Texture data
-ext_step_fixp_t            step_wall_dist;
-ext_step_fixp_t            ext_tex_step;
-tex_step_fixp_t            tex_step_next;
+ext_step_fixp_t        step_wall_dist;
+ext_step_fixp_t        ext_tex_step;
+tex_step_fixp_t        tex_step_next;
 
 // Texture x coordinate calculation
-proj_fixp_t                ext_ray_dir;
-proj_fixp_t                ext_dist;
-pos_fixp_t                 proj_dist_next;
-pos_fixp_t                 proj_dist_ff;
+proj_fixp_t            ext_ray_dir;
+proj_fixp_t            ext_dist;
+pos_frac_fixp_t        proj_frac_next;
+pos_frac_fixp_t        proj_frac_ff;
 
 // verilator lint_off UNUSEDSIGNAL
-logic [-1:-EXT_POS_W_FRAC] tex_x_frac;  // MSB bits are unused
+logic [-1:-POS_W_FRAC] tex_x_frac;  // MSB bits are unused
 // verilator lint_on UNUSEDSIGNAL
-logic [W_TEX_SIDE-1:0]     tex_x_next;
+logic [W_TEX_SIDE-1:0] tex_x_next;
 
 // FSMs
-main_state_t               main_state;
-main_state_t               main_next_state;
-tex_state_t                tex_state;
-tex_state_t                tex_next_state;
+main_state_t           main_state;
+main_state_t           main_next_state;
+tex_state_t            tex_state;
+tex_state_t            tex_next_state;
 
 // ----------------------------------------------------------------------------
 // FSMs
@@ -470,7 +471,7 @@ always_ff @(posedge clk)
 // ----------------------------------------------------------------------------
 
 always_comb begin
-    proj_dist_next = proj_dist_ff;
+    proj_frac_next = proj_frac_ff;
     ext_ray_dir    = '0;
     ext_dist       = `FIXP_CAST(wall_dist_ff, proj_fixp_t);
 
@@ -481,12 +482,12 @@ always_comb begin
             ext_ray_dir = `FIXP_CAST(ray_dir_y, proj_fixp_t);
 
         ext_dist        = `FIXP_MULT(ext_dist, ext_ray_dir);
-        proj_dist_next  = `FIXP_CAST(ext_dist, pos_fixp_t);
+        proj_frac_next  = unsigned'(ext_dist[-1:$right(pos_fixp_t)]);
     end
 end
 
 always_ff @(posedge clk)
-    proj_dist_ff <= proj_dist_next;
+    proj_frac_ff <= proj_frac_next;
 
 // ----------------------------------------------------------------------------
 // Calculate x coordinate where ray hits the texture
@@ -498,9 +499,9 @@ always_comb begin
 
     if (tex_state == ST_TEX_X) begin
         if (ray_hit_side_o)
-            tex_x_frac = pos_x[-1:-POS_W_FRAC] + proj_dist_ff[-1:-POS_W_FRAC];
+            tex_x_frac = pos_x[-1:$right(pos_x)] + proj_frac_ff;
         else
-            tex_x_frac = pos_y[-1:-POS_W_FRAC] + proj_dist_ff[-1:-POS_W_FRAC];
+            tex_x_frac = pos_y[-1:$right(pos_y)] + proj_frac_ff;
 
         // Get highest W_TEX_SIDE bits and represent as integer, which is the
         // same as int(tex_x_frac << W_TEX_SIDE), or multiplication by TEX_SIDE.
