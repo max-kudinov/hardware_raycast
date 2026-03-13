@@ -420,11 +420,11 @@ async def monitor(dut):
         await RisingEdge(dut.px_clk)
 
         if render.valid_0.value:
-            px_x = int(render.px_x_i.value) - 1
+            px_x = int(render.px_x_0.value)
             px_y = int(render.px_y_0.value)
             tex_shade = int(render.rd_tex_shade.value)
             tex_x = int(render.rd_tex_x.value)
-            tex_step = int(render.rd_tex_step.value)
+            tex_step = int(render.rd_tex_step.value) / 2**12
             tex_height = int(render.rd_tex_height.value)
 
             mon_queue.put_nowait(
@@ -433,6 +433,9 @@ async def monitor(dut):
 
 
 async def scoreboard(dut):
+    y_zoom_offset = fixp_init(0, fixp_tex_start)
+    raw_y_pos = fixp_init(0, (6, 12))
+
     while True:
         await RisingEdge(dut.px_clk)
 
@@ -451,30 +454,34 @@ async def scoreboard(dut):
             if tex_end > FRAME_HEIGHT - 1:
                 tex_end = FRAME_HEIGHT - 1
 
-            if px_y >= tex_start and px_y <= tex_end:
+            if px_y >= tex_start and px_y < tex_end:
 
-                y_zoom_offset = fixp_init(0, fixp_tex_start)
                 if tex_step < tex_step_scale:
                     y_zoom_offset = fixp_expr(
                         TEX_SIDE // 2
-                        - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_zoom_offset),
+                        - fixp_expr(
+                            FRAME_HEIGHT // 2 * tex_step, y_zoom_offset
+                        ),
                         y_zoom_offset,
                     )
                 else:
                     y_zoom_offset = 0
 
-                y_pos = fixp_init(0, fixp_tex_pos)
-                y_pos = fixp_expr(
-                    y_zoom_offset + fixp_expr((px_y - tex_start) * tex_step, y_pos),
-                    y_pos,
+                tex_align_scaled = fixp_init(0, (6, 12))
+                tex_align_scaled = fixp_expr(
+                    (px_y - tex_start) * tex_step, tex_align_scaled
                 )
+                raw_y_pos = fixp_expr(y_zoom_offset + tex_align_scaled, raw_y_pos)
 
-                tex_y = int(y_pos)
+                tex_y = min(31, int(raw_y_pos))
 
                 if tex_shade:
                     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
                 else:
                     px_color = (texture[tex_y][tex_x], 0, 0)
+
+                surface.set_at((px_x, px_y), px_color)
+                pg.display.update()
 
             red, green, blue = px_color
 
@@ -487,7 +494,8 @@ async def scoreboard(dut):
                 assert dut_red == red
             except AssertionError as e:
                 print("=" * 80)
-                print(f"Pixel {px_x}")
+                print(f"X {px_x}")
+                print(f"Y {px_y}")
                 print(f"Expected red: {red}, got {dut_red}")
                 print("=" * 80)
                 breakpoint()
@@ -499,7 +507,8 @@ async def scoreboard(dut):
                 assert dut_green == green
             except AssertionError as e:
                 print("=" * 80)
-                print(f"Pixel {px_x}")
+                print(f"X {px_x}")
+                print(f"Y {px_y}")
                 print(f"Expected red: {green}, got {dut_green}")
                 print("=" * 80)
                 breakpoint()
@@ -511,16 +520,14 @@ async def scoreboard(dut):
                 assert dut_blue == blue
             except AssertionError as e:
                 print("=" * 80)
-                print(f"Pixel {px_x}")
+                print(f"X {px_x}")
+                print(f"Y {px_y}")
                 print(f"Expected red: {blue}, got {dut_blue}")
                 print("=" * 80)
                 breakpoint()
                 for _ in range(50):
                     await RisingEdge(dut.px_clk)
                 raise e
-
-            surface.set_at((px_x, px_y), px_color)
-            pg.display.update()
 
 
 async def pixel_calc(dut):
@@ -656,12 +663,12 @@ async def render(dut, buf_toggle):
             if y >= start_pos and y <= end_pos:
 
                 y_pos = fixp_init(0, fixp_tex_pos)
-                y_pos = fixp_expr(
-                    y_start + fixp_expr((y - start_pos) * tex_step, y_pos),
-                    y_pos,
-                )
+                temp = fixp_init(0, (5, 12))
+                temp = fixp_expr((y - start_pos) * tex_step, temp)
+                fixp_cast(temp, fixp_tex_pos)
+                y_pos = fixp_expr(y_start + temp, y_pos)
 
-                tex_y = min(31, int(y_pos))
+                tex_y = int(y_pos)
 
                 # px_pos = (tex_x, tex_y)
                 # px_color = texture.getpixel(px_pos)
@@ -669,15 +676,15 @@ async def render(dut, buf_toggle):
                 #     r, g, b = px_color  # type: ignore
                 #     px_color = (r >> 1, g >> 1, b >> 1)
 
-                # if tex_shade:
-                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
-                # else:
-                #     px_color = (texture[tex_y][tex_x], 0, 0)
-
                 if tex_shade:
-                    px_color = (127, 127, 127)
+                    px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
                 else:
-                    px_color = (255, 255, 255)
+                    px_color = (texture[tex_y][tex_x], 0, 0)
+
+                # if tex_shade:
+                #     px_color = (127, 127, 127)
+                # else:
+                #     px_color = (255, 255, 255)
 
                 surface.set_at((x, y), px_color)
 
@@ -890,11 +897,11 @@ async def run_raycast(dut):
 
     # while True:
 
-    cocotb.start_soon(coro_quit(dut))
-    controls(dut)
+    # cocotb.start_soon(coro_quit(dut))
+    # controls(dut)
     # await render(dut, buf_toggle)
     cocotb.start_soon(pixel_calc(dut))
     await RisingEdge(dut.raycast_top.frame_done)
-    surface.fill((0, 0, 0))
-    await RisingEdge(dut.raycast_top.frame_done)
-    buf_toggle = buf_toggle ^ 1
+    # surface.fill((0, 0, 0))
+    # await RisingEdge(dut.raycast_top.frame_done)
+    # buf_toggle = buf_toggle ^ 1
