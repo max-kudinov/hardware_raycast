@@ -53,13 +53,13 @@ localparam int unsigned    W_BUF_DATA    = 1                                +  /
 localparam int unsigned    BUF_DEPTH     = FRAME_WIDTH * 2;
 localparam int unsigned    W_BUF_ADDR    = $clog2(BUF_DEPTH);
 localparam tex_step_fixp_t TEX_SCALE_EXT = `FIXP_CAST(TEX_SCALE, tex_step_fixp_t);
-localparam int unsigned    FRAC_PADDING  = TEX_STEP_W_FRAC - (W_TEX_SIDE - TEX_STEP_W_INT);
 
 // ----------------------------------------------------------------------------
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef logic [-1:-signed'(TEX_STEP_W_FRAC)] temp_fixp_t;
+typedef logic [-1:-signed'(TEX_STEP_W_FRAC)]         temp_fixp_t;
+typedef logic [W_TEX_SIDE:-signed'(TEX_STEP_W_FRAC)] align_fixp_t;
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
@@ -105,9 +105,8 @@ tex_step_fixp_t        rd_tex_step;
 logic                  valid_1;
 logic [W_TEX_SIDE-1:0] tex_align_next_1;
 logic [W_TEX_SIDE-1:0] tex_align_ff_1;
-logic [W_V_RES-1:0]    tex_start_next_1;
-logic [W_V_RES-1:0]    tex_start_ff_1;
-logic [W_V_RES-1:0]    tex_end_1;
+logic [W_V_RES-1:0]    tex_start;
+logic [W_V_RES-1:0]    tex_end;
 logic                  in_texture_next_1;
 logic                  in_texture_ff_1;
 logic                  tex_shade_1;
@@ -123,9 +122,10 @@ temp_fixp_t temp_mult;
 
 // Stage 2
 logic                  valid_2;
-tex_step_fixp_t tex_align_ext;
-tex_step_fixp_t tex_align_scaled;
-tex_pos_fixp_t  y_pos;
+align_fixp_t tex_align_ext;
+align_fixp_t tex_step_ext;
+align_fixp_t tex_align_scaled;
+align_fixp_t raw_y_pos;
 
 logic [TEX_POS_W_INT-1:0] tex_y_next_2;
 logic [TEX_POS_W_INT-1:0] tex_y_ff_2;
@@ -248,9 +248,9 @@ always_ff @(posedge clk)
 assign { rd_tex_shade, rd_tex_x, rd_tex_step, rd_tex_height } = buf_rd_data;
 
 always_comb begin
-    tex_start_next_1  = (FRAME_HEIGHT >> 1) - W_V_RES'(rd_tex_height);
-    tex_end_1         = (FRAME_HEIGHT >> 1) + W_V_RES'(rd_tex_height);
-    in_texture_next_1 = (px_y_0 >= tex_start_next_1) && (px_y_0 <= tex_end_1);
+    tex_start         = (FRAME_HEIGHT >> 1) - W_V_RES'(rd_tex_height);
+    tex_end           = (FRAME_HEIGHT >> 1) + W_V_RES'(rd_tex_height);
+    in_texture_next_1 = (px_y_0 >= tex_start) && (px_y_0 < tex_end);
 
     step_frac         = rd_tex_step[-1:$right(rd_tex_step)];
     height_ext        = { FRAME_HEIGHT[W_V_RES-1:1], { TEX_START_W_FRAC {1'b0} } };
@@ -262,12 +262,11 @@ always_comb begin
     else
         y_zoom_offset_next_1 = '0;
 
-    tex_align_next_1 = W_TEX_SIDE'(px_y_0 - tex_start_next_1);
+    tex_align_next_1 = W_TEX_SIDE'(px_y_0 - tex_start);
 end
 
 always_ff @(posedge clk)
     if (valid_0) begin
-        tex_start_ff_1     <= tex_start_next_1;
         in_texture_ff_1    <= in_texture_next_1;
         y_zoom_offset_ff_1 <= y_zoom_offset_next_1;
         tex_align_ff_1     <= tex_align_next_1;
@@ -285,11 +284,13 @@ always_ff @(posedge clk)
 // ----------------------------------------------------------------------------
 
 always_comb begin
-    tex_align_ext    = { tex_align_ff_1, { FRAC_PADDING {1'b0} } };
-    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_1);
-    y_pos            = tex_start_fixp_t'(y_zoom_offset_ff_1) +
-                       tex_start_fixp_t'(tex_align_scaled[$left(tex_align_scaled) -: $size(y_pos)]);
-    tex_y_next_2     = y_pos[TEX_POS_W_INT-1:0];
+    tex_align_ext    = { 1'b0, tex_align_ff_1, { TEX_STEP_W_FRAC {1'b0} } };
+    tex_step_ext     = `FIXP_CAST(tex_step_1, align_fixp_t);
+    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_ext);
+
+    raw_y_pos        = `FIXP_CAST(y_zoom_offset_ff_1, align_fixp_t) + tex_align_scaled;
+
+    tex_y_next_2     = (raw_y_pos[W_TEX_SIDE:0] > 31) ? W_TEX_SIDE'(31) : raw_y_pos[W_TEX_SIDE-1:0];
 end
 
 always_ff @(posedge clk)
