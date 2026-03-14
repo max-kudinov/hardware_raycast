@@ -433,8 +433,8 @@ async def monitor(dut):
 
 
 async def scoreboard(dut):
-    y_zoom_offset = fixp_init(0, fixp_tex_start)
     raw_y_pos = fixp_init(0, (6, 12))
+    y_zoom_offset = fixp_init(0, fixp_tex_start)
 
     while True:
         await RisingEdge(dut.px_clk)
@@ -447,12 +447,7 @@ async def scoreboard(dut):
             )
 
             tex_start = FRAME_HEIGHT // 2 - tex_height
-            if tex_start < 0:
-                tex_start = 0
-
             tex_end = FRAME_HEIGHT // 2 + tex_height
-            if tex_end > FRAME_HEIGHT - 1:
-                tex_end = FRAME_HEIGHT - 1
 
             if px_y >= tex_start and px_y < tex_end:
 
@@ -465,13 +460,17 @@ async def scoreboard(dut):
                         y_zoom_offset,
                     )
                 else:
-                    y_zoom_offset = 0
+                    y_zoom_offset = fixp_expr(0, y_zoom_offset)
 
+                tex_align = px_y - tex_start
+                tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
                 tex_align_scaled = fixp_init(0, (6, 12))
                 tex_align_scaled = fixp_expr(
-                    (px_y - tex_start) * tex_step, tex_align_scaled
+                    tex_align_ext * tex_step, tex_align_scaled
                 )
-                raw_y_pos = fixp_expr(y_zoom_offset + tex_align_scaled, raw_y_pos)
+                raw_y_pos = fixp_expr(
+                    y_zoom_offset + (tex_align_scaled << 3), raw_y_pos
+                )
 
                 tex_y = min(31, int(raw_y_pos))
 
@@ -509,7 +508,7 @@ async def scoreboard(dut):
                 print("=" * 80)
                 print(f"X {px_x}")
                 print(f"Y {px_y}")
-                print(f"Expected red: {green}, got {dut_green}")
+                print(f"Expected green: {green}, got {dut_green}")
                 print("=" * 80)
                 breakpoint()
                 for _ in range(50):
@@ -522,7 +521,7 @@ async def scoreboard(dut):
                 print("=" * 80)
                 print(f"X {px_x}")
                 print(f"Y {px_y}")
-                print(f"Expected red: {blue}, got {dut_blue}")
+                print(f"Expected blue: {blue}, got {dut_blue}")
                 print("=" * 80)
                 breakpoint()
                 for _ in range(50):
@@ -649,26 +648,50 @@ async def render(dut, buf_toggle):
         if end_pos > FRAME_HEIGHT - 1:
             end_pos = FRAME_HEIGHT - 1
 
-        y_start = fixp_init(0, fixp_tex_start)
+        y_zoom_offset = fixp_init(0, (4, 4))
+
         if tex_step < tex_step_scale:
-            y_start = fixp_expr(
+            y_zoom_offset = fixp_expr(
                 TEX_SIDE // 2
-                - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_start),
-                y_start,
+                - fixp_expr(
+                    FRAME_HEIGHT // 2 * tex_step, y_zoom_offset
+                ),
+                y_zoom_offset,
             )
         else:
-            y_start = 0
+            y_zoom_offset = 0
+
+        # y_start = fixp_init(0, fixp_tex_start)
+        # if tex_step < tex_step_scale:
+        #     y_start = fixp_expr(
+        #         TEX_SIDE // 2
+        #         - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_start),
+        #         y_start,
+        #     )
+        # else:
+        #     y_start = 0
 
         for y in range(FRAME_HEIGHT):
-            if y >= start_pos and y <= end_pos:
+            if y >= start_pos and y < end_pos:
 
-                y_pos = fixp_init(0, fixp_tex_pos)
-                temp = fixp_init(0, (5, 12))
-                temp = fixp_expr((y - start_pos) * tex_step, temp)
-                fixp_cast(temp, fixp_tex_pos)
-                y_pos = fixp_expr(y_start + temp, y_pos)
+                # y_pos = fixp_init(0, fixp_tex_pos)
+                # temp = fixp_init(0, (5, 12))
+                # temp = fixp_expr((y - start_pos) * tex_step, temp)
+                # fixp_cast(temp, fixp_tex_pos)
+                # y_pos = fixp_expr(y_start + temp, y_pos)
+                #
+                # tex_y = int(y_pos)
 
-                tex_y = int(y_pos)
+                tex_align = y - start_pos
+                tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
+                raw_y_pos = fixp_init(0, (6, 12))
+                tex_align_scaled = fixp_init(0, (6, 12))
+                tex_align_scaled = fixp_expr(
+                    tex_align_ext * tex_step, tex_align_scaled
+                )
+                raw_y_pos = fixp_expr(y_zoom_offset + (tex_align_scaled << 3), raw_y_pos)
+
+                tex_y = min(31, int(raw_y_pos))
 
                 # px_pos = (tex_x, tex_y)
                 # px_color = texture.getpixel(px_pos)
@@ -896,12 +919,11 @@ async def run_raycast(dut):
     buf_toggle = 1
 
     # while True:
+    #     controls(dut)
+    #     await render(dut, buf_toggle)
+    #     buf_toggle = buf_toggle ^ 1
 
-    # cocotb.start_soon(coro_quit(dut))
-    # controls(dut)
-    # await render(dut, buf_toggle)
     cocotb.start_soon(pixel_calc(dut))
-    await RisingEdge(dut.raycast_top.frame_done)
-    # surface.fill((0, 0, 0))
-    # await RisingEdge(dut.raycast_top.frame_done)
-    # buf_toggle = buf_toggle ^ 1
+    while True:
+        # cocotb.start_soon(coro_quit(dut))
+        await RisingEdge(dut.raycast_top.frame_done)
