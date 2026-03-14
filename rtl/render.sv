@@ -53,6 +53,7 @@ localparam int unsigned    W_BUF_DATA    = 1                                +  /
 localparam int unsigned    BUF_DEPTH     = FRAME_WIDTH * 2;
 localparam int unsigned    W_BUF_ADDR    = $clog2(BUF_DEPTH);
 localparam tex_step_fixp_t TEX_SCALE_EXT = `FIXP_CAST(TEX_SCALE, tex_step_fixp_t);
+localparam int unsigned    ZERO_PADDING  = TEX_STEP_W_FRAC - W_V_RES + 2;
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -103,8 +104,8 @@ tex_step_fixp_t        rd_tex_step;
 
 // Stage 1
 logic                  valid_1;
-logic [W_TEX_SIDE-1:0] tex_align_next_1;
-logic [W_TEX_SIDE-1:0] tex_align_ff_1;
+logic [W_V_RES-1:0]    tex_align_next_1;
+logic [W_V_RES-1:0]    tex_align_ff_1;
 logic [W_V_RES-1:0]    tex_start;
 logic [W_V_RES-1:0]    tex_end;
 logic                  in_texture_next_1;
@@ -214,6 +215,7 @@ assign buf_wr_data = { wr_tex_shade, wr_tex_x, wr_tex_step, wr_tex_height[W_V_RE
 assign buf_write   = calc_done;
 assign buf_wr_addr = W_BUF_ADDR'(calc_px_x) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { buf_toggle } });
 
+
 // ----------------------------------------------------------------------------
 // Pipeline that calculates pixel values based on coordinates and data that is
 // read from the texture buffer
@@ -222,7 +224,7 @@ assign buf_wr_addr = W_BUF_ADDR'(calc_px_x) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RE
 // ----------------------------------------------------------------------------
 
 assign buf_read    = in_range_i;
-assign buf_rd_addr = W_BUF_ADDR'(px_x_i) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { buf_toggle } });
+assign buf_rd_addr = W_BUF_ADDR'(px_x_i) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { !buf_toggle } });
 
 // Read data is available in the next clock cycle
 always_ff @(posedge clk)
@@ -262,7 +264,7 @@ always_comb begin
     else
         y_zoom_offset_next_1 = '0;
 
-    tex_align_next_1 = W_TEX_SIDE'(px_y_0 - tex_start);
+    tex_align_next_1 = px_y_0 - tex_start;
 end
 
 always_ff @(posedge clk)
@@ -284,13 +286,13 @@ always_ff @(posedge clk)
 // ----------------------------------------------------------------------------
 
 always_comb begin
-    tex_align_ext    = { 1'b0, tex_align_ff_1, { TEX_STEP_W_FRAC {1'b0} } };
+    tex_align_ext    = { tex_align_ff_1, 9'd0 };
     tex_step_ext     = `FIXP_CAST(tex_step_1, align_fixp_t);
-    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_ext);
 
-    raw_y_pos        = `FIXP_CAST(y_zoom_offset_ff_1, align_fixp_t) + tex_align_scaled;
+    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_1);
+    raw_y_pos        = { { ZERO_PADDING {1'b0} }, y_zoom_offset_ff_1, 5'd0} + tex_align_scaled;
 
-    tex_y_next_2     = (raw_y_pos[W_TEX_SIDE:0] > 31) ? W_TEX_SIDE'(31) : raw_y_pos[W_TEX_SIDE-1:0];
+    tex_y_next_2     = (raw_y_pos[$left(raw_y_pos):-3] > 31) ? W_TEX_SIDE'(31) : raw_y_pos[1:-3];
 end
 
 always_ff @(posedge clk)
