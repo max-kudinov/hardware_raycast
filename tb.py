@@ -419,9 +419,9 @@ async def monitor(dut):
     while True:
         await RisingEdge(dut.px_clk)
 
-        if render.valid_0.value:
-            px_x = int(render.px_x_0.value)
-            px_y = int(render.px_y_0.value)
+        if render.valids.value[0]:
+            px_x = int(render.px_x_i.value) - 1
+            px_y = int(render.px_y_p0.value)
             tex_shade = int(render.rd_tex_shade.value)
             tex_x = int(render.rd_tex_x.value)
             tex_step = int(render.rd_tex_step.value) / 2**12
