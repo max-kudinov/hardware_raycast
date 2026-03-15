@@ -42,25 +42,31 @@ module render
 );
 
 // ----------------------------------------------------------------------------
-// Local parameters declaration
-// ----------------------------------------------------------------------------
-
-localparam int unsigned    W_BUF_DATA    = 1                                +  // tex_shade
-                                           W_TEX_SIDE                       +  // tex_x
-                                           TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
-                                           (W_V_RES - 1);                      // tex_height (LSB is not used)
-
-localparam int unsigned    BUF_DEPTH     = FRAME_WIDTH * 2;
-localparam int unsigned    W_BUF_ADDR    = $clog2(BUF_DEPTH);
-localparam tex_step_fixp_t TEX_SCALE_EXT = `FIXP_CAST(TEX_SCALE, tex_step_fixp_t);
-localparam int unsigned    ZERO_PADDING  = TEX_STEP_W_FRAC - W_V_RES + 2;
-
-// ----------------------------------------------------------------------------
 // Local types declaration
 // ----------------------------------------------------------------------------
 
 typedef logic [-1:-signed'(TEX_STEP_W_FRAC)]         temp_fixp_t;
 typedef logic [W_TEX_SIDE:-signed'(TEX_STEP_W_FRAC)] align_fixp_t;
+
+// ----------------------------------------------------------------------------
+// Local parameters declaration
+// ----------------------------------------------------------------------------
+
+localparam int unsigned    W_BUF_DATA     = 1                                +  // tex_shade
+                                            W_TEX_SIDE                       +  // tex_x
+                                            TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
+                                            (W_V_RES - 1);                      // tex_height (LSB is not used)
+
+localparam int unsigned     N_PIPE_STAGES = 4;                                  // 0 to 3
+localparam int unsigned     W_VALIDS      = N_PIPE_STAGES - 1;                  // Don't need valid for the last stage
+
+localparam int unsigned     BUF_DEPTH     = FRAME_WIDTH * 2;
+localparam int unsigned     W_BUF_ADDR    = $clog2(BUF_DEPTH);
+
+localparam tex_step_fixp_t  TEX_SCALE_EXT = `FIXP_CAST(TEX_SCALE, tex_step_fixp_t);
+localparam int              ALIGN_SHIFT   = W_V_RES - (W_TEX_SIDE + 1);
+localparam int unsigned     ALIGN_EXT_PAD = unsigned'($size(align_fixp_t)) - W_V_RES;
+localparam [W_TEX_SIDE-1:0] TEX_Y_MAX     = 2**W_TEX_SIDE - 1;
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
@@ -90,56 +96,58 @@ logic                  calc_done;
 logic [W_H_RES-1:0]    calc_px_x;
 logic                  calc_active;
 
-// Stage 0
-logic                  valid_0;
-logic [W_V_RES-1:0]    px_y_0;
-logic [W_H_RES-1:0]    px_x_0;
+// Pipeline control path
+logic [W_VALIDS-1:0]   valids;
 
+// Stage 0
+logic [W_V_RES-1:0]    px_y_p0;
 // Texture data from the buffer
 logic [W_V_RES-2:0]    rd_tex_height;
 logic                  rd_tex_shade;
 logic [W_TEX_SIDE-1:0] rd_tex_x;
 tex_step_fixp_t        rd_tex_step;
 
-
 // Stage 1
-logic                  valid_1;
-logic [W_V_RES-1:0]    tex_align_next_1;
-logic [W_V_RES-1:0]    tex_align_ff_1;
+logic [W_V_RES-1:0]    tex_align_next;
+logic [W_V_RES-1:0]    tex_align_p1;
+
 logic [W_V_RES-1:0]    tex_start;
 logic [W_V_RES-1:0]    tex_end;
-logic                  in_texture_next_1;
-logic                  in_texture_ff_1;
-logic                  tex_shade_1;
-logic [W_TEX_SIDE-1:0] tex_x_1;
-tex_step_fixp_t        tex_step_1;
+logic                  in_texture_next;
+logic                  in_texture_p1;
 
-tex_start_fixp_t y_zoom_offset_next_1;
-tex_start_fixp_t y_zoom_offset_ff_1;
+logic                  tex_shade_p1;
+logic [W_TEX_SIDE-1:0] tex_x_p1;
+tex_step_fixp_t        tex_step_p1;
 
-temp_fixp_t step_frac;
-temp_fixp_t height_ext;
-temp_fixp_t temp_mult;
+tex_start_fixp_t       y_zoom_offset_next;
+tex_start_fixp_t       y_zoom_offset_p1;
+temp_fixp_t            step_frac;
+temp_fixp_t            height_ext;
+temp_fixp_t            temp_mult;
 
 // Stage 2
-logic                  valid_2;
-align_fixp_t tex_align_ext;
-align_fixp_t tex_step_ext;
-align_fixp_t tex_align_scaled;
-align_fixp_t raw_y_pos;
+align_fixp_t           tex_align_ext;
+align_fixp_t           tex_align_scaled;
 
-logic [TEX_POS_W_INT-1:0] tex_y_next_2;
-logic [TEX_POS_W_INT-1:0] tex_y_ff_2;
-logic                  in_texture_ff_2;
-logic [W_TEX_SIDE-1:0] tex_x_2;
-logic                  tex_shade_2;
+logic [W_V_RES-1:0]    raw_tex_y;
+logic [W_TEX_SIDE-1:0] tex_y_next;
+logic [W_TEX_SIDE-1:0] tex_y_p2;
+
+logic                  in_texture_p2;
+logic [W_TEX_SIDE-1:0] tex_x_p2;
+logic                  tex_shade_p2;
 
 // Stage 3
-logic [W_COLOR-1:0]   red_next;
-logic [W_COLOR-1:0]   green_next;
-logic [W_COLOR-1:0]   blue_next;
+logic [W_COLOR-1:0]    red_next;
+logic [W_COLOR-1:0]    green_next;
+logic [W_COLOR-1:0]    blue_next;
 
-logic [TEX_SIDE-1:0] texture [TEX_SIDE];
+logic [TEX_SIDE-1:0]   texture [TEX_SIDE];
+
+// ----------------------------------------------------------------------------
+// Texture column calculation
+// ----------------------------------------------------------------------------
 
 always_ff @(posedge clk)
     if (rst)
@@ -219,26 +227,29 @@ assign buf_wr_addr = W_BUF_ADDR'(calc_px_x) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RE
 // ----------------------------------------------------------------------------
 // Pipeline that calculates pixel values based on coordinates and data that is
 // read from the texture buffer
+// ----------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------
 // Stage 0
-// Buffer read control signals, register inputs for next stage
+// Send signal to read from buffer, save corresponding y coordinate for the
+// next stage
 // ----------------------------------------------------------------------------
 
 assign buf_read    = in_range_i;
 assign buf_rd_addr = W_BUF_ADDR'(px_x_i) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { !buf_toggle } });
 
-// Read data is available in the next clock cycle
 always_ff @(posedge clk)
-    if (rst)
-        valid_0 <= '0;
-    else
-        valid_0 <= buf_read;
+    px_y_p0 <= px_y_i;
 
+// Valid data is available on the next clock cycle after read
+// Every bit of valid shift register correspond to validity of data on each
+// stage
 always_ff @(posedge clk)
-    px_y_0 <= px_y_i;
-
-// TODO: temp, remove
-always_ff @(posedge clk)
-    px_x_0 <= px_x_i;
+    if (rst) begin
+        valids <= '0;
+    end else begin
+        valids <= { valids[W_VALIDS-2:0], buf_read };
+    end
 
 // ----------------------------------------------------------------------------
 // Stage 1
@@ -250,35 +261,31 @@ always_ff @(posedge clk)
 assign { rd_tex_shade, rd_tex_x, rd_tex_step, rd_tex_height } = buf_rd_data;
 
 always_comb begin
-    tex_start         = (FRAME_HEIGHT >> 1) - W_V_RES'(rd_tex_height);
-    tex_end           = (FRAME_HEIGHT >> 1) + W_V_RES'(rd_tex_height);
-    in_texture_next_1 = (px_y_0 >= tex_start) && (px_y_0 < tex_end);
+    tex_start       = (FRAME_HEIGHT >> 1) - W_V_RES'(rd_tex_height);
+    tex_end         = (FRAME_HEIGHT >> 1) + W_V_RES'(rd_tex_height);
+    in_texture_next = (px_y_p0 >= tex_start) && (px_y_p0 < tex_end);
+    tex_align_next  = px_y_p0 - tex_start;
 
-    step_frac         = rd_tex_step[-1:$right(rd_tex_step)];
-    height_ext        = { FRAME_HEIGHT[W_V_RES-1:1], { TEX_START_W_FRAC {1'b0} } };
-    temp_mult         = `FIXP_MULT(height_ext, step_frac);
+    step_frac       = rd_tex_step[-1:$right(rd_tex_step)];
+    height_ext      = { FRAME_HEIGHT[W_V_RES-1:1], { TEX_START_W_FRAC {1'b0} } };
+    temp_mult       = `FIXP_MULT(height_ext, step_frac);
 
     if (rd_tex_step < TEX_SCALE_EXT)
-        y_zoom_offset_next_1 = { TEX_START_W_INT'(TEX_SIDE >> 1), { TEX_START_W_FRAC {1'b0} } } -
-                               { temp_mult }[$size(y_zoom_offset_next_1)-1:0];
+        y_zoom_offset_next = { TEX_START_W_INT'(TEX_SIDE >> 1), { TEX_START_W_FRAC {1'b0} } } -
+                             { temp_mult }[$size(y_zoom_offset_next)-1:0];
     else
-        y_zoom_offset_next_1 = '0;
-
-    tex_align_next_1 = px_y_0 - tex_start;
+        y_zoom_offset_next = '0;
 end
 
 always_ff @(posedge clk)
-    if (valid_0) begin
-        in_texture_ff_1    <= in_texture_next_1;
-        y_zoom_offset_ff_1 <= y_zoom_offset_next_1;
-        tex_align_ff_1     <= tex_align_next_1;
-        tex_shade_1        <= rd_tex_shade;
-        tex_x_1            <= rd_tex_x;
-        tex_step_1         <= rd_tex_step;
-     end
-
-always_ff @(posedge clk)
-    valid_1 <= valid_0;
+    if (valids[0]) begin
+        in_texture_p1    <= in_texture_next;
+        y_zoom_offset_p1 <= y_zoom_offset_next;
+        tex_align_p1     <= tex_align_next;
+        tex_shade_p1     <= rd_tex_shade;
+        tex_x_p1         <= rd_tex_x;
+        tex_step_p1      <= rd_tex_step;
+    end
 
 // ----------------------------------------------------------------------------
 // Stage 2
@@ -286,25 +293,35 @@ always_ff @(posedge clk)
 // ----------------------------------------------------------------------------
 
 always_comb begin
-    tex_align_ext    = { tex_align_ff_1, 9'd0 };
-    tex_step_ext     = `FIXP_CAST(tex_step_1, align_fixp_t);
+    // In order to make mult operands shorter, we represent lower bits of
+    // integer number in a fractional part (same as left shift), the correct
+    // value could be later restored by applying opposite right shift
+    tex_align_ext    = { tex_align_p1, { ALIGN_EXT_PAD {1'b0} } };
+    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_p1);
 
-    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_1);
-    raw_y_pos        = { { ZERO_PADDING {1'b0} }, y_zoom_offset_ff_1, 5'd0} + tex_align_scaled;
+    // Shift y_zoom_offset to account for shifted tex_align_scaled, then take
+    // the integer part of the sum (accounting for previous shift, so we take
+    // a few bits from "fractional" part and represent it as lower bits of integer)
+    raw_tex_y        = {
+                        (`FIXP_CAST(y_zoom_offset_p1, align_fixp_t) >> ALIGN_SHIFT)
+                        + tex_align_scaled
+                       }[$size(align_fixp_t)-1 -: W_V_RES];
 
-    tex_y_next_2     = (raw_y_pos[$left(raw_y_pos):-3] > 31) ? W_TEX_SIDE'(31) : raw_y_pos[1:-3];
+    // If raw_tex_y is greater than maximum texel coordinate
+    // clip to max coordinate value
+    if (raw_tex_y > W_V_RES'(TEX_Y_MAX))
+        tex_y_next = TEX_Y_MAX;
+    else
+        tex_y_next = raw_tex_y[W_TEX_SIDE-1:0];
 end
 
 always_ff @(posedge clk)
-    if (valid_1) begin
-        in_texture_ff_2 <= in_texture_ff_1;
-        tex_shade_2     <= tex_shade_1;
-        tex_x_2         <= tex_x_1;
-        tex_y_ff_2      <= tex_y_next_2;
+    if (valids[1]) begin
+        in_texture_p2 <= in_texture_p1;
+        tex_shade_p2  <= tex_shade_p1;
+        tex_x_p2      <= tex_x_p1;
+        tex_y_p2      <= tex_y_next;
     end
-
-always_ff @(posedge clk)
-    valid_2 <= valid_1;
 
 // ----------------------------------------------------------------------------
 // Stage 3
@@ -316,19 +333,19 @@ always_comb begin
     green_next = '0;
     blue_next  = '0;
 
-    if (in_texture_ff_2) begin
-        if (tex_shade_2) begin
-            if (!texture[tex_y_ff_2][tex_x_2])
+    if (in_texture_p2) begin
+        if (tex_shade_p2) begin
+            if (!texture[tex_y_p2][tex_x_p2])
                 red_next = 255 >> 1;
         end else begin
-            if (!texture[tex_y_ff_2][tex_x_2])
+            if (!texture[tex_y_p2][tex_x_p2])
                 red_next = 255;
         end
     end
 end
 
 always_ff @(posedge clk)
-    if (valid_2) begin
+    if (valids[2]) begin
         red_o   <= red_next;
         green_o <= green_next;
         blue_o  <= blue_next;
