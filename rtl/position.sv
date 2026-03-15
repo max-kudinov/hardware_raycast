@@ -36,8 +36,8 @@ module position
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam real START_POS_X = 10.0;
-localparam real START_POS_Y = 10.0;
+localparam real START_POS_X = 18.0;
+localparam real START_POS_Y = 12.0;
 
 // ----------------------------------------------------------------------------
 // Local types declaration

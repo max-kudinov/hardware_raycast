@@ -60,24 +60,14 @@ fixp_inv = (
 # tex_pkg types
 # ----------------------------------------------------------------------------
 
-fixp_tex_pos = (
-    int(tex_pkg.TEX_POS_W_INT.value),
-    int(tex_pkg.TEX_POS_W_FRAC.value)
-)
-
-fixp_tex_start = (
-    int(tex_pkg.TEX_START_W_INT.value),
-    int(tex_pkg.TEX_START_W_FRAC.value)
+fixp_tex_zoom = (
+    int(tex_pkg.TEX_ZOOM_W_INT.value),
+    int(tex_pkg.TEX_ZOOM_W_FRAC.value)
 )
 
 fixp_tex_step = (
     int(tex_pkg.TEX_STEP_W_INT.value),
     int(tex_pkg.TEX_STEP_W_FRAC.value)
-)
-
-fixp_tex_scale = (
-    int(tex_pkg.TEX_SCALE_W_INT.value),
-    int(tex_pkg.TEX_SCALE_W_FRAC.value)
 )
 
 pg.init()
@@ -160,7 +150,7 @@ max_dist = fixp_init(2 ** fixp_ext_pos[0] - 1, fixp_ext_pos)
 pos_max = fixp_init(2 ** fixp_pos[0] - 1, fixp_pos)
 
 step = 2.0 / FRAME_WIDTH * 2**fixp_ray[1]
-tex_step_scale = fixp_init(TEX_SIDE / FRAME_HEIGHT, fixp_tex_scale)
+tex_step_scale = fixp_init(TEX_SIDE / FRAME_HEIGHT, fixp_tex_step)
 
 # Mimic rounding of int cast in SystemVerilog
 if step < 0.5:
@@ -434,7 +424,7 @@ async def monitor(dut):
 
 async def scoreboard(dut):
     raw_y_pos = fixp_init(0, (6, 12))
-    y_zoom_offset = fixp_init(0, fixp_tex_start)
+    tex_zoom = fixp_init(0, fixp_tex_zoom)
 
     while True:
         await RisingEdge(dut.px_clk)
@@ -452,15 +442,15 @@ async def scoreboard(dut):
             if px_y >= tex_start and px_y < tex_end:
 
                 if tex_step < tex_step_scale:
-                    y_zoom_offset = fixp_expr(
+                    tex_zoom = fixp_expr(
                         TEX_SIDE // 2
                         - fixp_expr(
-                            FRAME_HEIGHT // 2 * tex_step, y_zoom_offset
+                            FRAME_HEIGHT // 2 * tex_step, tex_zoom
                         ),
-                        y_zoom_offset,
+                        tex_zoom,
                     )
                 else:
-                    y_zoom_offset = fixp_expr(0, y_zoom_offset)
+                    tex_zoom = fixp_expr(0, tex_zoom)
 
                 tex_align = px_y - tex_start
                 tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
@@ -469,7 +459,7 @@ async def scoreboard(dut):
                     tex_align_ext * tex_step, tex_align_scaled
                 )
                 raw_y_pos = fixp_expr(
-                    y_zoom_offset + (tex_align_scaled << 3), raw_y_pos
+                    tex_zoom + (tex_align_scaled << 3), raw_y_pos
                 )
 
                 tex_y = min(31, int(raw_y_pos))

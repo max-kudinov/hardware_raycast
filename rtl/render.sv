@@ -63,7 +63,6 @@ localparam int unsigned     W_VALIDS      = N_PIPE_STAGES - 1;                  
 localparam int unsigned     BUF_DEPTH     = FRAME_WIDTH * 2;
 localparam int unsigned     W_BUF_ADDR    = $clog2(BUF_DEPTH);
 
-localparam tex_step_fixp_t  TEX_SCALE_EXT = `FIXP_CAST(TEX_SCALE, tex_step_fixp_t);
 localparam int              ALIGN_SHIFT   = W_V_RES - (W_TEX_SIDE + 1);
 localparam int unsigned     ALIGN_EXT_PAD = unsigned'($size(align_fixp_t)) - W_V_RES;
 localparam [W_TEX_SIDE-1:0] TEX_Y_MAX     = 2**W_TEX_SIDE - 1;
@@ -120,8 +119,8 @@ logic                  tex_shade_p1;
 logic [W_TEX_SIDE-1:0] tex_x_p1;
 tex_step_fixp_t        tex_step_p1;
 
-tex_start_fixp_t       y_zoom_offset_next;
-tex_start_fixp_t       y_zoom_offset_p1;
+tex_zoom_fixp_t        tex_zoom_next;
+tex_zoom_fixp_t        tex_zoom_p1;
 temp_fixp_t            step_frac;
 temp_fixp_t            height_ext;
 temp_fixp_t            temp_mult;
@@ -267,24 +266,24 @@ always_comb begin
     tex_align_next  = px_y_p0 - tex_start;
 
     step_frac       = rd_tex_step[-1:$right(rd_tex_step)];
-    height_ext      = { FRAME_HEIGHT[W_V_RES-1:1], { TEX_START_W_FRAC {1'b0} } };
+    height_ext      = { FRAME_HEIGHT[W_V_RES-1:1], { TEX_ZOOM_W_FRAC {1'b0} } };
     temp_mult       = `FIXP_MULT(height_ext, step_frac);
 
-    if (rd_tex_step < TEX_SCALE_EXT)
-        y_zoom_offset_next = { TEX_START_W_INT'(TEX_SIDE >> 1), { TEX_START_W_FRAC {1'b0} } } -
-                             { temp_mult }[$size(y_zoom_offset_next)-1:0];
+    if (rd_tex_step < TEX_SCALE)
+        tex_zoom_next = { TEX_ZOOM_W_INT'(TEX_SIDE >> 1), { TEX_ZOOM_W_FRAC {1'b0} } } -
+                        { temp_mult }[$size(tex_zoom_next)-1:0];
     else
-        y_zoom_offset_next = '0;
+        tex_zoom_next = '0;
 end
 
 always_ff @(posedge clk)
     if (valids[0]) begin
-        in_texture_p1    <= in_texture_next;
-        y_zoom_offset_p1 <= y_zoom_offset_next;
-        tex_align_p1     <= tex_align_next;
-        tex_shade_p1     <= rd_tex_shade;
-        tex_x_p1         <= rd_tex_x;
-        tex_step_p1      <= rd_tex_step;
+        in_texture_p1 <= in_texture_next;
+        tex_zoom_p1   <= tex_zoom_next;
+        tex_align_p1  <= tex_align_next;
+        tex_shade_p1  <= rd_tex_shade;
+        tex_x_p1      <= rd_tex_x;
+        tex_step_p1   <= rd_tex_step;
     end
 
 // ----------------------------------------------------------------------------
@@ -303,7 +302,7 @@ always_comb begin
     // the integer part of the sum (accounting for previous shift, so we take
     // a few bits from "fractional" part and represent it as lower bits of integer)
     raw_tex_y        = {
-                        (`FIXP_CAST(y_zoom_offset_p1, align_fixp_t) >> ALIGN_SHIFT)
+                        (`FIXP_CAST(tex_zoom_p1, align_fixp_t) >> ALIGN_SHIFT)
                         + tex_align_scaled
                        }[$size(align_fixp_t)-1 -: W_V_RES];
 

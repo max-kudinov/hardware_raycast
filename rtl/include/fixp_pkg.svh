@@ -39,12 +39,13 @@ endpackage : fixp_pkg
 `define INT_TO_FIXP(int_num, T) \
     T'({ ($left(T) + 1)'(int_num), { -$right(T) {1'b0} } })
 
-`define FIXP_MULT(a, b)           \
-    type(a)'(                     \
-        ({(2 * $size(a))'(a)} *   \
-         {(2 * $size(a))'(b)} +   \
-         (1 << (-$right(a) - 1))) \
-         >> -$right(a)            \
+`define FIXP_MULT(a, b)              \
+    type(a)'(                        \
+        (2 * $size(a))'(             \
+            ((a * b) +               \
+            (1 << (-$right(a) - 1))) \
+            >> -$right(a)            \
+        )                            \
     )
 
 `define FIXP_MULT_TRUNC(a, b) \
