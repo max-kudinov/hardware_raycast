@@ -10,6 +10,7 @@ package tex_pkg;
 
     localparam int unsigned TEX_SIDE        = 32;
     localparam int unsigned W_TEX_SIDE      = $clog2(TEX_SIDE);
+    localparam int unsigned W_PX_CODE       = 4;
 
     localparam int unsigned TEX_ZOOM_W_INT  = 4;
     localparam int unsigned TEX_ZOOM_W_FRAC = 4;

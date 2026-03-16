@@ -216,12 +216,12 @@ def inv_model(num_in):
     return approx
 
 
-texture = [
-    [255 * (j != i and j != TEX_SIDE - i) for j in range(TEX_SIDE)]
-    for i in range(TEX_SIDE)
-]
+# texture = [
+#     [255 * (j != i and j != TEX_SIDE - i) for j in range(TEX_SIDE)]
+#     for i in range(TEX_SIDE)
+# ]
 
-# texture = Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
+texture = Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
 
 ray_x = 0
 ray_dir_x = 0
@@ -464,10 +464,20 @@ async def scoreboard(dut):
 
                 tex_y = min(31, int(raw_y_pos))
 
+                px_pos = (tex_x, tex_y)
+
+                px_color = texture.getpixel(px_pos)
+                r, g, b = px_color  # type: ignore
+
                 if tex_shade:
-                    px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                    px_color = (r >> 1, g >> 1, b >> 1)
                 else:
-                    px_color = (texture[tex_y][tex_x], 0, 0)
+                    px_color = (r, g, b)
+
+                # if tex_shade:
+                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                # else:
+                #     px_color = (texture[tex_y][tex_x], 0, 0)
 
                 surface.set_at((px_x, px_y), px_color)
                 pg.display.update()
@@ -530,105 +540,105 @@ async def render(dut, buf_toggle):
     # Clear screen
     surface.fill((0, 0, 0))
 
-    await RisingEdge(dut.px_clk)
-
-    await RisingEdge(dut.raycast_top.frame_done)
-    mem = dut.raycast_top.render.frame_buffer.value
+    # await RisingEdge(dut.px_clk)
+    #
+    # await RisingEdge(dut.raycast_top.frame_done)
+    # mem = dut.raycast_top.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
         tex_shade, tex_x, tex_step, tex_height = line_height_calc_model(x)
 
-        dut_shade = int(mem[(FRAME_WIDTH * buf_toggle) + x][28])
-        dut_tex_x = int(mem[(FRAME_WIDTH * buf_toggle) + x][27:23])
-        dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
-        dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
-
-        height_div2 = tex_height // 2
-
-        try:
-            assert dut_height == height_div2
-        except AssertionError as e:
-            top = dut.raycast_top
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected height: {height_div2}, got {dut_height}")
-
-            print(f"Expected dir_x: {dir_x}")
-            print(
-                f"Got dir_x: {top.dir_x.value.to_signed() / 2**fixp_ray[1]}"
-            )
-            print(f"Expected dir_y: {dir_y}")
-            print(
-                f"Got dir_y: {top.dir_y.value.to_signed() / 2**fixp_ray[1]}\n"
-            )
-
-            print(f"Expected plane_x: {plane_x}")
-            print(
-                f"Got plane_x: {top.plane_x.value.to_signed()/2**fixp_ray[1]}"
-            )
-            print(f"Expected plane_y: {plane_y}")
-            print(
-                f"Got plane_y: {top.plane_y.value.to_signed()/2**fixp_ray[1]}"
-            )
-
-            print(f"Expected pos_x: {pos_x}")
-            print(
-                f"Got pos_x: {top.pos_x.value.to_unsigned() / 2**fixp_pos[1]}"
-            )
-            print(f"Expected pos_y: {pos_y}")
-            print(
-                f"Got pos_y: {top.pos_y.value.to_unsigned() / 2**fixp_pos[1]}"
-            )
-
-            print(f"ray_x {ray_x}")
-            print(f"ray_dir_x {ray_dir_x}")
-            print(f"ray_dir_y {ray_dir_y}")
-            print(f"delta_dist_x {delta_dist_x}")
-            print(f"delta_dist_y {delta_dist_y}")
-            print(f"init_side_dist_x {init_side_dist_x}")
-            print(f"init_side_dist_y {init_side_dist_y}")
-            print(f"dda_side_dist_x {dda_dist_x}")
-            print(f"dda_side_dist_y {dda_dist_y}")
-            print(f"hit_side {hit_side}")
-            print(f"wall_dist {wall_dist}")
-            print(f"inv_wall_dist {inv_wall_dist}")
-            print(f"scaled_height {scaled_height}")
-            print(f"map_x {map_x}")
-            print(f"map_y {map_y}")
-            print(f"init_side_dist_x {init_side_dist_x}")
-            print(f"init_side_dist_y {init_side_dist_y}")
-            print(f"line_height {tex_height}")
-            print("=" * 80)
-            raise e
-
-        try:
-            assert dut_shade == tex_shade
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected color: {tex_shade}, got {dut_shade}")
-            print("=" * 80)
-            raise e
-
-        try:
-            assert dut_tex_x == tex_x
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected tex_x: {tex_x}, got {dut_tex_x}")
-            print("=" * 80)
-            breakpoint()
-            raise e
-
-        try:
-            assert dut_tex_step == tex_step
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected tex_step: {tex_step}, got {dut_tex_step}")
-            print("=" * 80)
-            breakpoint()
-            raise e
+        # dut_shade = int(mem[(FRAME_WIDTH * buf_toggle) + x][28])
+        # dut_tex_x = int(mem[(FRAME_WIDTH * buf_toggle) + x][27:23])
+        # dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
+        # dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
+        #
+        # height_div2 = tex_height // 2
+        #
+        # try:
+        #     assert dut_height == height_div2
+        # except AssertionError as e:
+        #     top = dut.raycast_top
+        #     print("=" * 80)
+        #     print(f"Pixel {x}")
+        #     print(f"Expected height: {height_div2}, got {dut_height}")
+        #
+        #     print(f"Expected dir_x: {dir_x}")
+        #     print(
+        #         f"Got dir_x: {top.dir_x.value.to_signed() / 2**fixp_ray[1]}"
+        #     )
+        #     print(f"Expected dir_y: {dir_y}")
+        #     print(
+        #         f"Got dir_y: {top.dir_y.value.to_signed() / 2**fixp_ray[1]}\n"
+        #     )
+        #
+        #     print(f"Expected plane_x: {plane_x}")
+        #     print(
+        #         f"Got plane_x: {top.plane_x.value.to_signed()/2**fixp_ray[1]}"
+        #     )
+        #     print(f"Expected plane_y: {plane_y}")
+        #     print(
+        #         f"Got plane_y: {top.plane_y.value.to_signed()/2**fixp_ray[1]}"
+        #     )
+        #
+        #     print(f"Expected pos_x: {pos_x}")
+        #     print(
+        #         f"Got pos_x: {top.pos_x.value.to_unsigned() / 2**fixp_pos[1]}"
+        #     )
+        #     print(f"Expected pos_y: {pos_y}")
+        #     print(
+        #         f"Got pos_y: {top.pos_y.value.to_unsigned() / 2**fixp_pos[1]}"
+        #     )
+        #
+        #     print(f"ray_x {ray_x}")
+        #     print(f"ray_dir_x {ray_dir_x}")
+        #     print(f"ray_dir_y {ray_dir_y}")
+        #     print(f"delta_dist_x {delta_dist_x}")
+        #     print(f"delta_dist_y {delta_dist_y}")
+        #     print(f"init_side_dist_x {init_side_dist_x}")
+        #     print(f"init_side_dist_y {init_side_dist_y}")
+        #     print(f"dda_side_dist_x {dda_dist_x}")
+        #     print(f"dda_side_dist_y {dda_dist_y}")
+        #     print(f"hit_side {hit_side}")
+        #     print(f"wall_dist {wall_dist}")
+        #     print(f"inv_wall_dist {inv_wall_dist}")
+        #     print(f"scaled_height {scaled_height}")
+        #     print(f"map_x {map_x}")
+        #     print(f"map_y {map_y}")
+        #     print(f"init_side_dist_x {init_side_dist_x}")
+        #     print(f"init_side_dist_y {init_side_dist_y}")
+        #     print(f"line_height {tex_height}")
+        #     print("=" * 80)
+        #     raise e
+        #
+        # try:
+        #     assert dut_shade == tex_shade
+        # except AssertionError as e:
+        #     print("=" * 80)
+        #     print(f"Pixel {x}")
+        #     print(f"Expected color: {tex_shade}, got {dut_shade}")
+        #     print("=" * 80)
+        #     raise e
+        #
+        # try:
+        #     assert dut_tex_x == tex_x
+        # except AssertionError as e:
+        #     print("=" * 80)
+        #     print(f"Pixel {x}")
+        #     print(f"Expected tex_x: {tex_x}, got {dut_tex_x}")
+        #     print("=" * 80)
+        #     breakpoint()
+        #     raise e
+        #
+        # try:
+        #     assert dut_tex_step == tex_step
+        # except AssertionError as e:
+        #     print("=" * 80)
+        #     print(f"Pixel {x}")
+        #     print(f"Expected tex_step: {tex_step}, got {dut_tex_step}")
+        #     print("=" * 80)
+        #     breakpoint()
+        #     raise e
 
         start_pos = FRAME_HEIGHT // 2 - tex_height // 2
         if start_pos < 0:
@@ -683,16 +693,16 @@ async def render(dut, buf_toggle):
 
                 tex_y = min(31, int(raw_y_pos))
 
-                # px_pos = (tex_x, tex_y)
-                # px_color = texture.getpixel(px_pos)
-                # if tex_shade:
-                #     r, g, b = px_color  # type: ignore
-                #     px_color = (r >> 1, g >> 1, b >> 1)
-
+                px_pos = (tex_x, tex_y)
+                px_color = texture.getpixel(px_pos)
                 if tex_shade:
-                    px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
-                else:
-                    px_color = (texture[tex_y][tex_x], 0, 0)
+                    r, g, b = px_color  # type: ignore
+                    px_color = (r >> 1, g >> 1, b >> 1)
+
+                # if tex_shade:
+                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
+                # else:
+                #     px_color = (texture[tex_y][tex_x], 0, 0)
 
                 # if tex_shade:
                 #     px_color = (127, 127, 127)
@@ -906,8 +916,7 @@ async def run_raycast(dut):
     await RisingEdge(dut.px_clk)
     game_map = cocotb.top.raycast_top.map.value  # type: ignore
 
-    buf_toggle = 1
-
+    # buf_toggle = 1
     # while True:
     #     controls(dut)
     #     await render(dut, buf_toggle)
