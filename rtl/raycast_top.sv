@@ -1,4 +1,5 @@
 `include "fixp_pkg.svh"
+`include "tex_pkg.svh"
 `include "dvi_pkg.svh"
 
 `default_nettype none
@@ -26,6 +27,7 @@ module raycast_top #(
 );
 
 import fixp_pkg::*;
+import tex_pkg::NUM_TEX;
 import dvi_pkg::FRAME_WIDTH;
 import dvi_pkg::FRAME_HEIGHT;
 import dvi_pkg::W_H_RES;
@@ -36,17 +38,14 @@ import dvi_pkg::W_COLOR;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned MAP_SIDE = 32;
+localparam int unsigned MAP_SIDE  = 32;
+localparam int unsigned W_NUM_TEX = $clog2(NUM_TEX);
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-// Big-endian to match Python list order
-// verilator lint_off ASCRANGE
-logic [0:MAP_SIDE-1]  map [MAP_SIDE];
-// verilator lint_on ASCRANGE
-
+logic [MAP_SIDE-1:0]  map [MAP_SIDE];
 logic [POS_W_INT-1:0] map_x;
 logic [POS_W_INT-1:0] map_y;
 logic [POS_W_INT-1:0] render_map_x;
@@ -133,7 +132,7 @@ always_ff @(posedge px_clk)
 assign map_x = lookup_render ? render_map_x : controls_map_x;
 assign map_y = lookup_render ? render_map_y : controls_map_y;
 
-assign wall_hit = map[map_y][map_x];
+assign wall_hit = map[map_y][map_x] != '0;
 
 // ----------------------------------------------------------------------------
 // Main raycast components

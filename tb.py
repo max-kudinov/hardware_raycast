@@ -324,7 +324,7 @@ def line_height_calc_model(x):
     dda_dist_y = fixp_init(init_side_dist_y, fixp_ext_pos)
 
     while True:
-        if game_map[map_y][len(game_map)-1-map_x]:
+        if int(game_map[map_y][map_x]):
             break
 
         if (dda_dist_x < dda_dist_y):
@@ -761,7 +761,6 @@ def controls(dut):
 
     new_pos = fixp_init(0, fixp_pos)
     step_next = fixp_init(0, fixp_ray, True)
-    side = len(game_map)
 
     # Update x axis
     # Forward
@@ -771,7 +770,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Backward
@@ -781,7 +780,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Left
@@ -791,7 +790,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Right
@@ -801,7 +800,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][side-1-int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Update y axis
@@ -811,7 +810,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Backward
@@ -820,7 +819,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Left
@@ -829,7 +828,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Right
@@ -838,7 +837,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][side-1-int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Rotate right
