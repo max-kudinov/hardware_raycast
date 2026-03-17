@@ -221,7 +221,13 @@ def inv_model(num_in):
 #     for i in range(TEX_SIDE)
 # ]
 
-texture = Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
+textures = list()
+textures.append(
+    Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
+)
+textures.append(
+    Image.open("../textures/volcanic_wall0.png", mode="r").convert("RGB")
+)
 
 ray_x = 0
 ray_dir_x = 0
@@ -324,7 +330,7 @@ def line_height_calc_model(x):
     dda_dist_y = fixp_init(init_side_dist_y, fixp_ext_pos)
 
     while True:
-        if int(game_map[map_y][map_x]):
+        if int(game_map[map_y][(map_x*3)+2:map_x*3]):
             break
 
         if (dda_dist_x < dda_dist_y):
@@ -348,6 +354,7 @@ def line_height_calc_model(x):
 
     # from 0 to 31
     wall_dist = fixp_init(0, fixp_pos)
+    texture = int(game_map[map_y][(map_x*3)+2:map_x*3])
 
     # from 0 to 1
     inv_wall_dist = fixp_init(0, fixp_inv_dist)
@@ -394,13 +401,13 @@ def line_height_calc_model(x):
         tex_x = TEX_SIDE - 1 - tex_x
 
     if gte_one:
-        return (tex_shade, tex_x, tex_step, FRAME_HEIGHT)
+        return (texture, tex_shade, tex_x, tex_step, FRAME_HEIGHT)
     else:
         scaled_height = fixp_init(
             FRAME_HEIGHT * inv_wall_dist, (W_HEIGHT, 0)
         )
         # breakpoint()
-        return (tex_shade, tex_x, tex_step, int(scaled_height))
+        return (texture, tex_shade, tex_x, tex_step, int(scaled_height))
 
 
 async def monitor(dut):
@@ -412,13 +419,14 @@ async def monitor(dut):
         if render.valids.value[0]:
             px_x = int(render.px_x_i.value) - 1
             px_y = int(render.px_y_p0.value)
+            texture = int(render.rd_texture.value)
             tex_shade = int(render.rd_tex_shade.value)
             tex_x = int(render.rd_tex_x.value)
             tex_step = int(render.rd_tex_step.value) / 2**12
             tex_height = int(render.rd_tex_height.value)
 
             mon_queue.put_nowait(
-                (px_x, px_y, tex_shade, tex_x, tex_step, tex_height)
+                (px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height)
             )
 
 
@@ -432,7 +440,7 @@ async def scoreboard(dut):
         if dut.raycast_top.dvi_top.visible_range_del.value:
             px_color = (0, 0, 0)
 
-            px_x, px_y, tex_shade, tex_x, tex_step, tex_height = (
+            px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height = (
                 await mon_queue.get()
             )
 
@@ -466,7 +474,7 @@ async def scoreboard(dut):
 
                 px_pos = (tex_x, tex_y)
 
-                px_color = texture.getpixel(px_pos)
+                px_color = textures[texture-1].getpixel(px_pos)
                 r, g, b = px_color  # type: ignore
 
                 if tex_shade:
@@ -546,7 +554,7 @@ async def render(dut, buf_toggle):
     # mem = dut.raycast_top.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
-        tex_shade, tex_x, tex_step, tex_height = line_height_calc_model(x)
+        texture, tex_shade, tex_x, tex_step, tex_height = line_height_calc_model(x)
 
         # dut_shade = int(mem[(FRAME_WIDTH * buf_toggle) + x][28])
         # dut_tex_x = int(mem[(FRAME_WIDTH * buf_toggle) + x][27:23])
@@ -694,7 +702,7 @@ async def render(dut, buf_toggle):
                 tex_y = min(31, int(raw_y_pos))
 
                 px_pos = (tex_x, tex_y)
-                px_color = texture.getpixel(px_pos)
+                px_color = textures[texture-1].getpixel(px_pos)
                 if tex_shade:
                     r, g, b = px_color  # type: ignore
                     px_color = (r >> 1, g >> 1, b >> 1)
@@ -770,7 +778,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
             pos_x = new_pos
 
     # Backward
@@ -780,7 +788,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
             pos_x = new_pos
 
     # Left
@@ -790,7 +798,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
             pos_x = new_pos
 
     # Right
@@ -800,7 +808,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
             pos_x = new_pos
 
     # Update y axis
@@ -810,7 +818,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
             pos_y = new_pos
 
     # Backward
@@ -819,7 +827,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
             pos_y = new_pos
 
     # Left
@@ -828,7 +836,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
             pos_y = new_pos
 
     # Right
@@ -837,7 +845,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
             pos_y = new_pos
 
     # Rotate right

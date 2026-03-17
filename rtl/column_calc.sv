@@ -32,13 +32,14 @@ module column_calc
     // Map coordinates to check for a wall
     output var logic [POS_W_INT-1:0]  lookup_map_x_o,
     output var logic [POS_W_INT-1:0]  lookup_map_y_o,
-    input  var logic                  wall_hit_i,
+    input  var logic [W_NUM_TEX-1:0]  texture_i,
 
     output var logic                  done_o,
-    output var logic                  ray_hit_side_o,
+    output var logic [W_NUM_TEX-1:0]  texture_o,
+    output var logic                  tex_shade_o,
     output var logic [W_TEX_SIDE-1:0] tex_x_o,
     output var tex_step_fixp_t        tex_step_o,
-    output var logic [W_V_RES-1:0]    height_o
+    output var logic [W_V_RES-1:0]    tex_height_o
 );
 
 // ----------------------------------------------------------------------------
@@ -134,6 +135,7 @@ ext_pos_fixp_t         dda_side_dist_x;
 ext_pos_fixp_t         dda_side_dist_y;
 logic                  dda_start;
 logic                  dda_done;
+logic                  dda_wall_hit;
 
 // Ray step direction for DDA
 logic                  step_x_next;
@@ -415,7 +417,7 @@ dda #(
     .map_y_o            (lookup_map_y_o  ),
     .step_x_i           (step_x_ff       ),
     .step_y_i           (step_y_ff       ),
-    .wall_hit_i         (wall_hit_i      ),
+    .wall_hit_i         (dda_wall_hit    ),
 
     .init_side_dist_x_i (init_side_dist_x),
     .init_side_dist_y_i (init_side_dist_y),
@@ -423,9 +425,11 @@ dda #(
     .side_dist_y_o      (dda_side_dist_y ),
     .delta_dist_x_i     (delta_dist_x_ff ),
     .delta_dist_y_i     (delta_dist_y_ff ),
-    .hit_side_o         (ray_hit_side_o  ),
+    .hit_side_o         (tex_shade_o     ),
     .done_o             (dda_done        )
 );
+
+assign dda_wall_hit = texture_i != '0;
 
 always_ff @(posedge clk)
     if (rst)
@@ -433,11 +437,15 @@ always_ff @(posedge clk)
     else
         dda_start <= main_state == ST_CALC_SIDE_DIST;
 
+always_ff @(posedge clk)
+    if (dda_done)
+        texture_o <= texture_i;
+
 always_comb begin
     wall_dist_next = wall_dist_ff;
 
     if (main_state == ST_CALC_WALL_DIST) begin
-        if (ray_hit_side_o)
+        if (tex_shade_o)
             wall_dist_next = pos_fixp_t'(dda_side_dist_y - delta_dist_y_ff);
         else
             wall_dist_next = pos_fixp_t'(dda_side_dist_x - delta_dist_x_ff);
@@ -476,7 +484,7 @@ always_comb begin
     ext_dist       = `FIXP_CAST(wall_dist_ff, proj_fixp_t);
 
     if (tex_state == ST_TEX_DIST) begin
-        if (ray_hit_side_o)
+        if (tex_shade_o)
             ext_ray_dir = `FIXP_CAST(ray_dir_x, proj_fixp_t);
         else
             ext_ray_dir = `FIXP_CAST(ray_dir_y, proj_fixp_t);
@@ -498,7 +506,7 @@ always_comb begin
     tex_x_next = tex_x_o;
 
     if (tex_state == ST_TEX_X) begin
-        if (ray_hit_side_o)
+        if (tex_shade_o)
             tex_x_frac = pos_x[-1:$right(pos_x)] + proj_frac_ff;
         else
             tex_x_frac = pos_y[-1:$right(pos_y)] + proj_frac_ff;
@@ -510,9 +518,9 @@ always_comb begin
     end
 
     if (tex_state == ST_TEX_MIRROR) begin
-        if (ray_hit_side_o && (ray_dir_y < 0))
+        if (tex_shade_o && (ray_dir_y < 0))
             tex_x_next = W_TEX_SIDE'(TEX_SIDE - 1) - tex_x_o;
-        if (!ray_hit_side_o && ray_dir_x > 0)
+        if (!tex_shade_o && ray_dir_x > 0)
             tex_x_next = W_TEX_SIDE'(TEX_SIDE - 1) - tex_x_o;
     end
 end
@@ -521,7 +529,7 @@ always_ff @(posedge clk)
     tex_x_o <= tex_x_next;
 
 // ----------------------------------------------------------------------------
-// Calculate wall height
+// Calculate texture height
 // ----------------------------------------------------------------------------
 
 always_ff @(posedge clk)
@@ -531,9 +539,9 @@ always_ff @(posedge clk)
 always_ff @(posedge clk)
     if (main_state == ST_CALC_LINE_HEIGHT)
         if (wall_dist_ff[POS_W_INT-1:0] != '0)
-            height_o <= W_V_RES'(`FIXP_MULT(inv_dist_fixp_t'(FRAME_HEIGHT), inv_wall_dist_ff));
+            tex_height_o <= W_V_RES'(`FIXP_MULT(inv_dist_fixp_t'(FRAME_HEIGHT), inv_wall_dist_ff));
         else
-            height_o <= FRAME_HEIGHT;
+            tex_height_o <= FRAME_HEIGHT;
 
 always_ff @(posedge clk)
     if (rst)

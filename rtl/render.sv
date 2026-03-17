@@ -28,7 +28,7 @@ module render
     // Map coordinates to check for a wall
     output var logic [POS_W_INT-1:0] lookup_map_x_o,
     output var logic [POS_W_INT-1:0] lookup_map_y_o,
-    input  var logic                 wall_hit_i,
+    input  var logic [W_NUM_TEX-1:0] texture_i,
 
     // Camera coordinates
     input  var pos_fixp_t            pos_x_i,
@@ -52,7 +52,8 @@ typedef logic [W_TEX_SIDE:-signed'(TEX_STEP_W_FRAC)] align_fixp_t;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned    W_BUF_DATA     = 1                                +  // tex_shade
+localparam int unsigned    W_BUF_DATA     = W_NUM_TEX                        +  // texture
+                                            1                                +  // tex_shade
                                             W_TEX_SIDE                       +  // tex_x
                                             TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
                                             (W_V_RES - 1);                      // tex_height (LSB is not used)
@@ -85,6 +86,7 @@ logic [W_BUF_DATA-1:0] buf_rd_data;
 // verilator lint_off UNUSEDSIGNAL
 logic [W_V_RES-1:0]    wr_tex_height;  // LSB is not used
 // verilator lint_on UNUSEDSIGNAL
+logic [W_NUM_TEX-1:0]  wr_texture;
 logic                  wr_tex_shade;
 logic [W_TEX_SIDE-1:0] wr_tex_x;
 tex_step_fixp_t        wr_tex_step;
@@ -102,6 +104,7 @@ logic [W_VALIDS-1:0]   valids;
 logic [W_V_RES-1:0]    px_y_p0;
 // Texture data from the buffer
 logic [W_V_RES-2:0]    rd_tex_height;
+logic [W_NUM_TEX-1:0]  rd_texture;
 logic                  rd_tex_shade;
 logic [W_TEX_SIDE-1:0] rd_tex_x;
 tex_step_fixp_t        rd_tex_step;
@@ -115,6 +118,7 @@ logic [W_V_RES-1:0]    tex_end;
 logic                  in_texture_next;
 logic                  in_texture_p1;
 
+logic [W_NUM_TEX-1:0]  texture_p1;
 logic                  tex_shade_p1;
 logic [W_TEX_SIDE-1:0] tex_x_p1;
 tex_step_fixp_t        tex_step_p1;
@@ -133,6 +137,7 @@ logic [W_V_RES-1:0]    raw_tex_y;
 logic [W_TEX_SIDE-1:0] tex_y_next;
 logic [W_TEX_SIDE-1:0] tex_y_p2;
 
+logic [W_NUM_TEX-1:0]  texture_p2;
 logic                  in_texture_p2;
 logic [W_TEX_SIDE-1:0] tex_x_p2;
 logic                  tex_shade_p2;
@@ -142,8 +147,8 @@ logic [W_COLOR-1:0]    red_next;
 logic [W_COLOR-1:0]    green_next;
 logic [W_COLOR-1:0]    blue_next;
 
-logic [TEX_SIDE-1:0][W_PX_CODE-1:0] texture [TEX_SIDE];
-logic [23:0] recode_lut [15];
+logic [TEX_SIDE-1:0][W_PX_CODE-1:0] texture [NUM_TEX] [TEX_SIDE];
+logic [23:0] recode_lut [NUM_TEX] [15];
 
 // ----------------------------------------------------------------------------
 // Texture column calculation
@@ -180,13 +185,14 @@ column_calc column_calc (
 
     .lookup_map_x_o (lookup_map_x_o),
     .lookup_map_y_o (lookup_map_y_o),
-    .wall_hit_i     (wall_hit_i    ),
+    .texture_i      (texture_i     ),
 
     .done_o         (calc_done     ),
-    .ray_hit_side_o (wr_tex_shade  ),
+    .texture_o      (wr_texture    ),
+    .tex_shade_o    (wr_tex_shade  ),
     .tex_x_o        (wr_tex_x      ),
     .tex_step_o     (wr_tex_step   ),
-    .height_o       (wr_tex_height )
+    .tex_height_o   (wr_tex_height )
 );
 
 always_ff @(posedge clk) begin
@@ -219,7 +225,7 @@ always_ff @(posedge clk)
         calc_start <= calc_active && calc_done;
 
 // Height divided in half is used for calculations, so we don't need LSB
-assign buf_wr_data = { wr_tex_shade, wr_tex_x, wr_tex_step, wr_tex_height[W_V_RES-1:1] };
+assign buf_wr_data = { wr_texture, wr_tex_shade, wr_tex_x, wr_tex_step, wr_tex_height[W_V_RES-1:1] };
 assign buf_write   = calc_done;
 assign buf_wr_addr = W_BUF_ADDR'(calc_px_x) + W_BUF_ADDR'(FRAME_WIDTH & { W_H_RES { buf_toggle } });
 
@@ -258,7 +264,7 @@ always_ff @(posedge clk)
 // value for y coordinate in the texture
 // ----------------------------------------------------------------------------
 
-assign { rd_tex_shade, rd_tex_x, rd_tex_step, rd_tex_height } = buf_rd_data;
+assign { rd_texture, rd_tex_shade, rd_tex_x, rd_tex_step, rd_tex_height } = buf_rd_data;
 
 always_comb begin
     tex_start       = (FRAME_HEIGHT >> 1) - W_V_RES'(rd_tex_height);
@@ -282,6 +288,7 @@ always_ff @(posedge clk)
         in_texture_p1 <= in_texture_next;
         tex_zoom_p1   <= tex_zoom_next;
         tex_align_p1  <= tex_align_next;
+        texture_p1    <= rd_texture;
         tex_shade_p1  <= rd_tex_shade;
         tex_x_p1      <= rd_tex_x;
         tex_step_p1   <= rd_tex_step;
@@ -318,6 +325,7 @@ end
 always_ff @(posedge clk)
     if (valids[1]) begin
         in_texture_p2 <= in_texture_p1;
+        texture_p2    <= texture_p1;
         tex_shade_p2  <= tex_shade_p1;
         tex_x_p2      <= tex_x_p1;
         tex_y_p2      <= tex_y_next;
@@ -335,10 +343,10 @@ always_comb begin
 
     if (in_texture_p2)
         if (tex_shade_p2)
-            { red_next, green_next, blue_next } = (recode_lut[texture[tex_y_p2][tex_x_p2]] >> 1) &
+            { red_next, green_next, blue_next } = (recode_lut[texture_p2 - 1'b1][texture[texture_p2 - 1'b1][tex_y_p2][tex_x_p2]] >> 1) &
                                                   { { 8 {1'b1} }, 1'b0, { 7 {1'b1} }, 1'b0, {7 {1'b1} } };
         else
-            { red_next, green_next, blue_next } = recode_lut[texture[tex_y_p2][tex_x_p2]];
+            { red_next, green_next, blue_next } = recode_lut[texture_p2 - 1'b1][texture[texture_p2 - 1'b1][tex_y_p2][tex_x_p2]];
 end
 
 always_ff @(posedge clk)
@@ -349,7 +357,7 @@ always_ff @(posedge clk)
     end
 
 initial begin
-    texture = {
+    texture[0] = {
         { 4'd1, 4'd0, 4'd1, 4'd0, 4'd1, 4'd1, 4'd1, 4'd1, 4'd0, 4'd0, 4'd1, 4'd1, 4'd1, 4'd1, 4'd0, 4'd1, 4'd0, 4'd0, 4'd1, 4'd1, 4'd0, 4'd1, 4'd1, 4'd1, 4'd0, 4'd1, 4'd1, 4'd1, 4'd1, 4'd0, 4'd0, 4'd0 },
         { 4'd0, 4'd4, 4'd3, 4'd3, 4'd3, 4'd3, 4'd2, 4'd3, 4'd3, 4'd2, 4'd3, 4'd2, 4'd2, 4'd5, 4'd2, 4'd2, 4'd1, 4'd4, 4'd3, 4'd3, 4'd3, 4'd3, 4'd3, 4'd3, 4'd3, 4'd3, 4'd2, 4'd2, 4'd2, 4'd3, 4'd2, 4'd2 },
         { 4'd1, 4'd10, 4'd4, 4'd4, 4'd7, 4'd4, 4'd7, 4'd4, 4'd4, 4'd7, 4'd7, 4'd6, 4'd11, 4'd11, 4'd5, 4'd3, 4'd0, 4'd10, 4'd4, 4'd4, 4'd9, 4'd6, 4'd8, 4'd4, 4'd4, 4'd4, 4'd4, 4'd7, 4'd7, 4'd6, 4'd6, 4'd3 },
@@ -384,7 +392,49 @@ initial begin
         { 4'd10, 4'd12, 4'd12, 4'd14, 4'd10, 4'd10, 4'd10, 4'd4, 4'd0, 4'd12, 4'd12, 4'd12, 4'd12, 4'd12, 4'd12, 4'd10, 4'd10, 4'd14, 4'd12, 4'd12, 4'd12, 4'd10, 4'd10, 4'd4, 4'd0, 4'd12, 4'd12, 4'd14, 4'd10, 4'd10, 4'd12, 4'd10 } 
     };
 
-    recode_lut = {
+    texture[1] = {
+        { 4'd1, 4'd1, 4'd1, 4'd1, 4'd0, 4'd0, 4'd1, 4'd1, 4'd1, 4'd0, 4'd1, 4'd0, 4'd1, 4'd0, 4'd0, 4'd0, 4'd0, 4'd0, 4'd0, 4'd1, 4'd0, 4'd1, 4'd0, 4'd0, 4'd1, 4'd1, 4'd0, 4'd1, 4'd0, 4'd0, 4'd0, 4'd0 },
+        { 4'd5, 4'd3, 4'd8, 4'd6, 4'd1, 4'd1, 4'd6, 4'd3, 4'd3, 4'd4, 4'd3, 4'd5, 4'd7, 4'd1, 4'd0, 4'd0, 4'd0, 4'd1, 4'd0, 4'd0, 4'd6, 4'd5, 4'd3, 4'd4, 4'd3, 4'd3, 4'd4, 4'd4, 4'd3, 4'd2, 4'd0, 4'd1 },
+        { 4'd6, 4'd6, 4'd2, 4'd8, 4'd8, 4'd3, 4'd3, 4'd7, 4'd7, 4'd5, 4'd2, 4'd4, 4'd1, 4'd0, 4'd0, 4'd1, 4'd0, 4'd1, 4'd0, 4'd7, 4'd6, 4'd2, 4'd5, 4'd2, 4'd6, 4'd6, 4'd5, 4'd2, 4'd5, 4'd3, 4'd2, 4'd1 },
+        { 4'd0, 4'd7, 4'd6, 4'd2, 4'd2, 4'd5, 4'd3, 4'd6, 4'd7, 4'd6, 4'd2, 4'd4, 4'd7, 4'd7, 4'd1, 4'd0, 4'd7, 4'd7, 4'd1, 4'd7, 4'd6, 4'd5, 4'd2, 4'd4, 4'd7, 4'd7, 4'd6, 4'd2, 4'd2, 4'd5, 4'd3, 4'd0 },
+        { 4'd0, 4'd0, 4'd7, 4'd6, 4'd5, 4'd2, 4'd5, 4'd3, 4'd3, 4'd6, 4'd5, 4'd5, 4'd3, 4'd6, 4'd7, 4'd7, 4'd1, 4'd7, 4'd7, 4'd6, 4'd5, 4'd5, 4'd3, 4'd4, 4'd6, 4'd7, 4'd6, 4'd5, 4'd5, 4'd3, 4'd7, 4'd0 },
+        { 4'd7, 4'd0, 4'd0, 4'd6, 4'd5, 4'd5, 4'd5, 4'd2, 4'd3, 4'd5, 4'd5, 4'd2, 4'd2, 4'd8, 4'd8, 4'd6, 4'd7, 4'd3, 4'd3, 4'd5, 4'd2, 4'd5, 4'd5, 4'd5, 4'd4, 4'd3, 4'd5, 4'd5, 4'd3, 4'd7, 4'd7, 4'd0 },
+        { 4'd1, 4'd0, 4'd7, 4'd6, 4'd5, 4'd3, 4'd5, 4'd5, 4'd5, 4'd2, 4'd2, 4'd6, 4'd5, 4'd2, 4'd5, 4'd8, 4'd3, 4'd5, 4'd5, 4'd2, 4'd5, 4'd2, 4'd2, 4'd5, 4'd6, 4'd6, 4'd2, 4'd2, 4'd5, 4'd3, 4'd7, 4'd0 },
+        { 4'd7, 4'd0, 4'd3, 4'd5, 4'd3, 4'd2, 4'd2, 4'd3, 4'd3, 4'd2, 4'd5, 4'd6, 4'd5, 4'd2, 4'd6, 4'd6, 4'd7, 4'd5, 4'd2, 4'd5, 4'd5, 4'd2, 4'd5, 4'd3, 4'd0, 4'd7, 4'd6, 4'd2, 4'd5, 4'd5, 4'd3, 4'd0 },
+        { 4'd5, 4'd4, 4'd5, 4'd5, 4'd5, 4'd5, 4'd5, 4'd5, 4'd5, 4'd6, 4'd6, 4'd6, 4'd2, 4'd5, 4'd5, 4'd7, 4'd6, 4'd2, 4'd5, 4'd2, 4'd5, 4'd2, 4'd4, 4'd1, 4'd0, 4'd0, 4'd0, 4'd5, 4'd2, 4'd5, 4'd4, 4'd1 },
+        { 4'd6, 4'd5, 4'd2, 4'd5, 4'd7, 4'd7, 4'd2, 4'd5, 4'd5, 4'd7, 4'd0, 4'd7, 4'd6, 4'd2, 4'd6, 4'd5, 4'd5, 4'd5, 4'd2, 4'd2, 4'd5, 4'd5, 4'd4, 4'd1, 4'd1, 4'd0, 4'd7, 4'd2, 4'd5, 4'd2, 4'd4, 4'd1 },
+        { 4'd7, 4'd2, 4'd5, 4'd2, 4'd6, 4'd6, 4'd5, 4'd3, 4'd7, 4'd0, 4'd0, 4'd0, 4'd7, 4'd6, 4'd5, 4'd2, 4'd2, 4'd2, 4'd5, 4'd5, 4'd3, 4'd5, 4'd5, 4'd4, 4'd1, 4'd1, 4'd3, 4'd5, 4'd2, 4'd5, 4'd4, 4'd1 },
+        { 4'd7, 4'd6, 4'd2, 4'd5, 4'd3, 4'd5, 4'd5, 4'd4, 4'd7, 4'd1, 4'd0, 4'd0, 4'd0, 4'd6, 4'd5, 4'd5, 4'd5, 4'd3, 4'd4, 4'd6, 4'd5, 4'd2, 4'd5, 4'd5, 4'd3, 4'd4, 4'd5, 4'd2, 4'd6, 4'd4, 4'd1, 4'd1 },
+        { 4'd7, 4'd6, 4'd2, 4'd2, 4'd5, 4'd5, 4'd5, 4'd4, 4'd7, 4'd1, 4'd0, 4'd7, 4'd1, 4'd6, 4'd5, 4'd2, 4'd5, 4'd2, 4'd4, 4'd6, 4'd7, 4'd7, 4'd6, 4'd5, 4'd5, 4'd5, 4'd2, 4'd5, 4'd2, 4'd4, 4'd1, 4'd1 },
+        { 4'd7, 4'd2, 4'd5, 4'd2, 4'd2, 4'd2, 4'd5, 4'd5, 4'd8, 4'd7, 4'd7, 4'd0, 4'd6, 4'd5, 4'd2, 4'd5, 4'd2, 4'd2, 4'd5, 4'd4, 4'd6, 4'd7, 4'd6, 4'd3, 4'd5, 4'd3, 4'd5, 4'd6, 4'd6, 4'd5, 4'd4, 4'd1 },
+        { 4'd6, 4'd5, 4'd2, 4'd5, 4'd3, 4'd2, 4'd3, 4'd3, 4'd5, 4'd8, 4'd8, 4'd3, 4'd5, 4'd2, 4'd5, 4'd5, 4'd6, 4'd6, 4'd6, 4'd2, 4'd3, 4'd3, 4'd5, 4'd2, 4'd5, 4'd5, 4'd3, 4'd7, 4'd6, 4'd5, 4'd2, 4'd0 },
+        { 4'd7, 4'd2, 4'd5, 4'd4, 4'd7, 4'd6, 4'd3, 4'd5, 4'd3, 4'd5, 4'd3, 4'd3, 4'd5, 4'd5, 4'd5, 4'd3, 4'd7, 4'd0, 4'd7, 4'd6, 4'd2, 4'd5, 4'd5, 4'd2, 4'd5, 4'd4, 4'd7, 4'd1, 4'd1, 4'd6, 4'd5, 4'd0 },
+        { 4'd6, 4'd5, 4'd3, 4'd4, 4'd6, 4'd7, 4'd5, 4'd3, 4'd5, 4'd5, 4'd2, 4'd2, 4'd5, 4'd5, 4'd3, 4'd7, 4'd1, 4'd0, 4'd0, 4'd7, 4'd6, 4'd2, 4'd2, 4'd5, 4'd3, 4'd4, 4'd0, 4'd0, 4'd0, 4'd6, 4'd5, 4'd0 },
+        { 4'd7, 4'd2, 4'd5, 4'd2, 4'd4, 4'd3, 4'd2, 4'd5, 4'd5, 4'd5, 4'd2, 4'd5, 4'd5, 4'd3, 4'd7, 4'd0, 4'd0, 4'd0, 4'd0, 4'd1, 4'd0, 4'd6, 4'd5, 4'd5, 4'd2, 4'd5, 4'd4, 4'd7, 4'd4, 4'd5, 4'd3, 4'd1 },
+        { 4'd6, 4'd3, 4'd6, 4'd7, 4'd6, 4'd2, 4'd2, 4'd2, 4'd2, 4'd5, 4'd6, 4'd5, 4'd5, 4'd4, 4'd7, 4'd0, 4'd0, 4'd0, 4'd0, 4'd0, 4'd1, 4'd6, 4'd5, 4'd2, 4'd6, 4'd2, 4'd5, 4'd4, 4'd5, 4'd2, 4'd3, 4'd1 },
+        { 4'd7, 4'd4, 4'd7, 4'd7, 4'd7, 4'd3, 4'd5, 4'd2, 4'd5, 4'd6, 4'd2, 4'd2, 4'd5, 4'd4, 4'd7, 4'd1, 4'd0, 4'd1, 4'd0, 4'd1, 4'd7, 4'd6, 4'd5, 4'd3, 4'd7, 4'd6, 4'd5, 4'd5, 4'd6, 4'd2, 4'd4, 4'd1 },
+        { 4'd6, 4'd4, 4'd2, 4'd6, 4'd5, 4'd5, 4'd2, 4'd5, 4'd3, 4'd7, 4'd6, 4'd2, 4'd5, 4'd5, 4'd4, 4'd7, 4'd1, 4'd0, 4'd1, 4'd7, 4'd6, 4'd2, 4'd5, 4'd4, 4'd6, 4'd6, 4'd5, 4'd6, 4'd6, 4'd5, 4'd4, 4'd1 },
+        { 4'd7, 4'd5, 4'd4, 4'd3, 4'd5, 4'd2, 4'd5, 4'd3, 4'd7, 4'd0, 4'd1, 4'd6, 4'd5, 4'd3, 4'd5, 4'd8, 4'd7, 4'd1, 4'd7, 4'd6, 4'd5, 4'd2, 4'd5, 4'd3, 4'd4, 4'd3, 4'd2, 4'd6, 4'd2, 4'd5, 4'd3, 4'd1 },
+        { 4'd6, 4'd6, 4'd6, 4'd2, 4'd2, 4'd5, 4'd5, 4'd5, 4'd4, 4'd7, 4'd6, 4'd5, 4'd2, 4'd3, 4'd5, 4'd2, 4'd8, 4'd4, 4'd3, 4'd2, 4'd2, 4'd5, 4'd2, 4'd5, 4'd3, 4'd5, 4'd5, 4'd2, 4'd5, 4'd2, 4'd4, 4'd1 },
+        { 4'd6, 4'd7, 4'd7, 4'd6, 4'd5, 4'd3, 4'd5, 4'd5, 4'd3, 4'd4, 4'd5, 4'd2, 4'd5, 4'd5, 4'd5, 4'd2, 4'd5, 4'd5, 4'd5, 4'd3, 4'd5, 4'd5, 4'd5, 4'd5, 4'd5, 4'd5, 4'd3, 4'd5, 4'd2, 4'd4, 4'd5, 4'd1 },
+        { 4'd7, 4'd0, 4'd1, 4'd7, 4'd6, 4'd5, 4'd3, 4'd2, 4'd5, 4'd5, 4'd5, 4'd5, 4'd2, 4'd2, 4'd2, 4'd5, 4'd3, 4'd3, 4'd5, 4'd3, 4'd5, 4'd6, 4'd2, 4'd5, 4'd2, 4'd2, 4'd5, 4'd5, 4'd5, 4'd4, 4'd0, 4'd0 },
+        { 4'd0, 4'd0, 4'd0, 4'd0, 4'd1, 4'd6, 4'd3, 4'd2, 4'd2, 4'd6, 4'd5, 4'd2, 4'd6, 4'd5, 4'd5, 4'd2, 4'd5, 4'd3, 4'd5, 4'd5, 4'd3, 4'd1, 4'd6, 4'd2, 4'd3, 4'd5, 4'd5, 4'd2, 4'd5, 4'd8, 4'd7, 4'd0 },
+        { 4'd7, 4'd0, 4'd0, 4'd1, 4'd7, 4'd6, 4'd5, 4'd5, 4'd7, 4'd7, 4'd5, 4'd3, 4'd6, 4'd7, 4'd5, 4'd5, 4'd5, 4'd5, 4'd5, 4'd3, 4'd7, 4'd0, 4'd1, 4'd6, 4'd5, 4'd3, 4'd2, 4'd6, 4'd2, 4'd8, 4'd5, 4'd7 },
+        { 4'd7, 4'd0, 4'd1, 4'd7, 4'd6, 4'd2, 4'd5, 4'd4, 4'd6, 4'd7, 4'd2, 4'd4, 4'd7, 4'd6, 4'd2, 4'd5, 4'd5, 4'd2, 4'd5, 4'd5, 4'd3, 4'd7, 4'd6, 4'd3, 4'd5, 4'd2, 4'd5, 4'd3, 4'd2, 4'd5, 4'd8, 4'd1 },
+        { 4'd6, 4'd7, 4'd7, 4'd4, 4'd2, 4'd5, 4'd3, 4'd4, 4'd4, 4'd3, 4'd5, 4'd3, 4'd4, 4'd3, 4'd5, 4'd2, 4'd5, 4'd2, 4'd5, 4'd6, 4'd5, 4'd4, 4'd4, 4'd3, 4'd5, 4'd2, 4'd4, 4'd4, 4'd5, 4'd5, 4'd4, 4'd1 },
+        { 4'd5, 4'd4, 4'd4, 4'd3, 4'd2, 4'd5, 4'd2, 4'd3, 4'd5, 4'd2, 4'd2, 4'd3, 4'd5, 4'd5, 4'd2, 4'd6, 4'd6, 4'd2, 4'd5, 4'd7, 4'd7, 4'd7, 4'd6, 4'd5, 4'd2, 4'd5, 4'd5, 4'd2, 4'd5, 4'd5, 4'd3, 4'd1 },
+        { 4'd6, 4'd5, 4'd2, 4'd2, 4'd5, 4'd6, 4'd2, 4'd5, 4'd2, 4'd6, 4'd7, 4'd6, 4'd5, 4'd2, 4'd6, 4'd7, 4'd7, 4'd5, 4'd7, 4'd0, 4'd0, 4'd0, 4'd7, 4'd6, 4'd5, 4'd6, 4'd7, 4'd6, 4'd6, 4'd2, 4'd1, 4'd0 },
+        { 4'd7, 4'd6, 4'd7, 4'd7, 4'd6, 4'd6, 4'd7, 4'd6, 4'd7, 4'd7, 4'd6, 4'd7, 4'd7, 4'd6, 4'd7, 4'd7, 4'd7, 4'd6, 4'd0, 4'd0, 4'd0, 4'd0, 4'd0, 4'd7, 4'd6, 4'd7, 4'd6, 4'd7, 4'd7, 4'd1, 4'd0, 4'd0 }
+    };
+
+    texture[2] = '{default: 0};
+    texture[3] = '{default: 0};
+    texture[4] = '{default: 0};
+    texture[5] = '{default: 0};
+    texture[6] = '{default: 0};
+
+
+    recode_lut [0] = {
         { 8'd16,  8'd16,  8'd16  },
         { 8'd32,  8'd32,  8'd32  },
         { 8'd176, 8'd176, 8'd176 },
@@ -401,6 +451,30 @@ initial begin
         { 8'd96,  8'd96,  8'd96  },
         { 8'd0,   8'd48,  8'd24  }
     };
+
+    recode_lut [1] = {
+        { 8'd32,  8'd0, 8'd0 },
+        { 8'd48,  8'd0, 8'd0 },
+        { 8'd128, 8'd0, 8'd0 },
+        { 8'd192, 8'd0, 8'd0 },
+        { 8'd224, 8'd0, 8'd0 },
+        { 8'd160, 8'd0, 8'd0 },
+        { 8'd96,  8'd0, 8'd0 },
+        { 8'd64,  8'd0, 8'd0 },
+        { 8'd255, 8'd0, 8'd0 },
+        { 8'd0,   8'd0, 8'd0 },
+        { 8'd0,   8'd0, 8'd0 },
+        { 8'd0,   8'd0, 8'd0 },
+        { 8'd0,   8'd0, 8'd0 },
+        { 8'd0,   8'd0, 8'd0 },
+        { 8'd0,   8'd0, 8'd0 }
+    };
+
+    recode_lut [2] = '{default: 0};
+    recode_lut [3] = '{default: 0};
+    recode_lut [4] = '{default: 0};
+    recode_lut [5] = '{default: 0};
+    recode_lut [6] = '{default: 0};
 
 end
 
