@@ -227,6 +227,8 @@ textures.append(Image.open("../textures/volcanic_wall0.png").convert("RGB"))
 textures.append(Image.open("../textures/lair1.png").convert("RGB"))
 textures.append(Image.open("../textures/relief3.png").convert("RGB"))
 textures.append(Image.open("../textures/crystal_wall10.png").convert("RGB"))
+textures.append(Image.open("../textures/brick_gray2.png").convert("RGB"))
+textures.append(Image.open("../textures/lava3.png").convert("RGB"))
 
 ray_x = 0
 ray_dir_x = 0
