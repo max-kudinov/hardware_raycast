@@ -222,12 +222,11 @@ def inv_model(num_in):
 # ]
 
 textures = list()
-textures.append(
-    Image.open("../textures/wall_vines3.png", mode="r").convert("RGB")
-)
-textures.append(
-    Image.open("../textures/volcanic_wall0.png", mode="r").convert("RGB")
-)
+textures.append(Image.open("../textures/wall_vines3.png").convert("RGB"))
+textures.append(Image.open("../textures/volcanic_wall0.png").convert("RGB"))
+textures.append(Image.open("../textures/lair1.png").convert("RGB"))
+textures.append(Image.open("../textures/relief3.png").convert("RGB"))
+textures.append(Image.open("../textures/crystal_wall10.png").convert("RGB"))
 
 ray_x = 0
 ray_dir_x = 0
@@ -547,6 +546,8 @@ async def render(dut, buf_toggle):
     global y_start, y_pos
     # Clear screen
     surface.fill((0, 0, 0))
+    pg.draw.rect(surface, (20, 20, 20), (0, 0, 640, 240))
+    pg.draw.rect(surface, (48, 48, 48), (0, 240, 640, 240))
 
     # await RisingEdge(dut.px_clk)
     #
@@ -738,11 +739,6 @@ def print_info():
     font.render_to(surface, (20, 140), f"plane_y: {plane_y}", (0, 255, 0))
     font.render_to(surface, (20, 170), f"dir_x: {dir_x}", (0, 255, 0))
     font.render_to(surface, (20, 200), f"dir_y: {dir_y}", (0, 255, 0))
-    font.render_to(surface, (20, 230), f"tex_step: {tex_step}", (0, 255, 0))
-    font.render_to(surface, (20, 260), f"tex_x: {tex_x}", (0, 255, 0))
-    font.render_to(surface, (20, 290), f"wall_dist: {wall_dist}", (0, 255, 0))
-    font.render_to(surface, (20, 320), f"y_offset: {y_start}", (0, 255, 0))
-    font.render_to(surface, (20, 350), f"fixp_y: {y_pos}", (0, 255, 0))
 
 
 def controls(dut):
