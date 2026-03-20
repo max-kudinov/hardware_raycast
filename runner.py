@@ -20,6 +20,7 @@ def run_tb():
     sources += [proj_path / "rtl/raycast_top.sv"]
     sources += [proj_path / "rtl/temp_map.sv"]
     sources += [proj_path / "rtl/temp_recode_lut.sv"]
+    sources += [proj_path / "rtl/temp_textures.sv"]
     sources += [proj_path / "rtl/render.sv"]
     sources += [proj_path / "rtl/dvi/dvi_top.sv"]
     sources += [proj_path / "rtl/dvi/delay.sv"]
