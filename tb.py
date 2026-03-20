@@ -331,7 +331,7 @@ def line_height_calc_model(x):
     dda_dist_y = fixp_init(init_side_dist_y, fixp_ext_pos)
 
     while True:
-        if int(game_map[map_y][(map_x*3)+2:map_x*3]):
+        if int(game_map[map_y][map_x]):
             break
 
         if (dda_dist_x < dda_dist_y):
@@ -355,7 +355,7 @@ def line_height_calc_model(x):
 
     # from 0 to 31
     wall_dist = fixp_init(0, fixp_pos)
-    texture = int(game_map[map_y][(map_x*3)+2:map_x*3])
+    texture = int(game_map[map_y][map_x])
 
     # from 0 to 1
     inv_wall_dist = fixp_init(0, fixp_inv_dist)
@@ -776,7 +776,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Backward
@@ -786,7 +786,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Left
@@ -796,7 +796,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Right
@@ -806,7 +806,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)*3+2:int(new_pos)*3] != 1:
+        if game_map[int(pos_y)][int(new_pos)] != 1:
             pos_x = new_pos
 
     # Update y axis
@@ -816,7 +816,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Backward
@@ -825,7 +825,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Left
@@ -834,7 +834,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Right
@@ -843,7 +843,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)*3+2:int(pos_x)*3] != 1:
+        if game_map[int(new_pos)][int(pos_x)] != 1:
             pos_y = new_pos
 
     # Rotate right
@@ -919,15 +919,15 @@ async def run_raycast(dut):
     cocotb.start_soon(dut_reset(dut))
 
     await RisingEdge(dut.px_clk)
-    game_map = cocotb.top.raycast_top.map.value  # type: ignore
+    game_map = cocotb.top.raycast_top.temp_map.map.value  # type: ignore
 
-    # buf_toggle = 1
-    # while True:
-    #     controls(dut)
-    #     await render(dut, buf_toggle)
-    #     buf_toggle = buf_toggle ^ 1
-
-    cocotb.start_soon(pixel_calc(dut))
+    buf_toggle = 1
     while True:
-        # cocotb.start_soon(coro_quit(dut))
-        await RisingEdge(dut.raycast_top.frame_done)
+        controls(dut)
+        await render(dut, buf_toggle)
+        buf_toggle = buf_toggle ^ 1
+
+    # cocotb.start_soon(pixel_calc(dut))
+    # while True:
+    #     # cocotb.start_soon(coro_quit(dut))
+    #     await RisingEdge(dut.raycast_top.frame_done)
