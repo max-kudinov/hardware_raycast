@@ -779,7 +779,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
             pos_x = new_pos
 
     # Backward
@@ -789,7 +789,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
             pos_x = new_pos
 
     # Left
@@ -799,7 +799,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
             pos_x = new_pos
 
     # Right
@@ -809,7 +809,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_x + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(pos_y)][int(new_pos)] != 1:
+        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
             pos_x = new_pos
 
     # Update y axis
@@ -819,7 +819,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
             pos_y = new_pos
 
     # Backward
@@ -828,7 +828,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
             pos_y = new_pos
 
     # Left
@@ -837,7 +837,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
             pos_y = new_pos
 
     # Right
@@ -846,7 +846,7 @@ def controls(dut):
         new_pos = fixp_expr(
             pos_y + fixp_cast(step_next, fixp_pos), new_pos
         )
-        if game_map[int(new_pos)][int(pos_x)] != 1:
+        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
             pos_y = new_pos
 
     # Rotate right
