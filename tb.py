@@ -439,11 +439,14 @@ async def scoreboard(dut):
         await RisingEdge(dut.px_clk)
 
         if dut.raycast_top.dvi_top.visible_range_del.value:
-            px_color = (0, 0, 0)
-
             px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height = (
                 await mon_queue.get()
             )
+
+            if px_y < FRAME_HEIGHT // 2:
+                px_color = (20, 20, 20)
+            else:
+                px_color = (48, 48, 48)
 
             tex_start = FRAME_HEIGHT // 2 - tex_height
             tex_end = FRAME_HEIGHT // 2 + tex_height
@@ -475,7 +478,7 @@ async def scoreboard(dut):
 
                 px_pos = (tex_x, tex_y)
 
-                px_color = textures[texture-1].getpixel(px_pos)
+                px_color = textures[texture].getpixel(px_pos)
                 r, g, b = px_color  # type: ignore
 
                 if tex_shade:
