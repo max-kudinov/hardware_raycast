@@ -36,8 +36,8 @@ module position
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam real START_POS_X = 18.0;
-localparam real START_POS_Y = 12.0;
+localparam real START_POS_X = 13.0;
+localparam real START_POS_Y = 13.0;
 
 // ----------------------------------------------------------------------------
 // Local types declaration
@@ -60,6 +60,7 @@ typedef enum logic [2:0] {
     ST_CALC_DIR,
     ST_SCALE_DIR,
     ST_CALC_POS,
+    ST_WAIT_LOOKUP,
     ST_UPDATE_POS
 } calc_state_t;
 
@@ -103,10 +104,10 @@ always_ff @(posedge clk)
         update_enable <= '0;
 
         case (cntrl_state)
-            ST_FORWARD:  if (key_forward_i)  update_enable <= '1;
-            ST_BACKWARD: if (key_backward_i) update_enable <= '1;
-            ST_LEFT:     if (key_left_i)     update_enable <= '1;
-            ST_RIGHT:    if (key_right_i)    update_enable <= '1;
+            ST_FORWARD:  if (key_forward_i  && !key_backward_i) update_enable <= '1;
+            ST_BACKWARD: if (key_backward_i && !key_forward_i)  update_enable <= '1;
+            ST_LEFT:     if (key_left_i     && !key_right_i)    update_enable <= '1;
+            ST_RIGHT:    if (key_right_i    && !key_left_i)     update_enable <= '1;
         endcase
     end
 
@@ -159,7 +160,8 @@ always_comb begin
         ST_IDLE:       if (update_start_i) calc_next_state = ST_CALC_DIR;
         ST_CALC_DIR:                       calc_next_state = ST_SCALE_DIR;
         ST_SCALE_DIR:                      calc_next_state = ST_CALC_POS;
-        ST_CALC_POS:                       calc_next_state = ST_UPDATE_POS;
+        ST_CALC_POS:                       calc_next_state = ST_WAIT_LOOKUP;
+        ST_WAIT_LOOKUP:                    calc_next_state = ST_UPDATE_POS;
         ST_UPDATE_POS: if (update_done)    calc_next_state = ST_IDLE;
                        else                calc_next_state = ST_CALC_DIR;
     endcase

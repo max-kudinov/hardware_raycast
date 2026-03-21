@@ -78,6 +78,7 @@ ray_fixp_t            plane_y;
 // ----------------------------------------------------------------------------
 
 temp_map temp_map (
+    .clk     (px_clk ),
     .x       (map_x  ),
     .y       (map_y  ),
     .texture (texture)

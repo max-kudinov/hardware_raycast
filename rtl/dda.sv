@@ -52,6 +52,8 @@ ext_pos_fixp_t        side_dist_inc;
 
 logic                 overflow;
 logic                 hit_side_next;
+logic                 wait_rom_read;
+logic                 valid_hit;
 
 logic [POS_W_INT-1:0] map_x_next;
 logic [POS_W_INT-1:0] map_y_next;
@@ -64,8 +66,8 @@ always_comb begin
     next_state = state;
 
     unique case (state)
-        ST_IDLE:     if (start_i)    next_state = ST_CALC_DDA;
-        ST_CALC_DDA: if (wall_hit_i) next_state = ST_IDLE;
+        ST_IDLE:     if (start_i)   next_state = ST_CALC_DDA;
+        ST_CALC_DDA: if (valid_hit) next_state = ST_IDLE;
     endcase
 end
 
@@ -86,6 +88,7 @@ always_comb begin
     map_x_next       = map_x_o;
     map_y_next       = map_y_o;
 
+    valid_hit        = wall_hit_i && !wait_rom_read;
     hit_side_next    = hit_side_o;
     side_dist_inc    = '0;
     overflow         = '0;
@@ -98,7 +101,7 @@ always_comb begin
         map_y_next       = init_map_y_i;
     end
 
-    if (state == ST_CALC_DDA && !wall_hit_i) begin
+    if (state == ST_CALC_DDA && !wall_hit_i && !wait_rom_read) begin
         if (side_dist_x_o < side_dist_y_o) begin
 
             { overflow, side_dist_inc } = side_dist_x_o + delta_dist_x_i;
@@ -139,11 +142,22 @@ always_ff @(posedge clk) begin
     hit_side_o    <= hit_side_next;
 end
 
+// 1 cycle delay after every map x/y update to wait for ROM read and check for
+// hitting the wall
+always_ff @(posedge clk)
+    if (rst)
+        wait_rom_read <= '1;
+    else if (done_o)
+        wait_rom_read <= '1;
+    else if (state == ST_CALC_DDA)
+        wait_rom_read <= !wait_rom_read;
+
+
 always_ff @(posedge clk)
     if (rst)
         done_o <= '0;
     else
-        done_o <= state == ST_CALC_DDA && wall_hit_i;
+        done_o <= (state == ST_CALC_DDA) && valid_hit;
 
 endmodule
 
