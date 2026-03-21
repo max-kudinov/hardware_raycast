@@ -35,7 +35,7 @@ package dvi_pkg;
     localparam [W_V_TOTAL-1:0] V_TOTAL       = W_V_TOTAL'(VSYNC_END + V_BACK_PORCH);
 
     localparam int unsigned    W_COLOR       = 8;
-    localparam int unsigned    DEL_CYCLES    = 4;
+    localparam int unsigned    DEL_CYCLES    = 6;
 
 endpackage : dvi_pkg
 

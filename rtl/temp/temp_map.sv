@@ -1,12 +1,10 @@
-`include "fixp_pkg.svh"
-`include "tex_pkg.svh"
-
 `default_nettype none
 
-module temp_map
-    import fixp_pkg::*;
-    import tex_pkg::*;
-(
+localparam int unsigned NUM_TEX         = 7;
+localparam int unsigned W_NUM_TEX       = $clog2(NUM_TEX);
+localparam int unsigned POS_W_INT       = 5;
+
+module temp_map (
     input  var logic [POS_W_INT-1:0] x,
     input  var logic [POS_W_INT-1:0] y,
     output var logic [W_NUM_TEX-1:0] texture

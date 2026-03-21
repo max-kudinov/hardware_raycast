@@ -437,9 +437,11 @@ always_ff @(posedge clk)
     else
         dda_start <= main_state == ST_CALC_SIDE_DIST;
 
+// texture_i == 0 means no texture, and texture_o is used for ROM indexing, so
+// we subtract 1 to start indexing from 0 (0 to 6 instead of 1 to 7)
 always_ff @(posedge clk)
     if (dda_done)
-        texture_o <= texture_i;
+        texture_o <= texture_i - 1'b1;
 
 always_comb begin
     wall_dist_next = wall_dist_ff;

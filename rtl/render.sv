@@ -52,14 +52,14 @@ typedef logic [W_TEX_SIDE:-signed'(TEX_STEP_W_FRAC)] align_fixp_t;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned     W_BUF_DATA     = W_NUM_TEX                        +  // texture
-                                             1                                +  // tex_shade
-                                             W_TEX_SIDE                       +  // tex_x
-                                             TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
-                                             (W_V_RES - 1);                      // tex_height (LSB is not used)
+localparam int unsigned     W_BUF_DATA    = W_NUM_TEX                        +  // texture
+                                            1                                +  // tex_shade
+                                            W_TEX_SIDE                       +  // tex_x
+                                            TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
+                                            (W_V_RES - 1);                      // tex_height (LSB is not used)
 
-localparam int unsigned     N_PIPE_STAGES = 4;                                   // 0 to 3
-localparam int unsigned     W_VALIDS      = N_PIPE_STAGES - 1;                   // Don't need valid for the last stage
+localparam int unsigned     N_PIPE_STAGES = 6;                                  // 0 to 5
+localparam int unsigned     W_VALIDS      = N_PIPE_STAGES - 1;                  // Don't need valid for the last stage
 
 localparam int unsigned     BUF_DEPTH     = FRAME_WIDTH * 2;
 localparam int unsigned     W_BUF_ADDR    = $clog2(BUF_DEPTH);
@@ -148,6 +148,17 @@ logic                  tex_shade_p2;
 logic                  bg_top_p2;
 
 // Stage 3
+logic [W_NUM_TEX-1:0]  texture_p3;
+logic                  in_texture_p3;
+logic                  tex_shade_p3;
+logic                  bg_top_p3;
+
+// Stage 4
+logic                  in_texture_p4;
+logic                  tex_shade_p4;
+logic                  bg_top_p4;
+
+// Stage 5
 logic [W_COLOR-1:0]    red_next;
 logic [W_COLOR-1:0]    green_next;
 logic [W_COLOR-1:0]    blue_next;
@@ -250,7 +261,7 @@ always_ff @(posedge clk)
     px_y_p0 <= px_y_i;
 
 // Valid data is available on the next clock cycle after read
-// Every bit of valid shift register correspond to validity of data on each
+// Every bit of valids shift register corresponds to validity of data on each
 // stage
 always_ff @(posedge clk)
     if (rst) begin
@@ -338,43 +349,68 @@ always_ff @(posedge clk)
 
 // ----------------------------------------------------------------------------
 // Stage 3
-// Get texel from the texture and apply shade if necessary
+// Get pixel color code from the texture synchronous ROM
 // ----------------------------------------------------------------------------
 
-logic [W_NUM_TEX-1:0] tex;
-logic [W_PX_CODE-1:0] px_code;
-logic [23:0]          color;
-
-temp_recode_lut temp_recode_lut (
-    .tex        (tex    ),
-    .color_code (px_code),
-    .color      (color  )
-);
+logic [W_PX_CODE-1:0] px_code_p3;
 
 temp_textures temp_textures (
-    .num_tex (tex     ),
-    .x       (tex_x_p2),
-    .y       (tex_y_p2),
-    .px_code (px_code )
+    .clk     (clk       ),
+    .num_tex (texture_p2),
+    .x       (tex_x_p2  ),
+    .y       (tex_y_p2  ),
+    .px_code (px_code_p3)
 );
 
+always_ff @(posedge clk)
+    if (valids[2]) begin
+        in_texture_p3 <= in_texture_p2;
+        texture_p3    <= texture_p2;
+        tex_shade_p3  <= tex_shade_p2;
+        bg_top_p3     <= bg_top_p2;
+    end
+
+// ----------------------------------------------------------------------------
+// Stage 4
+// Get pixel color value from compressed color code
+// ----------------------------------------------------------------------------
+
+logic [23:0] color_p4;
+
+temp_recode_lut temp_recode_lut (
+    .clk        (clk       ),
+    .tex        (texture_p3),
+    .color_code (px_code_p3),
+    .color      (color_p4  )
+);
+
+always_ff @(posedge clk)
+    if (valids[3]) begin
+        in_texture_p4 <= in_texture_p3;
+        tex_shade_p4  <= tex_shade_p3;
+        bg_top_p4     <= bg_top_p3;
+    end
+
+// ----------------------------------------------------------------------------
+// Stage 5
+// Calculate RGB value based on color value and shade
+// ----------------------------------------------------------------------------
+
 always_comb begin
-    if (bg_top_p2)
+    if (bg_top_p4)
         { red_next, green_next, blue_next } = { 8'd20, 8'd20, 8'd20 };
     else
         { red_next, green_next, blue_next } = { 8'd48, 8'd48, 8'd48 };
 
-    tex = texture_p2 - 1'b1;
-
-    if (in_texture_p2)
-        if (tex_shade_p2)
-            { red_next, green_next, blue_next } = (color >> 1) & SHADE_MASK;
+    if (in_texture_p4)
+        if (tex_shade_p4)
+            { red_next, green_next, blue_next } = (color_p4 >> 1) & SHADE_MASK;
         else
-            { red_next, green_next, blue_next } = color;
+            { red_next, green_next, blue_next } = color_p4;
 end
 
 always_ff @(posedge clk)
-    if (valids[2]) begin
+    if (valids[4]) begin
         red_o   <= red_next;
         green_o <= green_next;
         blue_o  <= blue_next;
