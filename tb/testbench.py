@@ -1,5 +1,4 @@
 import math
-from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 import pygame as pg
 from pygame import freetype
 from PIL import Image
@@ -7,6 +6,8 @@ import cocotb
 from cocotb.types import LogicArray
 from cocotb.triggers import RisingEdge
 from cocotb.queue import Queue
+
+from fixedpoint import fixp_init, fixp_expr, fixp_unsigned, fixp_cast
 
 
 FP_MODE = True
@@ -75,64 +76,6 @@ font = freetype.Font(None, 24)
 surface = pg.display.set_mode((FRAME_WIDTH, FRAME_HEIGHT))
 
 game_map = list()
-
-
-def fixp_init(val, type, signed=False):
-
-    int_bits, frac_bits = type
-
-    fp_value = FpBinary(
-        int_bits=int_bits, frac_bits=frac_bits, signed=signed, value=val
-    )
-
-    return FpBinarySwitchable(
-        fp_mode=FP_MODE, fp_value=fp_value, float_value=val
-    )
-
-
-def fixp_expr(expr, num):
-    int_bits, frac_bits = num.format
-
-    if type(num.value) is FpBinary:
-        fp_value = FpBinary(
-            int_bits=int_bits,
-            frac_bits=frac_bits,
-            signed=num.value.is_signed,
-            value=expr,
-        )
-    else:
-        fp_value = expr
-
-    return FpBinarySwitchable(
-        fp_mode=FP_MODE, fp_value=fp_value, float_value=expr
-    )
-
-
-def fixp_unsigned(val, type):
-    int_bits, frac_bits = type
-
-    fp_value = FpBinary(
-        int_bits=int_bits,
-        frac_bits=frac_bits,
-        signed=False,
-        value=val
-    )
-
-    return FpBinarySwitchable(
-        fp_mode=FP_MODE,
-        fp_value=fp_value,
-        float_value=val
-    )
-
-
-def fixp_cast(num, fixp_type):
-    int_bits, frac_bits = fixp_type
-    return num.resize(
-        format=(int_bits, frac_bits),
-        round_mode=RoundingEnum.direct_neg_inf,
-    )
-
-
 time = 0
 
 PLANE_COEFF = float(

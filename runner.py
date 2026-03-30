@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from cocotb_tools.runner import get_runner
@@ -14,6 +15,9 @@ def run_tb():
     }
 
     proj_path = Path(__file__).resolve().parent
+    tb_path = str(proj_path) + "/tb"
+    sys.path.append(tb_path)
+
     sources = [proj_path / "rtl/newton_inv.sv"]
     sources += [proj_path / "rtl/dda.sv"]
     sources += [proj_path / "rtl/column_calc.sv"]
@@ -55,7 +59,7 @@ def run_tb():
 
     runner.test(
         hdl_toplevel=hdl_toplevel,
-        test_module="tb",
+        test_module="tb.testbench",
         parameters=parameters,
         waves=waves
     )
