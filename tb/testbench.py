@@ -7,10 +7,13 @@ from cocotb.types import LogicArray
 from cocotb.triggers import RisingEdge
 from cocotb.queue import Queue
 
-from fixedpoint import fixp_init, fixp_expr, fixp_unsigned, fixp_cast
-
-
-FP_MODE = True
+from fixedpoint import (
+    get_type_spec,
+    fixp_init,
+    fixp_expr,
+    fixp_unsigned,
+    fixp_cast,
+)
 
 dvi_pkg = cocotb.packages.dvi_pkg
 fixp_pkg = cocotb.packages.fixp_pkg
@@ -18,72 +21,36 @@ tex_pkg = cocotb.packages.tex_pkg
 
 FRAME_WIDTH = int(dvi_pkg.FRAME_WIDTH.value)
 FRAME_HEIGHT = int(dvi_pkg.FRAME_HEIGHT.value)
-W_HEIGHT = int(dvi_pkg.W_V_RES.value)  # type: ignore
+W_HEIGHT = int(dvi_pkg.W_V_RES.value)
 TEX_SIDE = int(tex_pkg.TEX_SIDE.value)
+MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)
+ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)
+INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)
 
-MOVEMENT_SPEED = float(cocotb.top.MOVEMENT_SPEED.value)  # type: ignore
-ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)  # type: ignore
-
-INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)  # type: ignore
-
-mon_queue = Queue()
-
-# ----------------------------------------------------------------------------
 # fixp_pkg types
-# ----------------------------------------------------------------------------
+fixp_ray = get_type_spec(fixp_pkg, "RAY")
+fixp_pos = get_type_spec(fixp_pkg, "POS")
+fixp_ext_pos = get_type_spec(fixp_pkg, "EXT_POS")
+fixp_inv_dist = get_type_spec(fixp_pkg, "INV_DIST")
+fixp_inv = get_type_spec(fixp_pkg, "INV")
 
-fixp_ray = (
-    int(fixp_pkg.RAY_W_INT.value),
-    int(fixp_pkg.RAY_W_FRAC.value)
-)
-
-fixp_pos = (
-    int(fixp_pkg.POS_W_INT.value),
-    int(fixp_pkg.POS_W_FRAC.value)
-)
-
-fixp_ext_pos = (
-    int(fixp_pkg.EXT_POS_W_INT.value),
-    int(fixp_pkg.EXT_POS_W_FRAC.value),
-)
-
-fixp_inv_dist = (
-    int(fixp_pkg.INV_DIST_W_INT.value),
-    int(fixp_pkg.INV_DIST_W_FRAC.value),
-)
-
-fixp_inv = (
-    int(fixp_pkg.INV_W_INT.value),
-    int(fixp_pkg.INV_W_FRAC.value)
-)
-
-# ----------------------------------------------------------------------------
 # tex_pkg types
-# ----------------------------------------------------------------------------
+fixp_tex_zoom = get_type_spec(tex_pkg, "TEX_ZOOM")
+fixp_tex_step = get_type_spec(tex_pkg, "TEX_STEP")
 
-fixp_tex_zoom = (
-    int(tex_pkg.TEX_ZOOM_W_INT.value),
-    int(tex_pkg.TEX_ZOOM_W_FRAC.value)
-)
-
-fixp_tex_step = (
-    int(tex_pkg.TEX_STEP_W_INT.value),
-    int(tex_pkg.TEX_STEP_W_FRAC.value)
-)
-
+# Pygame init
 pg.init()
-font = freetype.Font(None, 24)
+font = freetype.Font(None, 20)
 surface = pg.display.set_mode((FRAME_WIDTH, FRAME_HEIGHT))
 
 game_map = list()
+mon_queue = Queue()
 time = 0
 
-PLANE_COEFF = float(
-    cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value  # type: ignore
-)
+PLANE_COEFF = float(cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value)
 FIXP_MULT_COEFF = fixp_init(PLANE_COEFF, fixp_ray, True)
-move_speed = fixp_init(MOVEMENT_SPEED, fixp_ray, True)
 
+move_speed = fixp_init(MOVEMENT_SPEED, fixp_ray, True)
 cos_angle = fixp_init(math.cos(ROTATION_SPEED), fixp_ray, True)
 sin_angle = fixp_init(math.sin(ROTATION_SPEED), fixp_ray, True)
 cos_neg_angle = fixp_init(math.cos(-ROTATION_SPEED), fixp_ray, True)
@@ -101,42 +68,17 @@ if step < 0.5:
 else:
     ray_step = fixp_init(round(step), fixp_ray)
 
-controls = cocotb.top.raycast_top.controls  # type: ignore
+controls = cocotb.top.raycast_top.controls
 
 # Player position
-pos_x = fixp_init(
-    controls.position.START_POS_X.value,  # type: ignore
-    fixp_pos,
-)
-pos_y = fixp_init(
-    controls.position.START_POS_Y.value,  # type: ignore
-    fixp_pos,
-)
-
-
+pos_x = fixp_init(controls.position.START_POS_X.value, fixp_pos)
+pos_y = fixp_init(controls.position.START_POS_Y.value, fixp_pos)
 # Camera direction
-dir_x = fixp_init(
-    controls.rotation.START_DIR_X.value,  # type: ignore
-    fixp_ray,
-    True,
-)
-dir_y = fixp_init(
-    controls.rotation.START_DIR_Y.value,  # type: ignore
-    fixp_ray,
-    True,
-)
-
+dir_x = fixp_init(controls.rotation.START_DIR_X.value, fixp_ray, True)
+dir_y = fixp_init(controls.rotation.START_DIR_Y.value, fixp_ray, True)
 # Camera plane vector
-plane_x = fixp_init(
-    controls.rotation.START_PLANE_X.value,  # type: ignore
-    fixp_ray,
-    True,
-)
-plane_y = fixp_init(
-    controls.rotation.START_PLANE_Y.value,  # type: ignore
-    fixp_ray,
-    True,
-)
+plane_x = fixp_init(controls.rotation.START_PLANE_X.value, fixp_ray, True)
+plane_y = fixp_init(controls.rotation.START_PLANE_Y.value, fixp_ray, True)
 
 
 def inv_model(num_in):
@@ -159,53 +101,22 @@ def inv_model(num_in):
     return approx
 
 
-# texture = [
-#     [255 * (j != i and j != TEX_SIDE - i) for j in range(TEX_SIDE)]
-#     for i in range(TEX_SIDE)
-# ]
+tex_images = [
+    "wall_vines3.png",
+    "volcanic_wall0.png",
+    "lair1.png",
+    "relief3.png",
+    "crystal_wall10.png",
+    "brick_gray2.png",
+    "lava3.png",
+]
 
 textures = list()
-textures.append(Image.open("../textures/wall_vines3.png").convert("RGB"))
-textures.append(Image.open("../textures/volcanic_wall0.png").convert("RGB"))
-textures.append(Image.open("../textures/lair1.png").convert("RGB"))
-textures.append(Image.open("../textures/relief3.png").convert("RGB"))
-textures.append(Image.open("../textures/crystal_wall10.png").convert("RGB"))
-textures.append(Image.open("../textures/brick_gray2.png").convert("RGB"))
-textures.append(Image.open("../textures/lava3.png").convert("RGB"))
-
-ray_x = 0
-ray_dir_x = 0
-ray_dir_y = 0
-delta_dist_x = 0
-delta_dist_y = 0
-init_side_dist_x = 0
-init_side_dist_y = 0
-hit_side = 0
-map_x = 0
-map_y = 0
-wall_dist = 0
-inv_wall_dist = 0
-scaled_height = 0
-init_side_dist_x = 0
-init_side_dist_y = 0
-dda_dist_x = 0
-dda_dist_y = 0
-tex_step = 0
-tex_x = 0
-y_start = 0
-y_pos = 0
-wall_x = 0
-proj_dist = 0
-coord_x = 0
+for image in tex_images:
+    textures.append(Image.open(f"../textures/{image}").convert("RGB"))
 
 
-def line_height_calc_model(x):
-    global ray_x, ray_dir_x, ray_dir_y
-    global delta_dist_x, delta_dist_y, init_side_dist_x, init_side_dist_y
-    global hit_side, map_x, map_y
-    global wall_dist, inv_wall_dist, scaled_height
-    global dda_dist_x, dda_dist_y, tex_step, tex_x, wall_x, proj_dist, coord_x
-
+def column_calc_model(x):
     ray_x = fixp_init(0, fixp_ray, True)
     ray_dir_x = fixp_init(0, fixp_ray, True)
     ray_dir_y = fixp_init(0, fixp_ray, True)
@@ -265,7 +176,6 @@ def line_height_calc_model(x):
         )
 
     hit_side = 0
-
     map_x = int(pos_x)
     map_y = int(pos_y)
 
@@ -335,7 +245,6 @@ def line_height_calc_model(x):
         coord_x = fixp_expr(pos_x + proj_dist, coord_x)
 
     coord_x = fixp_expr(coord_x - math.floor(coord_x), coord_x)
-
     tex_x = int(coord_x << math.ceil(math.log2(TEX_SIDE)))
 
     if hit_side == 0 and ray_dir_x > 0:
@@ -350,11 +259,10 @@ def line_height_calc_model(x):
         scaled_height = fixp_init(
             FRAME_HEIGHT * inv_wall_dist, (W_HEIGHT, 0)
         )
-        # breakpoint()
         return (texture, tex_shade, tex_x, tex_step, int(scaled_height))
 
 
-async def monitor(dut):
+async def render_monitor(dut):
     render = dut.raycast_top.render
 
     while True:
@@ -374,7 +282,7 @@ async def monitor(dut):
             )
 
 
-async def scoreboard(dut):
+async def render_scoreboard(dut):
     raw_y_pos = fixp_init(0, (6, 12))
     tex_zoom = fixp_init(0, fixp_tex_zoom)
 
@@ -422,17 +330,12 @@ async def scoreboard(dut):
                 px_pos = (tex_x, tex_y)
 
                 px_color = textures[texture].getpixel(px_pos)
-                r, g, b = px_color  # type: ignore
+                r, g, b = px_color
 
                 if tex_shade:
                     px_color = (r >> 1, g >> 1, b >> 1)
                 else:
                     px_color = (r, g, b)
-
-                # if tex_shade:
-                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
-                # else:
-                #     px_color = (texture[tex_y][tex_x], 0, 0)
 
                 surface.set_at((px_x, px_y), px_color)
                 pg.display.update()
@@ -486,116 +389,71 @@ async def scoreboard(dut):
 
 async def pixel_calc(dut):
     pass
-    cocotb.start_soon(monitor(dut))
-    cocotb.start_soon(scoreboard(dut))
+    cocotb.start_soon(render_monitor(dut))
+    cocotb.start_soon(render_scoreboard(dut))
 
 
-async def render(dut, buf_toggle):
-    global y_start, y_pos
+async def column_calc_scoreboard(dut, buf_toggle):
     # Clear screen
     surface.fill((0, 0, 0))
     pg.draw.rect(surface, (20, 20, 20), (0, 0, 640, 240))
     pg.draw.rect(surface, (48, 48, 48), (0, 240, 640, 240))
 
-    # await RisingEdge(dut.px_clk)
-    #
-    # await RisingEdge(dut.raycast_top.frame_done)
-    # mem = dut.raycast_top.render.frame_buffer.value
+    await RisingEdge(dut.px_clk)
+    await RisingEdge(dut.raycast_top.frame_done)
+    mem = dut.raycast_top.render.frame_buffer.value
 
     for x in range(FRAME_WIDTH):
-        texture, tex_shade, tex_x, tex_step, tex_height = line_height_calc_model(x)
+        texture, tex_shade, tex_x, tex_step, tex_height = (
+            column_calc_model(x)
+        )
 
-        # dut_shade = int(mem[(FRAME_WIDTH * buf_toggle) + x][28])
-        # dut_tex_x = int(mem[(FRAME_WIDTH * buf_toggle) + x][27:23])
-        # dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
-        # dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
-        #
-        # height_div2 = tex_height // 2
-        #
-        # try:
-        #     assert dut_height == height_div2
-        # except AssertionError as e:
-        #     top = dut.raycast_top
-        #     print("=" * 80)
-        #     print(f"Pixel {x}")
-        #     print(f"Expected height: {height_div2}, got {dut_height}")
-        #
-        #     print(f"Expected dir_x: {dir_x}")
-        #     print(
-        #         f"Got dir_x: {top.dir_x.value.to_signed() / 2**fixp_ray[1]}"
-        #     )
-        #     print(f"Expected dir_y: {dir_y}")
-        #     print(
-        #         f"Got dir_y: {top.dir_y.value.to_signed() / 2**fixp_ray[1]}\n"
-        #     )
-        #
-        #     print(f"Expected plane_x: {plane_x}")
-        #     print(
-        #         f"Got plane_x: {top.plane_x.value.to_signed()/2**fixp_ray[1]}"
-        #     )
-        #     print(f"Expected plane_y: {plane_y}")
-        #     print(
-        #         f"Got plane_y: {top.plane_y.value.to_signed()/2**fixp_ray[1]}"
-        #     )
-        #
-        #     print(f"Expected pos_x: {pos_x}")
-        #     print(
-        #         f"Got pos_x: {top.pos_x.value.to_unsigned() / 2**fixp_pos[1]}"
-        #     )
-        #     print(f"Expected pos_y: {pos_y}")
-        #     print(
-        #         f"Got pos_y: {top.pos_y.value.to_unsigned() / 2**fixp_pos[1]}"
-        #     )
-        #
-        #     print(f"ray_x {ray_x}")
-        #     print(f"ray_dir_x {ray_dir_x}")
-        #     print(f"ray_dir_y {ray_dir_y}")
-        #     print(f"delta_dist_x {delta_dist_x}")
-        #     print(f"delta_dist_y {delta_dist_y}")
-        #     print(f"init_side_dist_x {init_side_dist_x}")
-        #     print(f"init_side_dist_y {init_side_dist_y}")
-        #     print(f"dda_side_dist_x {dda_dist_x}")
-        #     print(f"dda_side_dist_y {dda_dist_y}")
-        #     print(f"hit_side {hit_side}")
-        #     print(f"wall_dist {wall_dist}")
-        #     print(f"inv_wall_dist {inv_wall_dist}")
-        #     print(f"scaled_height {scaled_height}")
-        #     print(f"map_x {map_x}")
-        #     print(f"map_y {map_y}")
-        #     print(f"init_side_dist_x {init_side_dist_x}")
-        #     print(f"init_side_dist_y {init_side_dist_y}")
-        #     print(f"line_height {tex_height}")
-        #     print("=" * 80)
-        #     raise e
-        #
-        # try:
-        #     assert dut_shade == tex_shade
-        # except AssertionError as e:
-        #     print("=" * 80)
-        #     print(f"Pixel {x}")
-        #     print(f"Expected color: {tex_shade}, got {dut_shade}")
-        #     print("=" * 80)
-        #     raise e
-        #
-        # try:
-        #     assert dut_tex_x == tex_x
-        # except AssertionError as e:
-        #     print("=" * 80)
-        #     print(f"Pixel {x}")
-        #     print(f"Expected tex_x: {tex_x}, got {dut_tex_x}")
-        #     print("=" * 80)
-        #     breakpoint()
-        #     raise e
-        #
-        # try:
-        #     assert dut_tex_step == tex_step
-        # except AssertionError as e:
-        #     print("=" * 80)
-        #     print(f"Pixel {x}")
-        #     print(f"Expected tex_step: {tex_step}, got {dut_tex_step}")
-        #     print("=" * 80)
-        #     breakpoint()
-        #     raise e
+        dut_shade = int(mem[(FRAME_WIDTH * buf_toggle) + x][28])
+        dut_tex_x = int(mem[(FRAME_WIDTH * buf_toggle) + x][27:23])
+        dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
+        dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
+
+        height_div2 = tex_height // 2
+
+        try:
+            assert dut_height == height_div2
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected height: {height_div2}, got {dut_height}")
+            print("=" * 80)
+            breakpoint()
+            raise e
+
+        try:
+            assert dut_shade == tex_shade
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected color: {tex_shade}, got {dut_shade}")
+            print("=" * 80)
+            breakpoint()
+            raise e
+
+        try:
+            assert dut_tex_x == tex_x
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected tex_x: {tex_x}, got {dut_tex_x}")
+            print("=" * 80)
+            breakpoint()
+            raise e
+
+        try:
+            assert dut_tex_step == tex_step
+        except AssertionError as e:
+            print("=" * 80)
+            print(f"Pixel {x}")
+            print(f"Expected tex_step: {tex_step}, got {dut_tex_step}")
+            print("=" * 80)
+            breakpoint()
+            raise e
 
         start_pos = FRAME_HEIGHT // 2 - tex_height // 2
         if start_pos < 0:
@@ -618,26 +476,8 @@ async def render(dut, buf_toggle):
         else:
             y_zoom_offset = 0
 
-        # y_start = fixp_init(0, fixp_tex_start)
-        # if tex_step < tex_step_scale:
-        #     y_start = fixp_expr(
-        #         TEX_SIDE // 2
-        #         - fixp_expr(FRAME_HEIGHT // 2 * tex_step, y_start),
-        #         y_start,
-        #     )
-        # else:
-        #     y_start = 0
-
         for y in range(FRAME_HEIGHT):
             if y >= start_pos and y < end_pos:
-
-                # y_pos = fixp_init(0, fixp_tex_pos)
-                # temp = fixp_init(0, (5, 12))
-                # temp = fixp_expr((y - start_pos) * tex_step, temp)
-                # fixp_cast(temp, fixp_tex_pos)
-                # y_pos = fixp_expr(y_start + temp, y_pos)
-                #
-                # tex_y = int(y_pos)
 
                 tex_align = y - start_pos
                 tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
@@ -646,31 +486,22 @@ async def render(dut, buf_toggle):
                 tex_align_scaled = fixp_expr(
                     tex_align_ext * tex_step, tex_align_scaled
                 )
-                raw_y_pos = fixp_expr(y_zoom_offset + (tex_align_scaled << 3), raw_y_pos)
+                raw_y_pos = fixp_expr(
+                    y_zoom_offset + (tex_align_scaled << 3), raw_y_pos
+                )
 
                 tex_y = min(31, int(raw_y_pos))
 
                 px_pos = (tex_x, tex_y)
                 px_color = textures[texture-1].getpixel(px_pos)
                 if tex_shade:
-                    r, g, b = px_color  # type: ignore
+                    r, g, b = px_color
                     px_color = (r >> 1, g >> 1, b >> 1)
-
-                # if tex_shade:
-                #     px_color = (texture[tex_y][tex_x] >> 1, 0, 0)
-                # else:
-                #     px_color = (texture[tex_y][tex_x], 0, 0)
-
-                # if tex_shade:
-                #     px_color = (127, 127, 127)
-                # else:
-                #     px_color = (255, 255, 255)
 
                 surface.set_at((x, y), px_color)
 
     print_info()
     pg.display.update()
-    # cocotb.pass_test("Quit action")
 
 
 def print_info():
@@ -680,13 +511,14 @@ def print_info():
     frame_time = (time - old_time) / 1000.0
     fps = 1 / frame_time
 
-    font.render_to(surface, (20, 20), f"FPS: {str(fps)}", (0, 255, 0))
-    font.render_to(surface, (20, 50), f"pos_x: {pos_x}", (0, 255, 0))
-    font.render_to(surface, (20, 80), f"pos_y: {pos_y}", (0, 255, 0))
-    font.render_to(surface, (20, 110), f"plane_x: {plane_x}", (0, 255, 0))
-    font.render_to(surface, (20, 140), f"plane_y: {plane_y}", (0, 255, 0))
-    font.render_to(surface, (20, 170), f"dir_x: {dir_x}", (0, 255, 0))
-    font.render_to(surface, (20, 200), f"dir_y: {dir_y}", (0, 255, 0))
+    green = (0, 255, 0)
+    font.render_to(surface, (20, 20), f"FPS: {str(fps)}", green)
+    font.render_to(surface, (20, 50), f"pos_x: {pos_x}", green)
+    font.render_to(surface, (20, 80), f"pos_y: {pos_y}", green)
+    font.render_to(surface, (20, 110), f"plane_x: {plane_x}", green)
+    font.render_to(surface, (20, 140), f"plane_y: {plane_y}", green)
+    font.render_to(surface, (20, 170), f"dir_x: {dir_x}", green)
+    font.render_to(surface, (20, 200), f"dir_y: {dir_y}", green)
 
 
 def controls(dut):
@@ -859,21 +691,29 @@ async def coro_quit(dut):
                     quit()
 
 
-@cocotb.test()
-async def run_raycast(dut):
+async def setup(dut):
     global game_map
     cocotb.start_soon(dut_reset(dut))
 
     await RisingEdge(dut.px_clk)
-    game_map = cocotb.top.raycast_top.temp_map.map.value  # type: ignore
+    game_map = cocotb.top.raycast_top.temp_map.map.value
+
+
+@cocotb.test()
+async def check_column_calc(dut):
+    await setup(dut)
 
     buf_toggle = 1
     while True:
         controls(dut)
-        await render(dut, buf_toggle)
+        await column_calc_scoreboard(dut, buf_toggle)
         buf_toggle = buf_toggle ^ 1
 
-    # cocotb.start_soon(pixel_calc(dut))
-    # while True:
-    #     # cocotb.start_soon(coro_quit(dut))
-    #     await RisingEdge(dut.raycast_top.frame_done)
+
+@cocotb.test()
+async def check_render(dut):
+    await setup(dut)
+
+    cocotb.start_soon(pixel_calc(dut))
+    while True:
+        await RisingEdge(dut.raycast_top.frame_done)

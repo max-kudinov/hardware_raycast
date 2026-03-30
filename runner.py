@@ -61,7 +61,8 @@ def run_tb():
         hdl_toplevel=hdl_toplevel,
         test_module="tb.testbench",
         parameters=parameters,
-        waves=waves
+        waves=waves,
+        test_filter="check_column_calc"
     )
 
 

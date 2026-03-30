@@ -1,3 +1,5 @@
 [tool.pyright]
 venvPath = "."
 venv = "ray"
+reportFunctionMemberAccess = false
+reportAttributeAccessIssue = false

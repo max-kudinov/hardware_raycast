@@ -3,6 +3,16 @@ from fpbinary import FpBinary, FpBinarySwitchable, RoundingEnum
 FP_MODE = True
 
 
+def get_type_spec(pkg, type_prefix):
+    int_attr = f"{type_prefix}_W_INT"
+    frac_attr = f"{type_prefix}_W_FRAC"
+
+    return (
+        int(getattr(pkg, int_attr).value),
+        int(getattr(pkg, frac_attr).value),
+    )
+
+
 def fixp_init(val, type, signed=False):
     int_bits, frac_bits = type
 
