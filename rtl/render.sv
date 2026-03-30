@@ -135,6 +135,7 @@ temp_fixp_t            temp_mult;
 
 // Stage 2
 align_fixp_t           tex_align_ext;
+align_fixp_t           tex_step_ext;
 align_fixp_t           tex_align_scaled;
 
 logic [W_V_RES-1:0]    raw_tex_y;
@@ -319,7 +320,8 @@ always_comb begin
     // integer number in a fractional part (same as left shift), the correct
     // value could be later restored by applying opposite right shift
     tex_align_ext    = { tex_align_p1, { ALIGN_EXT_PAD {1'b0} } };
-    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_p1);
+    tex_step_ext     = `FIXP_CAST(tex_step_p1, align_fixp_t);
+    tex_align_scaled = `FIXP_MULT(tex_align_ext, tex_step_ext);
 
     // Shift y_zoom_offset to account for shifted tex_align_scaled, then take
     // the integer part of the sum (accounting for previous shift, so we take
