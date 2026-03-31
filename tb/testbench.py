@@ -199,7 +199,7 @@ def column_calc_model(x):
 
     # from 0 to 31
     wall_dist = fixp_init(0, fixp_pos)
-    texture = int(game_map[map_y][map_x])
+    texture = int(game_map[map_y][map_x]) - 1
 
     # from 0 to 1
     inv_wall_dist = fixp_init(0, fixp_inv_dist)
@@ -245,12 +245,59 @@ def column_calc_model(x):
         tex_x = TEX_SIDE - 1 - tex_x
 
     if gte_one:
-        return (texture, tex_shade, tex_x, tex_step, FRAME_HEIGHT)
+        return (texture, tex_shade, tex_x, tex_step, FRAME_HEIGHT // 2)
     else:
         scaled_height = fixp_init(
             FRAME_HEIGHT * inv_wall_dist, (W_HEIGHT, 0)
         )
-        return (texture, tex_shade, tex_x, tex_step, int(scaled_height))
+        return (texture, tex_shade, tex_x, tex_step, int(scaled_height) // 2)
+
+
+def render_model(px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height):
+    in_texture = False
+
+    if px_y < FRAME_HEIGHT // 2:
+        px_color = (20, 20, 20)
+    else:
+        px_color = (48, 48, 48)
+
+    tex_start = FRAME_HEIGHT // 2 - tex_height
+    tex_end = FRAME_HEIGHT // 2 + tex_height
+
+    if px_y >= tex_start and px_y < tex_end:
+        in_texture = True
+
+        if tex_step < tex_step_scale:
+            tex_zoom = fixp_init(
+                TEX_SIDE // 2
+                - fixp_init(
+                    FRAME_HEIGHT // 2 * tex_step, fixp_tex_zoom
+                ),
+                fixp_tex_zoom,
+            )
+        else:
+            tex_zoom = fixp_init(0, fixp_tex_zoom)
+
+        tex_align = px_y - tex_start
+        tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
+        tex_align_scaled = fixp_init(0, (6, 12))
+        tex_align_scaled = fixp_expr(
+            tex_align_ext * tex_step, tex_align_scaled
+        )
+        raw_y_pos = fixp_init(
+            tex_zoom + (tex_align_scaled << 3), (6, 12)
+        )
+
+        tex_y = min(31, int(raw_y_pos))
+        px_color = textures[texture].getpixel((tex_x, tex_y))
+        r, g, b = px_color
+
+        if tex_shade:
+            px_color = (r >> 1, g >> 1, b >> 1)
+        else:
+            px_color = (r, g, b)
+
+    return px_color, in_texture
 
 
 async def render_monitor(dut):
@@ -274,9 +321,6 @@ async def render_monitor(dut):
 
 
 async def render_scoreboard(dut):
-    raw_y_pos = fixp_init(0, (6, 12))
-    tex_zoom = fixp_init(0, fixp_tex_zoom)
-
     while True:
         await RisingEdge(dut.px_clk)
 
@@ -284,55 +328,15 @@ async def render_scoreboard(dut):
             px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height = (
                 await mon_queue.get()
             )
+            px_color, in_texture = render_model(
+                px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height
+            )
 
-            if px_y < FRAME_HEIGHT // 2:
-                px_color = (20, 20, 20)
-            else:
-                px_color = (48, 48, 48)
-
-            tex_start = FRAME_HEIGHT // 2 - tex_height
-            tex_end = FRAME_HEIGHT // 2 + tex_height
-
-            if px_y >= tex_start and px_y < tex_end:
-
-                if tex_step < tex_step_scale:
-                    tex_zoom = fixp_expr(
-                        TEX_SIDE // 2
-                        - fixp_expr(
-                            FRAME_HEIGHT // 2 * tex_step, tex_zoom
-                        ),
-                        tex_zoom,
-                    )
-                else:
-                    tex_zoom = fixp_expr(0, tex_zoom)
-
-                tex_align = px_y - tex_start
-                tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
-                tex_align_scaled = fixp_init(0, (6, 12))
-                tex_align_scaled = fixp_expr(
-                    tex_align_ext * tex_step, tex_align_scaled
-                )
-                raw_y_pos = fixp_expr(
-                    tex_zoom + (tex_align_scaled << 3), raw_y_pos
-                )
-
-                tex_y = min(31, int(raw_y_pos))
-
-                px_pos = (tex_x, tex_y)
-
-                px_color = textures[texture].getpixel(px_pos)
-                r, g, b = px_color
-
-                if tex_shade:
-                    px_color = (r >> 1, g >> 1, b >> 1)
-                else:
-                    px_color = (r, g, b)
-
+            if in_texture:
                 surface.set_at((px_x, px_y), px_color)
                 pg.display.update()
 
             red, green, blue = px_color
-
             render = dut.raycast_top.render
             dut_red = int(render.red_o.value)
             dut_green = int(render.green_o.value)
@@ -404,14 +408,12 @@ async def column_calc_scoreboard(dut, buf_toggle):
         dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
         dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
 
-        height_div2 = tex_height // 2
-
         try:
-            assert dut_height == height_div2
+            assert dut_height == tex_height
         except AssertionError as e:
             print("=" * 80)
             print(f"Pixel {x}")
-            print(f"Expected height: {height_div2}, got {dut_height}")
+            print(f"Expected height: {tex_height}, got {dut_height}")
             print("=" * 80)
             breakpoint()
             raise e
@@ -446,50 +448,11 @@ async def column_calc_scoreboard(dut, buf_toggle):
             breakpoint()
             raise e
 
-        start_pos = FRAME_HEIGHT // 2 - tex_height // 2
-        if start_pos < 0:
-            start_pos = 0
-
-        end_pos = FRAME_HEIGHT // 2 + tex_height // 2
-        if end_pos > FRAME_HEIGHT - 1:
-            end_pos = FRAME_HEIGHT - 1
-
-        y_zoom_offset = fixp_init(0, (4, 4))
-
-        if tex_step < tex_step_scale:
-            y_zoom_offset = fixp_expr(
-                TEX_SIDE // 2
-                - fixp_expr(
-                    FRAME_HEIGHT // 2 * tex_step, y_zoom_offset
-                ),
-                y_zoom_offset,
-            )
-        else:
-            y_zoom_offset = 0
-
         for y in range(FRAME_HEIGHT):
-            if y >= start_pos and y < end_pos:
-
-                tex_align = y - start_pos
-                tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
-                raw_y_pos = fixp_init(0, (6, 12))
-                tex_align_scaled = fixp_init(0, (6, 12))
-                tex_align_scaled = fixp_expr(
-                    tex_align_ext * tex_step, tex_align_scaled
-                )
-                raw_y_pos = fixp_expr(
-                    y_zoom_offset + (tex_align_scaled << 3), raw_y_pos
-                )
-
-                tex_y = min(31, int(raw_y_pos))
-
-                px_pos = (tex_x, tex_y)
-                px_color = textures[texture-1].getpixel(px_pos)
-                if tex_shade:
-                    r, g, b = px_color
-                    px_color = (r >> 1, g >> 1, b >> 1)
-
-                surface.set_at((x, y), px_color)
+            px_color, _ = render_model(
+                x, y, texture, tex_shade, tex_x, tex_step, tex_height
+            )
+            surface.set_at((x, y), px_color)
 
     print_info()
     pg.display.update()
