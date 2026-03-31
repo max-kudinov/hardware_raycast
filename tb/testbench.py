@@ -38,15 +38,6 @@ fixp_inv = get_type_spec(fixp_pkg, "INV")
 fixp_tex_zoom = get_type_spec(tex_pkg, "TEX_ZOOM")
 fixp_tex_step = get_type_spec(tex_pkg, "TEX_STEP")
 
-# Pygame init
-pg.init()
-font = freetype.Font(None, 20)
-surface = pg.display.set_mode((FRAME_WIDTH, FRAME_HEIGHT))
-
-game_map = list()
-mon_queue = Queue()
-time = 0
-
 PLANE_COEFF = float(cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value)
 FIXP_MULT_COEFF = fixp_init(PLANE_COEFF, fixp_ray, True)
 
@@ -522,24 +513,8 @@ def print_info():
 
 
 def controls(dut):
-    global dir_x
-    global dir_y
-    global plane_x
-    global plane_y
-
-    for event in pg.event.get():
-        if event.type == pg.KEYDOWN:
-            if event.key == pg.K_q:
-                quit()
-
     keys = pg.key.get_pressed()
-
-    forward = 0
-    backward = 0
-    left = 0
-    right = 0
-    rot_left = 0
-    rot_right = 0
+    forward = backward = left = right = rot_left = rot_right = 0
 
     def update_pos(dir, is_x):
         global pos_x, pos_y
@@ -581,19 +556,28 @@ def controls(dut):
     if keys[pg.K_d]:
         update_pos(-dir_x, 0)
 
-    # Rotate right
-    if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:
-        rot_right = 1
+    def rotate(direction):
+        global dir_x
+        global dir_y
+        global plane_x
+        global plane_y
+
+        if direction:
+            cos = cos_angle
+            sin = sin_angle
+        else:
+            cos = cos_neg_angle
+            sin = sin_neg_angle
 
         old_dir_x = fixp_init(dir_x, fixp_ray, True)
         dir_x = fixp_cast(
-            fixp_cast(dir_x * cos_neg_angle, fixp_ray)
-            - fixp_cast(dir_y * sin_neg_angle, fixp_ray),
+            fixp_cast(dir_x * cos, fixp_ray)
+            - fixp_cast(dir_y * sin, fixp_ray),
             fixp_ray,
         )
         dir_y = fixp_cast(
-            fixp_cast(old_dir_x * sin_neg_angle, fixp_ray)
-            + fixp_cast(dir_y * cos_neg_angle, fixp_ray),
+            fixp_cast(old_dir_x * sin, fixp_ray)
+            + fixp_cast(dir_y * cos, fixp_ray),
             fixp_ray,
         )
 
@@ -601,36 +585,36 @@ def controls(dut):
         plane_y = fixp_cast(
             -fixp_cast(dir_x * FIXP_MULT_COEFF, fixp_ray), fixp_ray
         )
+
+    # Rotate right
+    if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:
+        rot_right = 1
+        rotate(0)
 
     # Rotate left
     if keys[pg.K_LEFT] and not keys[pg.K_RIGHT]:
         rot_left = 1
-
-        old_dir_x = fixp_init(dir_x, fixp_ray, True)
-        dir_x = fixp_cast(
-            fixp_cast(dir_x * cos_angle, fixp_ray)
-            - fixp_cast(dir_y * sin_angle, fixp_ray),
-            fixp_ray,
-        )
-        dir_y = fixp_cast(
-            fixp_cast(old_dir_x * sin_angle, fixp_ray)
-            + fixp_cast(dir_y * cos_angle, fixp_ray),
-            fixp_ray,
-        )
-
-        plane_x = fixp_cast(dir_y * FIXP_MULT_COEFF, fixp_ray)
-        plane_y = fixp_cast(
-            -fixp_cast(dir_x * FIXP_MULT_COEFF, fixp_ray), fixp_ray
-        )
+        rotate(1)
 
     # Cocotb doesn't allow indexing of packed arrays, so yikes
     key_str = f"{rot_right}{rot_left}{right}{left}{backward}{forward}"
     dut.keys_inv_i.value = ~LogicArray(key_str)
 
 
-def quit():
-    pg.quit()
-    cocotb.pass_test("Quit action")
+def check_for_quit():
+    quit_sim = False
+
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            quit_sim = True
+
+        elif event.type == pg.KEYDOWN:
+            if event.key == pg.K_q:
+                quit_sim = True
+
+    if quit_sim:
+        pg.quit()
+        cocotb.pass_test("Quit action")
 
 
 async def dut_reset(dut):
@@ -639,18 +623,17 @@ async def dut_reset(dut):
     dut.rst_n.value = 1
 
 
-async def coro_quit(dut):
-    while True:
-        await RisingEdge(dut.px_clk)
-        for event in pg.event.get():
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_q:
-                    quit()
-
-
 async def setup(dut):
-    global game_map
+    global game_map, font, surface, mon_queue, time
     cocotb.start_soon(dut_reset(dut))
+
+    # Pygame init
+    pg.init()
+    font = freetype.Font(None, 20)
+    surface = pg.display.set_mode((FRAME_WIDTH, FRAME_HEIGHT))
+
+    mon_queue = Queue()
+    time = 0
 
     await RisingEdge(dut.px_clk)
     game_map = cocotb.top.raycast_top.temp_map.map.value
@@ -662,6 +645,7 @@ async def check_column_calc(dut):
 
     buf_toggle = 1
     while True:
+        check_for_quit()
         controls(dut)
         await column_calc_scoreboard(dut, buf_toggle)
         buf_toggle = buf_toggle ^ 1
@@ -673,4 +657,5 @@ async def check_render(dut):
 
     cocotb.start_soon(pixel_calc(dut))
     while True:
+        check_for_quit()
         await RisingEdge(dut.raycast_top.frame_done)
