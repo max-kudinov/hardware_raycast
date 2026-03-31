@@ -522,8 +522,6 @@ def print_info():
 
 
 def controls(dut):
-    global pos_x
-    global pos_y
     global dir_x
     global dir_y
     global plane_x
@@ -543,86 +541,45 @@ def controls(dut):
     rot_left = 0
     rot_right = 0
 
-    new_pos = fixp_init(0, fixp_pos)
-    step_next = fixp_init(0, fixp_ray, True)
+    def update_pos(dir, is_x):
+        global pos_x, pos_y
+        step_next = fixp_expr(dir * move_speed, dir)
+        if is_x:
+            update_axis = pos_x
+        else:
+            update_axis = pos_y
+
+        new_pos = fixp_init(
+            update_axis + fixp_cast(step_next, fixp_pos), fixp_pos
+        )
+        if is_x and int(game_map[int(pos_y)][int(new_pos)]) == 0:
+            pos_x = new_pos
+        if not is_x and int(game_map[int(new_pos)][int(pos_x)]) == 0:
+            pos_y = new_pos
 
     # Update x axis
-    # Forward
     if keys[pg.K_w]:
         forward = 1
-        step_next = fixp_expr(dir_x * move_speed, dir_x)
-        new_pos = fixp_expr(
-            pos_x + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
-            pos_x = new_pos
-
-    # Backward
+        update_pos(dir_x, 1)
     if keys[pg.K_s]:
         backward = 1
-        step_next = fixp_expr(-dir_x * move_speed, dir_x)
-        new_pos = fixp_expr(
-            pos_x + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
-            pos_x = new_pos
-
-    # Left
+        update_pos(-dir_x, 1)
     if keys[pg.K_a]:
         left = 1
-        step_next = fixp_expr(-dir_y * move_speed, dir_y)
-        new_pos = fixp_expr(
-            pos_x + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
-            pos_x = new_pos
-
-    # Right
+        update_pos(-dir_y, 1)
     if keys[pg.K_d]:
         right = 1
-        step_next = fixp_expr(dir_y * move_speed, dir_y)
-        new_pos = fixp_expr(
-            pos_x + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(pos_y)][int(new_pos)]) == 0:
-            pos_x = new_pos
+        update_pos(dir_y, 1)
 
     # Update y axis
-    # Forward
     if keys[pg.K_w]:
-        step_next = fixp_expr(dir_y * move_speed, dir_y)
-        new_pos = fixp_expr(
-            pos_y + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
-            pos_y = new_pos
-
-    # Backward
+        update_pos(dir_y, 0)
     if keys[pg.K_s]:
-        step_next = fixp_expr(-dir_y * move_speed, dir_y)
-        new_pos = fixp_expr(
-            pos_y + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
-            pos_y = new_pos
-
-    # Left
+        update_pos(-dir_y, 0)
     if keys[pg.K_a]:
-        step_next = fixp_expr(dir_x * move_speed, dir_x)
-        new_pos = fixp_expr(
-            pos_y + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
-            pos_y = new_pos
-
-    # Right
+        update_pos(dir_x, 0)
     if keys[pg.K_d]:
-        step_next = fixp_expr(-dir_x * move_speed, dir_x)
-        new_pos = fixp_expr(
-            pos_y + fixp_cast(step_next, fixp_pos), new_pos
-        )
-        if int(game_map[int(new_pos)][int(pos_x)]) == 0:
-            pos_y = new_pos
+        update_pos(-dir_x, 0)
 
     # Rotate right
     if keys[pg.K_RIGHT] and not keys[pg.K_LEFT]:
