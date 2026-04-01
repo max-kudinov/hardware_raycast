@@ -361,10 +361,11 @@ async def render_scoreboard(dut):
             await dut_assert(green, dut_green, px_x, px_y)
             await dut_assert(blue, dut_blue, px_x, px_y)
 
-
-async def pixel_calc(dut):
-    cocotb.start_soon(render_monitor(dut))
-    cocotb.start_soon(render_scoreboard(dut))
+        if (
+            dut.raycast_top.frame_done.value
+            and not dut.raycast_top.render.buf_toggle.value
+        ):
+            break
 
 
 async def column_calc_scoreboard(dut, buf_toggle):
@@ -562,7 +563,6 @@ async def check_column_calc(dut):
 async def check_render(dut):
     await setup(dut)
 
-    cocotb.start_soon(pixel_calc(dut))
-    while True:
-        check_for_quit()
-        await RisingEdge(dut.raycast_top.frame_done)
+    cocotb.start_soon(render_monitor(dut))
+    await render_scoreboard(dut)
+    pg.quit()
