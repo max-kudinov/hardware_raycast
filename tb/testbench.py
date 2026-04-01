@@ -300,6 +300,21 @@ def render_model(px_x, px_y, texture, tex_shade, tex_x, tex_step, tex_height):
     return px_color, in_texture
 
 
+async def dut_assert(expected, actual, x, y):
+    try:
+        assert expected == actual
+    except AssertionError as e:
+        print("=" * 80)
+        print(f"X {x}")
+        print(f"Y {y}")
+        print(f"Expected height: {expected}, got {actual}")
+        print("=" * 80)
+        breakpoint()
+        for _ in range(50):
+            await RisingEdge(cocotb.top.px_clk)
+        raise e
+
+
 async def render_monitor(dut):
     render = dut.raycast_top.render
 
@@ -342,48 +357,12 @@ async def render_scoreboard(dut):
             dut_green = int(render.green_o.value)
             dut_blue = int(render.blue_o.value)
 
-            try:
-                assert dut_red == red
-            except AssertionError as e:
-                print("=" * 80)
-                print(f"X {px_x}")
-                print(f"Y {px_y}")
-                print(f"Expected red: {red}, got {dut_red}")
-                print("=" * 80)
-                breakpoint()
-                for _ in range(50):
-                    await RisingEdge(dut.px_clk)
-                raise e
-
-            try:
-                assert dut_green == green
-            except AssertionError as e:
-                print("=" * 80)
-                print(f"X {px_x}")
-                print(f"Y {px_y}")
-                print(f"Expected green: {green}, got {dut_green}")
-                print("=" * 80)
-                breakpoint()
-                for _ in range(50):
-                    await RisingEdge(dut.px_clk)
-                raise e
-
-            try:
-                assert dut_blue == blue
-            except AssertionError as e:
-                print("=" * 80)
-                print(f"X {px_x}")
-                print(f"Y {px_y}")
-                print(f"Expected blue: {blue}, got {dut_blue}")
-                print("=" * 80)
-                breakpoint()
-                for _ in range(50):
-                    await RisingEdge(dut.px_clk)
-                raise e
+            await dut_assert(red, dut_red, px_x, px_y)
+            await dut_assert(green, dut_green, px_x, px_y)
+            await dut_assert(blue, dut_blue, px_x, px_y)
 
 
 async def pixel_calc(dut):
-    pass
     cocotb.start_soon(render_monitor(dut))
     cocotb.start_soon(render_scoreboard(dut))
 
@@ -408,45 +387,10 @@ async def column_calc_scoreboard(dut, buf_toggle):
         dut_tex_step = int(mem[(FRAME_WIDTH * buf_toggle) + x][22:8]) / 2**12
         dut_height = int(mem[(FRAME_WIDTH * buf_toggle) + x][7:0])
 
-        try:
-            assert dut_height == tex_height
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected height: {tex_height}, got {dut_height}")
-            print("=" * 80)
-            breakpoint()
-            raise e
-
-        try:
-            assert dut_shade == tex_shade
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected color: {tex_shade}, got {dut_shade}")
-            print("=" * 80)
-            breakpoint()
-            raise e
-
-        try:
-            assert dut_tex_x == tex_x
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected tex_x: {tex_x}, got {dut_tex_x}")
-            print("=" * 80)
-            breakpoint()
-            raise e
-
-        try:
-            assert dut_tex_step == tex_step
-        except AssertionError as e:
-            print("=" * 80)
-            print(f"Pixel {x}")
-            print(f"Expected tex_step: {tex_step}, got {dut_tex_step}")
-            print("=" * 80)
-            breakpoint()
-            raise e
+        await dut_assert(tex_height, dut_height, x, 0)
+        await dut_assert(tex_shade, dut_shade, x, 0)
+        await dut_assert(tex_x, dut_tex_x, x, 0)
+        await dut_assert(tex_step, dut_tex_step, x, 0)
 
         for y in range(FRAME_HEIGHT):
             px_color, _ = render_model(
