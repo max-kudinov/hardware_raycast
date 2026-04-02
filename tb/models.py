@@ -363,3 +363,149 @@ def controls_model(
 
     if rotate_left:
         rotate(1)
+
+
+def convert_state_to_float():
+    global pos_x, pos_y, dir_x, dir_y, plane_x, plane_y
+    pos_x = float(pos_x)
+    pos_y = float(pos_y)
+    dir_x = float(dir_x)
+    dir_y = float(dir_y)
+    plane_x = float(plane_x)
+    plane_y = float(plane_y)
+
+
+def controls_float(
+    forward, backward, left, right, rotate_right, rotate_left, game_map
+):
+    def update_pos(dir, is_x):
+        global pos_x, pos_y
+
+        if is_x:
+            update_axis = pos_x
+        else:
+            update_axis = pos_y
+
+        new_pos = update_axis + dir * MOVEMENT_SPEED
+
+        if is_x and int(game_map[int(pos_y)][int(new_pos)] == 0):
+            pos_x = new_pos
+        if not is_x and int(game_map[int(new_pos)][int(pos_x)] == 0):
+            pos_y = new_pos
+
+    # Update x axis
+    if forward:
+        update_pos(dir_x, 1)
+        update_pos(dir_y, 0)
+    if backward:
+        update_pos(-dir_x, 1)
+        update_pos(-dir_y, 0)
+    if left:
+        update_pos(-dir_y, 1)
+        update_pos(dir_x, 0)
+    if right:
+        update_pos(dir_y, 1)
+        update_pos(-dir_x, 0)
+
+    def rotate(angle):
+        global dir_x, dir_y, plane_x, plane_y
+        old_dir_x = dir_x
+        dir_x = dir_x * math.cos(angle) - dir_y * math.sin(angle)
+        dir_y = old_dir_x * math.sin(angle) + dir_y * math.cos(angle)
+        old_plane_x = plane_x
+        plane_x = plane_x * math.cos(angle) - plane_y * math.sin(angle)
+        plane_y = old_plane_x * math.sin(angle) + plane_y * math.cos(angle)
+
+    if rotate_right:
+        rotate(-ROTATION_SPEED)
+
+    if rotate_left:
+        rotate(ROTATION_SPEED)
+
+
+def float_model(game_map, textures, surface):
+    for x in range(0, FRAME_WIDTH):
+        ray_x = 2 * x / FRAME_WIDTH - 1
+        ray_dir_x = dir_x + plane_x * ray_x
+        ray_dir_y = dir_y + plane_y * ray_x
+
+        delta_dist_x = 1e30 if ray_dir_x == 0 else 1 / abs(ray_dir_x)
+        delta_dist_y = 1e30 if ray_dir_y == 0 else 1 / abs(ray_dir_y)
+
+        wall_dist = 0
+        map_x = int(pos_x)
+        map_y = int(pos_y)
+
+        if ray_dir_x > 0:
+            step_x = 1
+            side_dist_x = (map_x + 1 - pos_x) * delta_dist_x
+        else:
+            step_x = -1
+            side_dist_x = (pos_x - map_x) * delta_dist_x
+
+        if ray_dir_y > 0:
+            step_y = 1
+            side_dist_y = (map_y + 1 - pos_y) * delta_dist_y
+        else:
+            step_y = -1
+            side_dist_y = (pos_y - map_y) * delta_dist_y
+
+        hit_side = 0
+
+        while True:
+            if int(game_map[map_y][map_x]):
+                break
+
+            if side_dist_x < side_dist_y:
+                hit_side = 0
+                side_dist_x += delta_dist_x
+                map_x += step_x
+            else:
+                hit_side = 1
+                side_dist_y += delta_dist_y
+                map_y += step_y
+
+        texture = int(game_map[map_y][map_x]) - 1
+
+        if hit_side == 0:
+            wall_dist = side_dist_x - delta_dist_x
+            tex_shade = 0
+        else:
+            wall_dist = side_dist_y - delta_dist_y
+            tex_shade = 1
+
+        if wall_dist == 0:
+            tex_height = FRAME_HEIGHT
+        else:
+            tex_height = FRAME_HEIGHT / wall_dist
+
+        tex_step = wall_dist * TEX_SIDE / FRAME_HEIGHT
+
+        if hit_side == 0:
+            coord_x = wall_dist * ray_dir_y + pos_y
+        else:
+            coord_x = wall_dist * ray_dir_x + pos_x
+
+        tex_x = int((coord_x - math.floor(coord_x)) * TEX_SIDE)
+
+        if hit_side == 0 and ray_dir_x > 0:
+            tex_x = TEX_SIDE - 1 - tex_x
+        if hit_side == 1 and ray_dir_y < 0:
+            tex_x = TEX_SIDE - 1 - tex_x
+
+        tex_start = FRAME_HEIGHT // 2 - tex_height // 2
+        tex_end = FRAME_HEIGHT // 2 + tex_height // 2
+
+        for y in range(FRAME_HEIGHT):
+            if y >= tex_start and y < tex_end:
+                raw_y_pos = (y - tex_start) * tex_step
+                tex_y = min(TEX_SIDE - 1, int(raw_y_pos))
+
+                px_color = textures[texture].getpixel((tex_x, tex_y))
+                r, g, b = px_color
+                if tex_shade:
+                    px_color = (r >> 1, g >> 1, b >> 1)
+                else:
+                    px_color = (r, g, b)
+
+                surface.set_at((x, y), px_color)

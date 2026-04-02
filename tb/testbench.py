@@ -7,6 +7,9 @@ from cocotb.triggers import RisingEdge
 from cocotb.queue import Queue
 
 from models import (
+    float_model,
+    controls_float,
+    convert_state_to_float,
     column_calc_model,
     render_model,
     controls_model,
@@ -219,6 +222,21 @@ async def setup(dut):
 
     await RisingEdge(dut.px_clk)
     game_map = cocotb.top.raycast_top.temp_map.map.value
+
+
+@cocotb.test()
+async def float_raycast(dut):
+    await setup(dut)
+    convert_state_to_float()
+
+    while True:
+        pg.draw.rect(surface, (20, 20, 20), (0, 0, 640, 240))
+        pg.draw.rect(surface, (48, 48, 48), (0, 240, 640, 240))
+        check_for_quit()
+        controls_float(*handle_controls(dut), game_map)
+        float_model(game_map, textures, surface)
+        print_info()
+        pg.display.update()
 
 
 @cocotb.test()
