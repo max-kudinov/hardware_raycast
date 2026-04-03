@@ -38,12 +38,20 @@ import dvi_pkg::W_COLOR;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-// localparam int unsigned MAP_SIDE = 32;
+localparam int unsigned MAP_SIDE = 32;
+
+// ----------------------------------------------------------------------------
+// Local types declaration
+// ----------------------------------------------------------------------------
+
+typedef logic [$clog2(MAP_SIDE*MAP_SIDE)-1:0] map_addr_t;
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
+logic [W_NUM_TEX-1:0] map [MAP_SIDE*MAP_SIDE];
+map_addr_t            map_addr;
 logic [POS_W_INT-1:0] map_x;
 logic [POS_W_INT-1:0] map_y;
 logic [POS_W_INT-1:0] render_map_x;
@@ -74,15 +82,25 @@ ray_fixp_t            plane_x;
 ray_fixp_t            plane_y;
 
 // ----------------------------------------------------------------------------
+// ROM initialization
+// ----------------------------------------------------------------------------
+
+// Cocotb runs simulation from sim_build directory, so it has different
+// relative path to the memfiles
+`ifdef SIMULATION
+    initial $readmemh("../memfiles/map.mem", map);
+`else
+    initial $readmemh("memfiles/map.mem", map);
+`endif
+
+// ----------------------------------------------------------------------------
 // Manage access to map lookup memory
 // ----------------------------------------------------------------------------
 
-temp_map temp_map (
-    .clk     (px_clk ),
-    .x       (map_x  ),
-    .y       (map_y  ),
-    .texture (texture)
-);
+assign map_addr = (map_addr_t'(map_y) << $clog2(MAP_SIDE)) + map_addr_t'(map_x);
+
+always_ff @(posedge px_clk)
+    texture <= map[map_addr];
 
 assign frame_start = (px_x == '0) && (px_y == '0) && in_range;
 assign frame_done  = (px_x == FRAME_WIDTH - 1) && (px_y == FRAME_HEIGHT - 1);
