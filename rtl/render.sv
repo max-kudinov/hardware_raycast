@@ -45,33 +45,43 @@ module render
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned     W_BUF_DATA    = W_NUM_TEX                        +  // texture
-                                            1                                +  // tex_shade
-                                            W_TEX_SIDE                       +  // tex_x
-                                            TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
-                                            (W_V_RES - 1);                      // tex_height (LSB is not used)
+localparam int unsigned     W_BUF_DATA        = W_NUM_TEX                        +  // texture
+                                                1                                +  // tex_shade
+                                                W_TEX_SIDE                       +  // tex_x
+                                                TEX_STEP_W_INT + TEX_STEP_W_FRAC +  // tex_step
+                                                (W_V_RES - 1);                      // tex_height (LSB is not used)
 
-localparam int unsigned     N_PIPE_STAGES = 6;                                  // 0 to 5
-localparam int unsigned     W_VALIDS      = N_PIPE_STAGES - 1;                  // Don't need valid for the last stage
+localparam int unsigned     N_PIPE_STAGES     = 6;                                  // 0 to 5
+localparam int unsigned     W_VALIDS          = N_PIPE_STAGES - 1;                  // Don't need valid for the last stage
 
-localparam int unsigned     BUF_DEPTH     = FRAME_WIDTH * 2;
-localparam int unsigned     W_BUF_ADDR    = $clog2(BUF_DEPTH);
+localparam int unsigned     BUF_DEPTH         = FRAME_WIDTH * 2;
+localparam int unsigned     W_BUF_ADDR        = $clog2(BUF_DEPTH);
 
-localparam int              ALIGN_SHIFT   = W_V_RES - (W_TEX_SIDE + 1);
-localparam int unsigned     ALIGN_EXT_PAD = W_TEX_SIDE + 1 + TEX_STEP_W_FRAC - W_V_RES;
-localparam [W_TEX_SIDE-1:0] TEX_Y_MAX     = 2**W_TEX_SIDE - 1;
+localparam int              ALIGN_SHIFT       = W_V_RES - (W_TEX_SIDE + 1);
+localparam int unsigned     ALIGN_EXT_PAD     = W_TEX_SIDE + 1 + TEX_STEP_W_FRAC - W_V_RES;
+localparam [W_TEX_SIDE-1:0] TEX_Y_MAX         = 2**W_TEX_SIDE - 1;
 
-localparam logic [23:0]     SHADE_MASK    = { { 8 {1'b1} }, 1'b0, { 7 {1'b1} }, 1'b0, {7 {1'b1} } };
+localparam int unsigned     RECODE_LUT_SIZE   = NUM_TEX * RECODE_LUT_LEN;
+localparam int unsigned     W_RECODE_LUT_ADDR = $clog2(RECODE_LUT_SIZE);
+
+localparam int unsigned     W_PX              = W_COLOR * 3;
+localparam int unsigned     TEXTURES_SIZE     = NUM_TEX * TEX_SIDE * TEX_SIDE;
+localparam int unsigned     W_TEXTURES_ADDR   = $clog2(TEXTURES_SIZE);
+localparam logic [W_PX-1:0] SHADE_MASK        = { { W_COLOR     {1'b1} }, 1'b0,
+                                                  { W_COLOR - 1 {1'b1} }, 1'b0,
+                                                  { W_COLOR - 1 {1'b1} } };
+
+localparam logic [W_PX-1:0] BG_TOP_COLOR      = { 8'd20, 8'd20, 8'd20 };
+localparam logic [W_PX-1:0] BG_BOTTOM_COLOR   = { 8'd48, 8'd48, 8'd48 };
 
 
 // ----------------------------------------------------------------------------
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef logic [-1:-signed'(TEX_STEP_W_FRAC)]          temp_fixp_t;
-typedef logic [W_TEX_SIDE:-signed'(TEX_STEP_W_FRAC)]  align_fixp_t;
-typedef logic [$clog2(NUM_TEX*15)-1:0]                recode_lut_addr_t;
-typedef logic [$clog2(NUM_TEX*TEX_SIDE*TEX_SIDE)-1:0] textures_addr_t;
+typedef logic [-1:-signed'(TEX_STEP_W_FRAC)] tex_frac_fixp_t;
+typedef logic [W_RECODE_LUT_ADDR-1:0]        recode_lut_addr_t;
+typedef logic [W_TEXTURES_ADDR-1:0]          textures_addr_t;
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
@@ -132,9 +142,9 @@ tex_step_fixp_t        tex_step_p1;
 
 tex_zoom_fixp_t        tex_zoom_next;
 tex_zoom_fixp_t        tex_zoom_p1;
-temp_fixp_t            step_frac;
-temp_fixp_t            height_ext;
-temp_fixp_t            temp_mult;
+tex_frac_fixp_t        step_frac;
+tex_frac_fixp_t        height_ext;
+tex_frac_fixp_t        temp_mult;
 
 // Stage 2
 align_fixp_t           tex_align_ext;
@@ -162,18 +172,16 @@ logic [W_PX_CODE-1:0]  px_code_p3;
 logic                  in_texture_p4;
 logic                  tex_shade_p4;
 logic                  bg_top_p4;
-logic [23:0]           color_p4;
+logic [W_PX-1:0]       color_p4;
 
 // Stage 5
-logic [W_COLOR-1:0]    red_next;
-logic [W_COLOR-1:0]    green_next;
-logic [W_COLOR-1:0]    blue_next;
+logic [W_PX-1:0]       color_next;
 
 // ROMs
-logic [W_PX_CODE-1:0] textures [NUM_TEX * TEX_SIDE * TEX_SIDE];
-logic [23:0] recode_lut [NUM_TEX*15];
-recode_lut_addr_t recode_lut_addr;
-textures_addr_t   textures_addr;
+logic [W_PX_CODE-1:0]  textures   [TEXTURES_SIZE];
+logic [W_PX-1:0]       recode_lut [RECODE_LUT_SIZE];
+recode_lut_addr_t      recode_lut_addr;
+textures_addr_t        textures_addr;
 
 // ----------------------------------------------------------------------------
 // ROM initialization
@@ -388,8 +396,8 @@ always_ff @(posedge clk)
 // Get pixel color code from the texture synchronous ROM
 // ----------------------------------------------------------------------------
 
-assign textures_addr = (textures_addr_t'(texture_p2) << (W_TEX_SIDE*2)) +
-                       (textures_addr_t'(tex_y_p2)   <<  W_TEX_SIDE   ) +
+assign textures_addr = (textures_addr_t'(texture_p2) * textures_addr_t'(TEX_SIDE*TEX_SIDE)) +
+                       (textures_addr_t'(tex_y_p2)   * textures_addr_t'(TEX_SIDE         )) +
                         textures_addr_t'(tex_x_p2);
 
 always_ff @(posedge clk)
@@ -408,7 +416,9 @@ always_ff @(posedge clk)
 // Get pixel color value from compressed color code
 // ----------------------------------------------------------------------------
 
-assign recode_lut_addr = (recode_lut_addr_t'(texture_p3) * 15 + recode_lut_addr_t'(px_code_p3));
+assign recode_lut_addr = ((recode_lut_addr_t'(texture_p3)      *
+                           recode_lut_addr_t'(RECODE_LUT_LEN)) +
+                           recode_lut_addr_t'(px_code_p3));
 
 always_ff @(posedge clk)
     if (valids[3]) begin
@@ -427,22 +437,20 @@ always_ff @(posedge clk)
 
 always_comb begin
     if (bg_top_p4)
-        { red_next, green_next, blue_next } = { 8'd20, 8'd20, 8'd20 };
+        color_next = BG_TOP_COLOR;
     else
-        { red_next, green_next, blue_next } = { 8'd48, 8'd48, 8'd48 };
+        color_next = BG_BOTTOM_COLOR;
 
     if (in_texture_p4)
         if (tex_shade_p4)
-            { red_next, green_next, blue_next } = (color_p4 >> 1) & SHADE_MASK;
+            color_next = (color_p4 >> 1) & SHADE_MASK;
         else
-            { red_next, green_next, blue_next } = color_p4;
+            color_next = color_p4;
 end
 
 always_ff @(posedge clk)
     if (valids[4]) begin
-        red_o   <= red_next;
-        green_o <= green_next;
-        blue_o  <= blue_next;
+        { red_o, green_o, blue_o } <= color_next;
     end
 
 endmodule

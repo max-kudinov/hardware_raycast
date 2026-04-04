@@ -21,11 +21,15 @@ package fixp_pkg;
     localparam int unsigned INV_W_INT       = 8;
     localparam int unsigned INV_W_FRAC      = 10;
 
+    localparam int unsigned PROJ_W_INT      = POS_W_INT + 1;
+    localparam int unsigned PROJ_W_FRAC     = RAY_W_FRAC;
+
     localparam int unsigned INV_ITER_NUM    = 8;
 
     typedef logic signed [RAY_W_INT-1:-signed'(RAY_W_FRAC)]           ray_fixp_t;
     typedef logic        [POS_W_INT-1:-signed'(POS_W_FRAC)]           pos_fixp_t;
     typedef logic        [INV_W_INT-1:-signed'(INV_W_FRAC)]           inv_fixp_t;
+    typedef logic signed [PROJ_W_INT-1:-signed'(PROJ_W_FRAC)]         proj_fixp_t;
     typedef logic        [SIDE_W_INT-1:-signed'(SIDE_W_FRAC)]         side_fixp_t;
     typedef logic        [EXT_POS_W_INT-1:-signed'(EXT_POS_W_FRAC)]   ext_pos_fixp_t;
     typedef logic        [INV_DIST_W_INT-1:-signed'(INV_DIST_W_FRAC)] inv_dist_fixp_t;

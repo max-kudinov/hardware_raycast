@@ -38,19 +38,21 @@ import dvi_pkg::W_COLOR;
 // Local parameters declaration
 // ----------------------------------------------------------------------------
 
-localparam int unsigned MAP_SIDE = 32;
+localparam int unsigned MAP_SIDE   = 32;
+localparam int unsigned MAP_SIZE   = MAP_SIDE * MAP_SIDE;
+localparam int unsigned W_MAP_ADDR = $clog2(MAP_SIZE);
 
 // ----------------------------------------------------------------------------
 // Local types declaration
 // ----------------------------------------------------------------------------
 
-typedef logic [$clog2(MAP_SIDE*MAP_SIDE)-1:0] map_addr_t;
+typedef logic [W_MAP_ADDR-1:0] map_addr_t;
 
 // ----------------------------------------------------------------------------
 // Local signals declaration
 // ----------------------------------------------------------------------------
 
-logic [W_NUM_TEX-1:0] map [MAP_SIDE*MAP_SIDE];
+logic [W_NUM_TEX-1:0] map [MAP_SIZE];
 map_addr_t            map_addr;
 logic [POS_W_INT-1:0] map_x;
 logic [POS_W_INT-1:0] map_y;
@@ -97,7 +99,7 @@ ray_fixp_t            plane_y;
 // Manage access to map lookup memory
 // ----------------------------------------------------------------------------
 
-assign map_addr = (map_addr_t'(map_y) << $clog2(MAP_SIDE)) + map_addr_t'(map_x);
+assign map_addr = (map_addr_t'(map_y) * map_addr_t'(MAP_SIDE)) + map_addr_t'(map_x);
 
 always_ff @(posedge px_clk)
     texture <= map[map_addr];

@@ -68,9 +68,8 @@ typedef enum logic [2:0] {
     ST_TEX_MIRROR
 } tex_state_t;
 
-typedef logic signed [POS_W_INT:-signed'(RAY_W_FRAC)]        proj_fixp_t;  // POS_W_INT + 1 to account sign
-typedef logic        [POS_W_INT-1:-signed'(TEX_STEP_W_FRAC)] ext_step_fixp_t;
-typedef logic        [-1:-signed'(POS_W_FRAC)]               pos_frac_fixp_t;
+typedef logic [POS_W_INT-1:-signed'(TEX_STEP_W_FRAC)] ext_step_fixp_t;
+typedef logic [-1:-signed'(POS_W_FRAC)]               pos_frac_fixp_t;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
