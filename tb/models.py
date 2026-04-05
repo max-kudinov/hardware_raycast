@@ -18,10 +18,12 @@ fixp_pos = get_type_spec(fixp_pkg, "POS")
 fixp_ext_pos = get_type_spec(fixp_pkg, "EXT_POS")
 fixp_inv_dist = get_type_spec(fixp_pkg, "INV_DIST")
 fixp_inv = get_type_spec(fixp_pkg, "INV")
+fixp_proj = get_type_spec(fixp_pkg, "PROJ")
 
 # tex_pkg types
 fixp_tex_zoom = get_type_spec(tex_pkg, "TEX_ZOOM")
 fixp_tex_step = get_type_spec(tex_pkg, "TEX_STEP")
+fixp_tex_align = get_type_spec(tex_pkg, "TEX_ALIGN")
 
 FRAME_WIDTH = int(dvi_pkg.FRAME_WIDTH.value)
 FRAME_HEIGHT = int(dvi_pkg.FRAME_HEIGHT.value)
@@ -31,7 +33,24 @@ ROTATION_SPEED = float(cocotb.top.ROTATION_SPEED.value)
 INV_ITER_NUM = int(fixp_pkg.INV_ITER_NUM.value)
 PLANE_COEFF = float(cocotb.top.raycast_top.controls.rotation.PLANE_COEFF.value)
 FIXP_MULT_COEFF = fixp_init(PLANE_COEFF, fixp_ray, True)
+POS_W_FRAC = int(fixp_pkg.POS_W_FRAC.value)
+ALIGN_SHIFT = int(cocotb.top.raycast_top.render.ALIGN_SHIFT.value)
 TEX_SIDE = int(tex_pkg.TEX_SIDE.value)
+MAP_SIDE = int(cocotb.top.raycast_top.MAP_SIDE.value)
+BG_TOP_HEX = int(cocotb.top.raycast_top.render.BG_TOP_COLOR.value)
+BG_BOTTOM_HEX = int(cocotb.top.raycast_top.render.BG_BOTTOM_COLOR.value)
+
+BG_TOP_COLOR = (
+    (BG_TOP_HEX >> 16),
+    (BG_TOP_HEX >> 8) & 255,
+    BG_TOP_HEX & 255,
+)
+
+BG_BOTTOM_COLOR = (
+    (BG_BOTTOM_HEX >> 16),
+    (BG_BOTTOM_HEX >> 8) & 255,
+    BG_BOTTOM_HEX & 255,
+)
 
 move_speed = fixp_init(MOVEMENT_SPEED, fixp_ray, True)
 cos_angle = fixp_init(math.cos(ROTATION_SPEED), fixp_ray, True)
@@ -162,7 +181,7 @@ def column_calc_model(x, game_map):
     dda_dist_y = fixp_init(init_side_dist_y, fixp_ext_pos)
 
     while True:
-        if int(game_map[map_y][map_x]):
+        if int(game_map[(map_y * MAP_SIDE) + map_x]):
             break
 
         if (dda_dist_x < dda_dist_y):
@@ -186,7 +205,7 @@ def column_calc_model(x, game_map):
 
     # from 0 to 31
     wall_dist = fixp_init(0, fixp_pos)
-    texture = int(game_map[map_y][map_x]) - 1
+    texture = int(game_map[(map_y * MAP_SIDE) + map_x]) - 1
 
     # from 0 to 1
     inv_wall_dist = fixp_init(0, fixp_inv_dist)
@@ -211,15 +230,15 @@ def column_calc_model(x, game_map):
     tex_step = fixp_expr(wall_dist * tex_step_scale, tex_step)
 
     coord_x = fixp_init(0, fixp_pos)
-    proj_dist = fixp_init(0, (6, 10), True)
+    proj_dist = fixp_init(0, fixp_proj, True)
 
     if hit_side == 0:
         proj_dist = fixp_expr(wall_dist * ray_dir_y, proj_dist)
-        fixp_cast(proj_dist, (6, 8))
+        fixp_cast(proj_dist, (0, POS_W_FRAC))
         coord_x = fixp_expr(pos_y + proj_dist, coord_x)
     else:
         proj_dist = fixp_expr(wall_dist * ray_dir_x, proj_dist)
-        fixp_cast(proj_dist, (6, 8))
+        fixp_cast(proj_dist, (0, POS_W_FRAC))
         coord_x = fixp_expr(pos_x + proj_dist, coord_x)
 
     coord_x = fixp_expr(coord_x - math.floor(coord_x), coord_x)
@@ -246,9 +265,9 @@ def render_model(
     in_texture = False
 
     if px_y < FRAME_HEIGHT // 2:
-        px_color = (20, 20, 20)
+        px_color = BG_TOP_COLOR
     else:
-        px_color = (48, 48, 48)
+        px_color = BG_BOTTOM_COLOR
 
     tex_start = FRAME_HEIGHT // 2 - tex_height
     tex_end = FRAME_HEIGHT // 2 + tex_height
@@ -268,16 +287,16 @@ def render_model(
             tex_zoom = fixp_init(0, fixp_tex_zoom)
 
         tex_align = px_y - tex_start
-        tex_align_ext = fixp_init(tex_align / 2**3, (6, 12))
-        tex_align_scaled = fixp_init(0, (6, 12))
+        tex_align_ext = fixp_init(tex_align / 2**ALIGN_SHIFT, fixp_tex_align)
+        tex_align_scaled = fixp_init(0, fixp_tex_align)
         tex_align_scaled = fixp_expr(
             tex_align_ext * tex_step, tex_align_scaled
         )
         raw_y_pos = fixp_init(
-            tex_zoom + (tex_align_scaled << 3), (6, 12)
+            tex_zoom + (tex_align_scaled << ALIGN_SHIFT), fixp_tex_align
         )
 
-        tex_y = min(31, int(raw_y_pos))
+        tex_y = min(TEX_SIDE - 1, int(raw_y_pos))
         px_color = textures[texture].getpixel((tex_x, tex_y))
         r, g, b = px_color
 
@@ -303,9 +322,12 @@ def controls_model(
         new_pos = fixp_init(
             update_axis + fixp_cast(step_next, fixp_pos), fixp_pos
         )
-        if is_x and int(game_map[int(pos_y)][int(new_pos)]) == 0:
+        if is_x and int(game_map[(int(pos_y) * MAP_SIDE) + int(new_pos)]) == 0:
             pos_x = new_pos
-        if not is_x and int(game_map[int(new_pos)][int(pos_x)]) == 0:
+        elif (
+            not is_x
+            and int(game_map[(int(new_pos) * MAP_SIDE) + int(pos_x)]) == 0
+        ):
             pos_y = new_pos
 
     # Update x axis
@@ -388,9 +410,11 @@ def controls_float(
 
         new_pos = update_axis + dir * MOVEMENT_SPEED
 
-        if is_x and int(game_map[int(pos_y)][int(new_pos)] == 0):
+        if is_x and int(game_map[(int(pos_y) * MAP_SIDE) + int(new_pos)] == 0):
             pos_x = new_pos
-        if not is_x and int(game_map[int(new_pos)][int(pos_x)] == 0):
+        elif not is_x and int(
+            game_map[(int(new_pos) * MAP_SIDE) + int(pos_x)] == 0
+        ):
             pos_y = new_pos
 
     # Update x axis
@@ -453,7 +477,7 @@ def float_model(game_map, textures, surface):
         hit_side = 0
 
         while True:
-            if int(game_map[map_y][map_x]):
+            if int(game_map[(map_y * MAP_SIDE) + map_x]):
                 break
 
             if side_dist_x < side_dist_y:
@@ -465,7 +489,7 @@ def float_model(game_map, textures, surface):
                 side_dist_y += delta_dist_y
                 map_y += step_y
 
-        texture = int(game_map[map_y][map_x]) - 1
+        texture = int(game_map[(map_y * MAP_SIDE) + map_x]) - 1
 
         if hit_side == 0:
             wall_dist = side_dist_x - delta_dist_x
