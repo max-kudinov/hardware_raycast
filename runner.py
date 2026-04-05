@@ -54,12 +54,26 @@ def run_tb():
         ]
     )
 
+    test_name = "check_render"
+
+    try:
+        arg_name = sys.argv[1]
+
+        if arg_name == "--float":
+            test_name = "float_raycast"
+        elif arg_name == "--fixp_model":
+            test_name = "fixp_model"
+        elif arg_name == "--fixp_model_check":
+            test_name = "check_column_calc"
+    except IndexError:
+        pass
+
     runner.test(
         hdl_toplevel=hdl_toplevel,
         test_module="tb.testbench",
         parameters=parameters,
         waves=waves,
-        test_filter="check_column_calc"
+        test_filter=test_name
     )
 
 
