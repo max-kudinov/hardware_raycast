@@ -110,8 +110,6 @@ def draw_background():
 
 
 async def render_scoreboard(dut):
-    draw_background()
-
     while True:
         await RisingEdge(dut.px_clk)
 
@@ -308,6 +306,7 @@ async def check_column_calc(dut):
 @cocotb.test()
 async def check_render(dut):
     await setup(dut)
+    draw_background()
 
     cocotb.start_soon(render_monitor(dut))
     await render_scoreboard(dut)
