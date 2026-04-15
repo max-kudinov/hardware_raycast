@@ -15,7 +15,7 @@ module primer20k_top #(
     output var logic       tmds_clk_n
 );
 
-logic       power_on_rst_n;
+logic [7:0] power_on_rst_cnt;
 logic       rst;
 logic [5:0] keys;
 
@@ -74,15 +74,16 @@ assign keys = ~keys_inv_i;
 
 `endif
 
-// Reset after bitstream upload
-initial power_on_rst_n = '0;
+// Enable reset after bitstream upload
+initial power_on_rst_cnt = '1;
 
 // always_ff can't have LHS values that are also driven by other processes
 // (like initial), see IEEE-1800 2023 9.2.2.4
 always @(posedge px_clk)
-    power_on_rst_n <= '1;
+    if (power_on_rst_cnt != '0)
+    power_on_rst_cnt <= power_on_rst_cnt - 1'b1;
 
-assign rst = !rst_n || !power_on_rst_n;
+assign rst = !rst_n || (power_on_rst_cnt != '0);
 
 raycast_top #(
     .MOVEMENT_SPEED (MOVEMENT_SPEED),
