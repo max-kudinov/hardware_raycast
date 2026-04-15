@@ -2,11 +2,7 @@
 
 source ~/oss-cad-suite/environment
 
-if ! yosys -m slang -p "read_verilog -sv                \
-                            rtl/temp/temp_map.sv        \
-                            rtl/temp/temp_textures.sv   \
-                            rtl/temp/temp_recode_lut.sv;\
-                        read_slang                      \
+if ! yosys -m slang -p "read_slang                      \
                             --single-unit               \
                             --libraries-inherit-macros  \
                             -DPRIMER20K                 \
@@ -15,7 +11,7 @@ if ! yosys -m slang -p "read_verilog -sv                \
                             rtl/*                       \
                             rtl/dvi/*                   \
                             rtl/blackboxes/*;           \
-                        synth_gowin                     \
+                       synth_gowin                      \
                             -top primer20k_top          \
                             -json netlist.json"
 then
