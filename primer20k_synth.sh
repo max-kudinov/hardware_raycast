@@ -1,12 +1,12 @@
 #!/bin/bash
 
-source ~/oss-cad-suite/environment
 
-if ! yosys -m slang -p "read_slang                      \
+if ! yosys -m /home/mkudinov/contrib/yosys-slang/build/slang.so -p "read_slang                      \
                             --single-unit               \
                             --libraries-inherit-macros  \
                             -DPRIMER20K                 \
                             -DGOWIN                     \
+                            -DVGA                       \
                             -Irtl/include               \
                             rtl/*                       \
                             rtl/dvi/*                   \
@@ -17,6 +17,8 @@ if ! yosys -m slang -p "read_slang                      \
 then
     exit 1
 fi
+
+source ~/oss-cad-suite/environment
 
 if ! nextpnr-himbaechel --json netlist.json           \
                         --write pnr.json              \

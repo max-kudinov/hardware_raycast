@@ -20,10 +20,19 @@ module raycast_top #(
     input  var logic       key_rotate_left_i,
     input  var logic       key_rotate_right_i,
 
+`ifdef DVI
     output var logic [2:0] tmds_data_p,
     output var logic [2:0] tmds_data_n,
     output var logic       tmds_clk_p,
     output var logic       tmds_clk_n
+`elsif VGA
+    output var logic [3:0] red_o,
+    output var logic [3:0] green_o,
+    output var logic [3:0] blue_o,
+
+    output var logic       hsync_o,
+    output var logic       vsync_o
+`endif
 );
 
 import fixp_pkg::*;
@@ -180,24 +189,80 @@ controls #(
     .plane_y_o          (plane_y           )
 );
 
-dvi_top dvi_top (
-    .serial_clk  (serial_clk ),
-    .pixel_clk   (px_clk     ),
-    .rst         (rst        ),
+`ifdef DVI
 
-    .red_i       (red        ),
-    .green_i     (green      ),
-    .blue_i      (blue       ),
+    dvi_top dvi_top (
+        .serial_clk  (serial_clk ),
+        .pixel_clk   (px_clk     ),
+        .rst         (rst        ),
 
-    .x_o         (px_x       ),
-    .y_o         (px_y       ),
-    .in_range_o  (in_range   ),
+        .red_i       (red        ),
+        .green_i     (green      ),
+        .blue_i      (blue       ),
 
-    .tmds_data_p (tmds_data_p),
-    .tmds_data_n (tmds_data_n),
-    .tmds_clk_p  (tmds_clk_p ),
-    .tmds_clk_n  (tmds_clk_n )
-);
+        .x_o         (px_x       ),
+        .y_o         (px_y       ),
+        .in_range_o  (in_range   ),
+
+        .tmds_data_p (tmds_data_p),
+        .tmds_data_n (tmds_data_n),
+        .tmds_clk_p  (tmds_clk_p ),
+        .tmds_clk_n  (tmds_clk_n )
+    );
+
+`elsif VGA
+
+    import dvi_pkg::DEL_CYCLES;
+
+    logic       hsync;
+    logic       vsync;
+    logic [2:0] delay_in;
+    logic [2:0] delay_out;
+    logic       hsync_del;
+    logic       vsync_del;
+    logic       in_range_del;
+
+    // DVI uses the same timings as VGA
+    dvi_sync dvi_sync (
+        .clk_i           (px_clk  ),
+        .rst_i           (rst     ),
+
+        .hsync_o         (hsync   ),
+        .vsync_o         (vsync   ),
+        .pixel_x_o       (px_x    ),
+        .pixel_y_o       (px_y    ),
+        .visible_range_o (in_range)
+    );
+
+    assign delay_in = { hsync, vsync, in_range };
+    assign { hsync_del, vsync_del, in_range_del } = delay_out;
+
+    delay #(
+        .WIDTH    (3         ),
+        .N_CYCLES (DEL_CYCLES)
+    ) delay (
+        .clk    (px_clk   ),
+        .rst    (rst      ),
+        .data_i (delay_in ),
+        .data_o (delay_out)
+    );
+
+    always_ff @(posedge px_clk) begin
+        hsync_o <= hsync_del;
+        vsync_o <= vsync_del;
+
+        red_o   <= '0;
+        green_o <= '0;
+        blue_o  <= '0;
+
+        if (in_range_del) begin
+            red_o   <= red[W_COLOR-1-:4];
+            green_o <= green[W_COLOR-1-:4];
+            blue_o  <= blue[W_COLOR-1-:4];
+        end
+    end
+
+`endif
 
 endmodule
 

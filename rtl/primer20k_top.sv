@@ -9,10 +9,19 @@ module primer20k_top #(
 `endif
     input  var logic       rst_n,
     input  var logic [5:0] keys_inv_i,
+`ifdef DVI
     output var logic [2:0] tmds_data_p,
     output var logic [2:0] tmds_data_n,
     output var logic       tmds_clk_p,
     output var logic       tmds_clk_n
+`elsif VGA
+    output var logic [3:0] red_o,
+    output var logic [3:0] green_o,
+    output var logic [3:0] blue_o,
+
+    output var logic       hsync_o,
+    output var logic       vsync_o
+`endif
 );
 
 logic [7:0] power_on_rst_cnt;
@@ -21,7 +30,7 @@ logic [5:0] keys;
 
 assign keys = ~keys_inv_i;
 
-`ifdef GOWIN
+`ifdef DVI
 
     logic px_clk;
     logic pixel_clk_div2;
@@ -64,6 +73,39 @@ assign keys = ~keys_inv_i;
         .RESETN (pll_lock      )
     );
 
+`elsif VGA
+
+    logic clk_50_mhz;
+    logic pll_lock;
+    logic px_clk;
+    logic serial_clk;
+
+    rPLL #(
+        .FCLKIN    ("27"),
+        .IDIV_SEL  (6   ),
+        .FBDIV_SEL (12  ),
+        .ODIV_SEL  (16   )
+    ) rpll (
+        .CLKIN   (clk       ), // 27 MHZ
+        .CLKOUT  (clk_50_mhz), // 50 MHz
+        .LOCK    (pll_lock  ),
+        .RESET   ('0        ),
+        .RESET_P ('0        ),
+        .CLKFB   ('0        ),
+        .FBDSEL  ('0        ),
+        .IDSEL   ('0        ),
+        .ODSEL   ('0        ),
+        .PSDA    ('0        ),
+        .DUTYDA  ('0        ),
+        .FDLY    ('0        )
+    );
+
+    always_ff @(posedge clk_50_mhz)
+        if (rst)
+            px_clk <= '0;
+        else
+            px_clk <= !px_clk;
+
 `elsif SIMULATION
 
     bit serial_clk;
@@ -83,7 +125,7 @@ always @(posedge px_clk)
     if (power_on_rst_cnt != '0)
     power_on_rst_cnt <= power_on_rst_cnt - 1'b1;
 
-assign rst = !rst_n || (power_on_rst_cnt != '0);
+assign rst = !rst_n || (power_on_rst_cnt != '0) || !pll_lock;
 
 raycast_top #(
     .MOVEMENT_SPEED (MOVEMENT_SPEED),
@@ -99,11 +141,19 @@ raycast_top #(
     .key_right_i        (keys[3]    ),
     .key_rotate_left_i  (keys[4]    ),
     .key_rotate_right_i (keys[5]    ),
-
+`ifdef DVI
     .tmds_data_p        (tmds_data_p),
     .tmds_data_n        (tmds_data_n),
     .tmds_clk_p         (tmds_clk_p ),
     .tmds_clk_n         (tmds_clk_n )
+`elsif VGA
+    .red_o              (red_o      ),
+    .green_o            (green_o    ),
+    .blue_o             (blue_o     ),
+
+    .hsync_o            (hsync_o    ),
+    .vsync_o            (vsync_o    )
+`endif
 );
 
 endmodule

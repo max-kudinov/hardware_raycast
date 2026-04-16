@@ -9,19 +9,37 @@ IO_LOC  "keys_inv_i[4]" P9;
 IO_LOC  "keys_inv_i[5]" T8;
 
 // DVI
-IO_LOC "tmds_clk_p" G16;
-IO_PORT "tmds_clk_p" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_clk_n" H15;
-IO_PORT "tmds_clk_n" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_data_p[0]" H14;
-IO_PORT "tmds_data_p[0]" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_data_n[0]" H16;
-IO_PORT "tmds_data_n[0]" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_data_p[1]" J15;
-IO_PORT "tmds_data_p[1]" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_data_n[1]" K16;
-IO_PORT "tmds_data_n[1]" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_data_p[2]" K14;
-IO_PORT "tmds_data_p[2]" PULL_MODE=NONE DRIVE=3.5;
-IO_LOC "tmds_data_n[2]" K15;
-IO_PORT "tmds_data_n[2]" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_clk_p" G16;
+//IO_PORT "tmds_clk_p" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_clk_n" H15;
+//IO_PORT "tmds_clk_n" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_data_p[0]" H14;
+//IO_PORT "tmds_data_p[0]" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_data_n[0]" H16;
+//IO_PORT "tmds_data_n[0]" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_data_p[1]" J15;
+//IO_PORT "tmds_data_p[1]" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_data_n[1]" K16;
+//IO_PORT "tmds_data_n[1]" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_data_p[2]" K14;
+//IO_PORT "tmds_data_p[2]" PULL_MODE=NONE DRIVE=3.5;
+//IO_LOC "tmds_data_n[2]" K15;
+//IO_PORT "tmds_data_n[2]" PULL_MODE=NONE DRIVE=3.5;
+
+IO_LOC "red_o[0]" D14;
+IO_LOC "red_o[1]" B14;
+IO_LOC "red_o[2]" B13;
+IO_LOC "red_o[3]" B12;
+
+IO_LOC "blue_o[0]" E15;
+IO_LOC "blue_o[1]" A15;
+IO_LOC "blue_o[2]" A14;
+IO_LOC "blue_o[3]" C12;
+
+IO_LOC "green_o[0]" A11;
+IO_LOC "green_o[1]" N6;
+IO_LOC "green_o[2]" N9;
+IO_LOC "green_o[3]" L9;
+
+IO_LOC "hsync_o" B11;
+IO_LOC "vsync_o" D11;
