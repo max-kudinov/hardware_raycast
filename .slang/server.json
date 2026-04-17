@@ -1,5 +1,5 @@
 {
-    "flags": "-Irtl/include -DSIMULATION -DVGA -Wno-case-default -Wno-case-enum -Wno-useless-cast",
+    "flags": "-Irtl/include -DSIMULATION -Wno-case-default -Wno-case-enum -Wno-useless-cast",
     "indexGlobs": ["rtl/.../*.sv*"],
     "excludeDirs": ["sim_build", "__pycache__"]
 }
