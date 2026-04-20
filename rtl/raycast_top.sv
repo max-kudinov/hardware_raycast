@@ -4,39 +4,27 @@
 
 `default_nettype none
 
-module raycast_top
-    import dvi_pkg::W_H_RES;
-    import dvi_pkg::W_V_RES;
-    import dvi_pkg::W_COLOR;
-#(
+module raycast_top #(
     parameter real MOVEMENT_SPEED = 0.8,
     parameter real ROTATION_SPEED = 0.4
 ) (
-    input  var logic               clk,
-    input  var logic               rst,
+    input  var logic clk,
+    input  var logic rst,
 
     // Key input
-    input  var logic               key_forward_i,
-    input  var logic               key_backward_i,
-    input  var logic               key_left_i,
-    input  var logic               key_right_i,
-    input  var logic               key_rotate_left_i,
-    input  var logic               key_rotate_right_i,
+    input  var logic key_forward_i,
+    input  var logic key_backward_i,
+    input  var logic key_left_i,
+    input  var logic key_right_i,
+    input  var logic key_rotate_left_i,
+    input  var logic key_rotate_right_i,
 
-    // Data for display output
-    input  var logic [W_H_RES-1:0] px_x_i,
-    input  var logic [W_V_RES-1:0] px_y_i,
-    input  var logic               in_range_i,
-
-    output var logic [W_COLOR-1:0] red_o,
-    output var logic [W_COLOR-1:0] green_o,
-    output var logic [W_COLOR-1:0] blue_o
+    interface        display_if
 );
 
 import fixp_pkg::*;
+import dvi_pkg::*;
 import tex_pkg::W_NUM_TEX;
-import dvi_pkg::FRAME_WIDTH;
-import dvi_pkg::FRAME_HEIGHT;
 
 // ----------------------------------------------------------------------------
 // Local parameters declaration
@@ -79,6 +67,13 @@ ray_fixp_t            dir_y;
 ray_fixp_t            plane_x;
 ray_fixp_t            plane_y;
 
+logic [W_H_RES-1:0]   px_x;
+logic [W_V_RES-1:0]   px_y;
+logic                 in_range;
+logic [W_COLOR-1:0]   red;
+logic [W_COLOR-1:0]   green;
+logic [W_COLOR-1:0]   blue;
+
 // ----------------------------------------------------------------------------
 // ROM initialization
 // ----------------------------------------------------------------------------
@@ -100,8 +95,8 @@ assign map_addr = (map_addr_t'(map_y) * map_addr_t'(MAP_SIDE)) + map_addr_t'(map
 always_ff @(posedge clk)
     texture <= map[map_addr];
 
-assign frame_start = (px_x_i == '0) && (px_y_i == '0) && in_range_i;
-assign frame_done  = (px_x_i == FRAME_WIDTH - 1) && (px_y_i == FRAME_HEIGHT - 1);
+assign frame_start = (px_x == '0) && (px_y == '0) && in_range;
+assign frame_done  = (px_x == FRAME_WIDTH - 1) && (px_y == FRAME_HEIGHT - 1);
 
 always_ff @(posedge clk)
     if (rst)
@@ -124,13 +119,13 @@ render render (
     .clk            (clk         ),
     .rst            (rst         ),
 
-    .px_x_i         (px_x_i      ),
-    .px_y_i         (px_y_i      ),
-    .in_range_i     (in_range_i  ),
+    .px_x_i         (px_x        ),
+    .px_y_i         (px_y        ),
+    .in_range_i     (in_range    ),
     .new_frame_i    (frame_start ),
-    .red_o          (red_o       ),
-    .green_o        (green_o     ),
-    .blue_o         (blue_o      ),
+    .red_o          (red         ),
+    .green_o        (green       ),
+    .blue_o         (blue        ),
 
     .lookup_map_x_o (render_map_x),
     .lookup_map_y_o (render_map_y),
@@ -175,6 +170,25 @@ controls #(
     .plane_x_o          (plane_x           ),
     .plane_y_o          (plane_y           )
 );
+
+`ifdef VGA
+    vga vga (
+`else
+    dvi_top dvi_top (
+`endif
+        .clk        (clk       ),
+        .rst        (rst       ),
+
+        .red_i      (red       ),
+        .green_i    (green     ),
+        .blue_i     (blue      ),
+
+        .px_x_o     (px_x      ),
+        .px_y_o     (px_y      ),
+        .in_range_o (in_range  ),
+
+        .display_if (display_if)
+    );
 
 endmodule
 
