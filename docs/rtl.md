@@ -7,8 +7,8 @@ I won't cover everything here, because there's too much code and it's kinda
 boring, but we're gonna look at some interesting parts.
 
 The current target is the Tang Primer 20K FPGA board. But the code is fairly
-portable, so you can adapt it to any target with DVI output by changing the
-wrapper around the `raycast_top` module.
+portable, so you can adapt it to any target with DVI or VGA output by changing
+the wrapper around the `raycast_top` module.
 
 I was exploring synthesizable SystemVerilog during the creation of this project,
 so currently the code is verified to work with the
@@ -238,13 +238,14 @@ explicitly cast to be signed if needed.
 
 ## Hierarchy
 
-The main parts of the raycaster are the render, controls and DVI modules. The
-whole structure is the following:
+The main parts of the raycaster are the render, controls and DVI/VGA modules.
+The whole structure is the following:
 
 ![RTL hierarchy](../img/hierarchy.png)
 
-DVI won't be covered here, it has its own
-[repository](https://github.com/max-kudinov/open_dvi).
+DVI and VGA won't be covered here. DVI has its own
+[repository](https://github.com/max-kudinov/open_dvi) and VGA has many articles
+already.
 
 ## Render
 
@@ -273,8 +274,8 @@ final calculations for each pixel.
 
 ![rendering](../img/rendering.png)
 
-DVI driver sends X and Y coordinates to the renderer, which reads ray data from
-the SRAM, using the X value as an address. Then read data goes through the
+DVI/VGA driver sends X and Y coordinates to the renderer, which reads ray data
+from the SRAM, using the X value as an address. Then read data goes through the
 pipeline, and the corresponding pixel color is received back by the driver. The
 driver has an inner delay to account for pipeline latency, thus, it waits for
 the color value after sending the coordinates, so everything stays in sync.
@@ -351,10 +352,10 @@ and `plane_y = -dir_x * 0.66`. Multiplication by `0.66` is needed to scale the
 length of the vector.
 
 Actually, rotating even only the direction vector with a multiplication matrix
-introduces an error that might accumulate. If you turn back and forth around 90
-degrees, the image will become distorted rapidly, because during rotation, the
-length of the direction vector would change. So the proper solution would be to
-use CORDIC here. But from my testing, when you're just moving around normally,
-error accumulation is very limited and doesn't give any visual cues, unless you
-want to intentionally break it. So I'd say that it's good enough for now, maybe
-I'll fix this later.
+introduces an error that might accumulate. If you would rotate back and forth by
+a few degrees, the image will become distorted rapidly, because during rotation,
+the length of the direction vector would change. So the proper solution would be
+to use CORDIC here. But from my testing, when you're just moving around
+normally, error accumulation is very limited and doesn't give any visual cues,
+unless you want to intentionally break it. So I'd say that it's good enough for
+now, maybe I'll fix this later.
