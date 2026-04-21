@@ -27,6 +27,7 @@ module primer20k_top #(
 );
 
 logic       rst;
+logic [7:0] power_on_rst_cnt;
 logic [5:0] keys;
 logic       px_clk;
 logic       pll_clk;
@@ -127,7 +128,13 @@ logic       pll_lock;
 
 `endif
 
-assign rst  = !rst_n || !pll_lock;
+initial power_on_rst_cnt = '1;
+
+always @(posedge pll_clk)
+    if (pll_lock && power_on_rst_cnt != '0)
+        power_on_rst_cnt <= power_on_rst_cnt - 1'b1;
+
+assign rst  = !rst_n || (power_on_rst_cnt != '0);
 assign keys = ~keys_inv_i;
 
 raycast_top #(
