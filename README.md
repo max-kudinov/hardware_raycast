@@ -1,8 +1,12 @@
 # Hardware raycaster
 
+![raycast monitor](img/raycast_monitor.jpg)
+
 Raycasting algorithm inspired by Wolfenstein 3D, implemented in SystemVerilog
 and optimized for low hardware resource utilization through FSM-based resource
 sharing and optimal fixed point widths.
+
+![raycast demo](img/raycast_demo.gif)
 
 ## Implementation details
 
